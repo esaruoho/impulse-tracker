@@ -194,7 +194,7 @@ This document is currently incomplete.
         also will not fixup any problems that occur in Impulse Tracker
         that only occur under Windows 3.xx
 
-        Microsft Windows '95 and Impulse Tracker *SHOULD* work fine.
+        Microsoft Windows '95 and Impulse Tracker *SHOULD* work fine.
         If no sound card can be detected under Windows '95, check first that
         you have no other program using your soundcard (or another DOS window
         still open that used your soundcard).
