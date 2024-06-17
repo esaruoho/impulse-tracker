@@ -132,7 +132,7 @@ first SF0 in example 2 is unnecessary.
 Resetting the Filters
 ---------------------
 Since the filters are driver related (and IT.EXE really doesn't know about
-their existance), they are not reset automatically when you stop/play a song.
+their existence), they are not reset automatically when you stop/play a song.
 If a MIDI Reset (FFh), MIDI Start (FAh) or MIDI Stop (FCh) message is
 received, then the driver will reset all of it's internal tables. The default
 configuration will send both MIDI Reset and MIDI Stop commands.
