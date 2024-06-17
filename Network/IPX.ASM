@@ -1,6 +1,6 @@
-;����������������������������������������������������������������������������Ŀ
-;� Network Module                                                              �
-;�������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+;³ Network Module                                                              ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
 
                         Jumps
                         .386P
@@ -125,14 +125,14 @@ TRACEENABLED    EQU     0
 SCREENTRACEENABLED EQU  0
 CREATENEWLOGFILE EQU    1
 
-;�����������������������������������������������������������������������������Ŀ
-;� Externals                                                                   �
-;�������������������������������������������������������������������������������
+;ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+;³ Externals                                                                   ³
+;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
 
-;�������������������������������������������������������������������������������
+;ÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ
 
 
-;�������������������������������������������������������������������������������
+;ÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ
 
 Segment                 IPX PARA Public 'Code' USE16
                         Assume  CS:IPX, DS:Nothing, ES:Nothing
@@ -221,7 +221,7 @@ ConnectionRequest       DB      0       ; Bit 0 = requesting a connection
                                         ;         for reply.
                                         ; Bit 2 = connection accepted, waiting
                                         ;         for verification.
-                                        ; Bit 7 = leave connetion request box
+                                        ; Bit 7 = leave connection request box
 
 IPXHeaderText           DW      1
                         DB      36, 25
@@ -627,7 +627,7 @@ Label           ConnectKeys     Byte
 
                         DB      0FFh
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 MessageBlock            DB      4
 MessageSenderName       DB      16 Dup (0)
@@ -646,7 +646,7 @@ AutoRejectMessage       DB      "IPX AutoRejectConnection: "
 ClosedMessage           DB      "IPX ClosedConnection: "
 AutoDropMessage         DB      "IPX DropConnection: "
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Macro_MaintenanceRHeader Macro Index
         MaintenanceRHeader&Index& Label
@@ -771,11 +771,11 @@ MaintenanceSendDataOffset       DW      0
 Seg10                           DW      0
 MaintenanceSendDataSize         DW      0
 
-;�������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 MaintenanceSData        DB      128 Dup (0)
 
-;�������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 
 ;Data packet definitions.
@@ -893,9 +893,9 @@ EndM
                 IndexCounter = IndexCounter + 1
         EndM
 
-;�������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 ; RELOCATION TABLE
-;�������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Macro_DataSegments Macro Index
         DW      Offset DataSegA&Index&
@@ -947,11 +947,11 @@ ENDIF
 
         DW      0
 
-;�������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 include debug.inc
 
-;�������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            F_Nothing Far
 
@@ -960,7 +960,7 @@ Proc            F_Nothing Far
 
 EndP            F_Nothing
 
-;�������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            F_Return0 Far
 
@@ -971,7 +971,7 @@ Proc            F_Return0 Far
 
 EndP            F_Return0
 
-;�������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            F_Return1 Far
 
@@ -984,7 +984,7 @@ Proc            F_Return1 Far
 
 EndP            F_Return1
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            IdleCheck Far
 
@@ -1052,7 +1052,7 @@ IdleNoRedraw:
 EndP            IdleCheck
                 Assume DS:Nothing
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            TransferDestinationAddress      ; SI = Header
 
@@ -1076,7 +1076,7 @@ Proc            TransferDestinationAddress      ; SI = Header
 
 EndP            TransferDestinationAddress
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            NodeSearch      ; DS gets set to DiskDataArea
                                 ; Given EAX:EDX = Node address
@@ -1113,7 +1113,7 @@ NodeSearch2:
 
 EndP            NodeSearch
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            CheckFromSelf
 
@@ -1132,7 +1132,7 @@ Proc            CheckFromSelf
 
 EndP            CheckFromSelf
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            ConnectionReject
 
@@ -1144,7 +1144,7 @@ Proc            ConnectionReject
 
 EndP            ConnectionReject
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            FindConnection          ; Returns carry set if not found,
                                         ;  BX = address, AX = connection number
@@ -1187,7 +1187,7 @@ FindConnection3:
 
 EndP            FindConnection
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            RemoveFromGroup         ; Assumes DS = CS = IPX
 
@@ -1258,7 +1258,7 @@ EndP            RemoveFromGroup2
 EndP            RemoveFromGroup
                 Assume DS:Nothing
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            SendDataOK              ; Returns carry if data is still
                                         ; pending to send.
@@ -1292,7 +1292,7 @@ SendDataOK_End:
 EndP            SendDataOK
                 Assume DS:Nothing
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Macro_AckOffsets  Macro   Index
         DW      Offset SendAckHeader&Index&+6
@@ -1424,7 +1424,7 @@ DESRRelisten:
 EndP            DataESR
                 Assume DS:Nothing
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            SendDataGivenBX ; Given BX = Offset to SendPacketInfo stuff
 
@@ -1460,7 +1460,7 @@ Proc            SendDataGivenBX ; Given BX = Offset to SendPacketInfo stuff
 
 EndP            SendDataGivenBX
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 SendPacketInformation   DW      Offset UserAddress1, Offset DataSendHeader1+6, Offset DataSendECB1
                         DW      Offset UserAddress2, Offset DataSendHeader2+6, Offset DataSendECB2
@@ -1624,7 +1624,7 @@ SendITDataEnd:
 
 EndP            SendITData
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            SendDataESR Far
 
@@ -1674,7 +1674,7 @@ SDESRResend:
 EndP            SendDataESR
                 Assume DS:Nothing
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 MAXIMUMBLOCKTYPE        = 10
 
@@ -1686,7 +1686,7 @@ MESRBlockOffsets        Label   Word
         DW      Offset MESRBlockType8, Offset MESRBlockType9
         DW      Offset MESRBLockType10
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            MaintenanceESR Far      ; Given ES:SI = ECB
 
@@ -2178,7 +2178,7 @@ MESRBlockType7Accepted:
         Jmp     MESRBlockTypeFinished
 
 MESRBlockType7Reject:
-        Test    DH, DH                  ; If connection rejected, dont' send
+        Test    DH, DH                  ; If connection rejected, don't send
                                         ; Further response.
         JZ      MESRBlockType7End
 
@@ -2357,7 +2357,7 @@ MESRRelisten:
 EndP            MaintenanceESR
                 Assume DS:Nothing
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            MaintenanceWaitForSend
 
@@ -2402,7 +2402,7 @@ SendMaintenancePacket2:
 EndP            MaintenanceWaitForSend
                 Assume DS:Nothing
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            SendMaintenancePacket
 
@@ -2437,7 +2437,7 @@ Proc            SendMaintenancePacket
 EndP            SendMaintenancePacket
                 Assume DS:Nothing
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            DetectIPXNetwork Far       ; IPX detection.
 
@@ -2483,7 +2483,7 @@ DetectIPXNetwork1:
 EndP            DetectIPXNetwork
                 Assume DS:Nothing
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Macro_SetupListenDataPackets Macro Index
                 Mov     DSocket&Index&, DX
@@ -2615,7 +2615,7 @@ IPX_InitialiseReturn:
 EndP            IPX_Initialise
                 Assume DS:Nothing
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            BroadcastMaintenanceByte        ; Given AL
 
@@ -2630,7 +2630,7 @@ Proc            BroadcastMaintenanceByte        ; Given AL
 
 EndP            BroadcastMaintenanceByte
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            IPX_DriverScreen Far
 
@@ -2678,7 +2678,7 @@ IPX_DriverScreen1:
 EndP            IPX_DriverScreen
                 Assume DS:Nothing
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            IPX_Shutdown Far        ; Shutdown has to:
                                         ;  free all allocated
@@ -2736,7 +2736,7 @@ IPX_Shutdown1:
 EndP            IPX_Shutdown
                 Assume DS:Nothing
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            IPX_LeaveSession Far
 
@@ -2749,7 +2749,7 @@ Proc            IPX_LeaveSession Far
 
 EndP            IPX_LeaveSession
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            IPX_Update Far
 
@@ -2791,7 +2791,7 @@ Proc            IPX_Update Far
                 JA      IPX_UpdateConnectionCancelled
 
 IPX_UpdateConnectionAccept:
-; Have to send complete info about all connnections back
+; Have to send complete info about all connections back
 ; including socket numbers
                 Mov     AH, NumberOfConnections
                 Mov     DI, Offset MaintenanceSData
@@ -2844,7 +2844,7 @@ IPX_UpdateEnd:
 EndP            IPX_Update
                 Assume DS:Nothing
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            IPX_DrawHexNumber       ; Given AL = Number
 
@@ -2866,7 +2866,7 @@ Proc            IPX_DrawHexNumber       ; Given AL = Number
 
 EndP            IPX_DrawHexNumber
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            IPX_DrawAddress
 
@@ -2894,7 +2894,7 @@ IPX_DrawAddress2:
 
 EndP            IPX_DrawAddress
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            IPX_DrawConnect Far
 
@@ -3000,7 +3000,7 @@ IPX_DrawConnectEnd:
 
 EndP            IPX_DrawConnect
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            IPX_PreConnect Far
 
@@ -3047,7 +3047,7 @@ IPX_PreConnectEnd:
 EndP            IPX_PreConnect
                 Assume DS:Nothing
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            IPX_PostConnect Far
 
@@ -3069,7 +3069,7 @@ IPX_PostConnect1:
 
 EndP            IPX_PostConnect
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            IPX_ConnectUp Far
                 Assume DS:IPX
@@ -3084,7 +3084,7 @@ Proc            IPX_ConnectUp Far
 EndP            IPX_ConnectUp
                 Assume DS:Nothing
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            IPX_ConnectDown Far
                 Assume DS:IPX
@@ -3096,7 +3096,7 @@ Proc            IPX_ConnectDown Far
 EndP            IPX_ConnectDown
                 Assume DS:Nothing
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            IPX_ConnectPgUp Far
                 Assume DS:IPX
@@ -3116,7 +3116,7 @@ IPX_ConnectPgUp1:
 EndP            IPX_ConnectPgUp
                 Assume DS:Nothing
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            IPX_ConnectPgDn Far
                 Assume DS:IPX
@@ -3129,7 +3129,7 @@ Proc            IPX_ConnectPgDn Far
 EndP            IPX_ConnectPgDn
                 Assume DS:Nothing
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            IPX_ConnectHome Far
 
@@ -3139,7 +3139,7 @@ Proc            IPX_ConnectHome Far
 
 EndP            IPX_ConnectHome
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            IPX_ConnectEnd Far
 
@@ -3150,7 +3150,7 @@ Proc            IPX_ConnectEnd Far
 
 EndP            IPX_ConnectEnd
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            IPX_ConnectTab Far
                 Assume DS:IPX
@@ -3164,7 +3164,7 @@ Proc            IPX_ConnectTab Far
 EndP            IPX_ConnectTab
                 Assume DS:Nothing
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            IPX_GetDestinationAddress
 
@@ -3199,7 +3199,7 @@ IPX_GetDestinationAddress1:
 EndP            IPX_GetDestinationAddress
                 Assume DS:Nothing
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc    IPX_MaintenanceSendData
 
@@ -3217,7 +3217,7 @@ Proc    IPX_MaintenanceSendDataNoHeader
 EndP    IPX_MaintenanceSendDataNoHeader
 EndP    IPX_MaintenanceSendData
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc    SendConnectionData
         Assume DS:IPX
@@ -3258,7 +3258,7 @@ SendConnectionData1:
 EndP    SendConnectionData
         Assume DS:Nothing
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            IPX_ConnectEnter Far    ; Have to request a connection
 
@@ -3339,7 +3339,7 @@ IPX_ConnectEnter1:
 
 EndP            IPX_ConnectEnter
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            IPX_SendGroupMessage Far
 
@@ -3376,7 +3376,7 @@ IPX_SendGroupMessage1:
 
         Jmp     IPX_SendMessageChain
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            IPX_SendMessage Far
 
@@ -3422,7 +3422,7 @@ EndP            IPX_SendMessage
 EndP            IPX_SendGroupMessage
 
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            IPX_ShowConnectionDetails Far
 
@@ -3488,7 +3488,7 @@ IPX_ShowConnectionDetails1:
 EndP            IPX_ShowConnectionDetails
                 Assume DS:Nothing
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            IPX_DisplayMessages Far
 
@@ -3549,7 +3549,7 @@ IPX_DisplayMessages4:
 EndP            IPX_DisplayMessages
                 Assume DS:Nothing
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            IPX_ConnectionStatus Far; Returns 0 if not connected
                                         ; Otherwise returns connection count
@@ -3559,7 +3559,7 @@ Proc            IPX_ConnectionStatus Far; Returns 0 if not connected
 
 EndP            IPX_ConnectionStatus
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 EndDriver:
 
@@ -3576,7 +3576,7 @@ ProvidedProcedureTableStart:
         DW      NUMPROVIDEDFUNCTIONS - ($-ProvidedProcedureTableStart)/4 Dup (0)
 
 
-;������������������������������������������������������������������������������
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 EndS
 
