@@ -749,7 +749,7 @@ endif
 
 
 End_Win32_Services MACRO VxDName
-    .errb <VxDName>, <VxD name misssing>
+    .errb <VxDName>, <VxD name missing>
 if Create_Win32_Services
     csvc&VxDName    equ ($ - VxDName&_Win32_Services)/8 - 1
 endif

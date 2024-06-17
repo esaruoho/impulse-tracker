@@ -93,9 +93,9 @@
           1: -1           5: -16          9: +1           D: +16
           2: -2           6: *2/3         A: +2           E: *3/2
           3: -4           7: *1/2         B: +4           F: *2
- Rxy - Tremelo with speed x, depth y
+ Rxy - Tremolo with speed x, depth y
  S3x - Set vibrato waveform
- S4x - Set tremelo waveform
+ S4x - Set tremolo waveform
  S5x - Set panbrello waveform
         Waveforms for x in S3x, S4x and S5x:
           0 = Sine                      2 = Square
@@ -155,8 +155,8 @@ Volume Control
  Nxy - Channel volume slide, x=0 down; y=0 up; x=F fine down; y=F fine up
  Vxx - Set global volume to xx (0->80h)
  Wxx - Global volume slide, x=0 down; y=0 up; x=F fine down; y=F fine up
- Rxy - Tremelo with speed x, depth y
- S4x - Set tremelo waveform
+ Rxy - Tremolo with speed x, depth y
+ S4x - Set tremolo waveform
 
 Panning Control
  Xxx - Set panning position (0->0FFh)
@@ -189,15 +189,15 @@ Data Entry
  Alt-0 -> Alt-9  Set skipvalue to 0-9
  . (period)      Clear field(s)
  1               Note cut (^^^)
- `               Note off (ммм) / panning toggle (in volume column)
+ `               Note off (ц█ц█ц█) / panning toggle (in volume column)
  Spacebar        Use last (default) note/instrument/volume/effect/effectvalue
 
-              Ё Ё ЁЁ Ё Ё Ё ЁЁ ЁЁ Ё Ё Ё ЁЁ Ё Ё Ё ЁЁ ЁЁ Ё Ё Ё ЁЁ Ё Ё
-              Ё Ё ЁЁ Ё Ё Ё ЁЁ ЁЁ Ё Ё Ё ЁЁ Ё Ё Ё ЁЁ ЁЁ Ё Ё Ё ЁЁ Ё Ё
-              Ё ЁSЁЁDЁ Ё ЁGЁЁHЁЁJЁ Ё Ё2ЁЁ3Ё Ё Ё5ЁЁ6ЁЁ7Ё Ё Ё9ЁЁ0Ё Ё
-              Ё юбыюбы Ё юбыюбыюбы Ё юбыюбы Ё юбыюбыюбы Ё юбыюбы Ё
-              Ё ZЁ XЁ CЁ VЁ BЁ NЁ MЁ QЁ WЁ EЁ RЁ TЁ YЁ UЁ IЁ OЁ PЁ
-              юддаддаддаддаддаддаддаддаддаддаддаддаддаддаддаддадды
+              бЁ бЁ бЁбЁ бЁ бЁ бЁ бЁбЁ бЁбЁ бЁ бЁ бЁ бЁбЁ бЁ бЁ бЁ бЁбЁ бЁбЁ бЁ бЁ бЁ бЁбЁ бЁ бЁ
+              бЁ бЁ бЁбЁ бЁ бЁ бЁ бЁбЁ бЁбЁ бЁ бЁ бЁ бЁбЁ бЁ бЁ бЁ бЁбЁ бЁбЁ бЁ бЁ бЁ бЁбЁ бЁ бЁ
+              бЁ бЁSбЁбЁDбЁ бЁ бЁGбЁбЁHбЁбЁJбЁ бЁ бЁ2бЁбЁ3бЁ бЁ бЁ5бЁбЁ6бЁбЁ7бЁ бЁ бЁ9бЁбЁ0бЁ бЁ
+              бЁ ц─ц┌ц≥ц─ц┌ц≥ бЁ ц─ц┌ц≥ц─ц┌ц≥ц─ц┌ц≥ бЁ ц─ц┌ц≥ц─ц┌ц≥ бЁ ц─ц┌ц≥ц─ц┌ц≥ц─ц┌ц≥ бЁ ц─ц┌ц≥ц─ц┌ц≥ бЁ
+              бЁ ZбЁ XбЁ CбЁ VбЁ BбЁ NбЁ MбЁ QбЁ WбЁ EбЁ RбЁ TбЁ YбЁ UбЁ IбЁ OбЁ PбЁ
+              ц─ц└ц└ц│ц└ц└ц│ц└ц└ц│ц└ц└ц│ц└ц└ц│ц└ц└ц│ц└ц└ц│ц└ц└ц│ц└ц└ц│ц└ц└ц│ц└ц└ц│ц└ц└ц│ц└ц└ц│ц└ц└ц│ц└ц└ц│ц└ц└ц│ц└ц└ц≥
 
 Pattern selection
  +, -               Next/Previous pattern (*)
@@ -229,7 +229,7 @@ Cursor Control
  Alt-Left/Right     Move forwards/backwards one channel
  Ctrl-Left/Right    Move left/right between track columns
  Tab/Shift-Tab      Move forwards/backwards to note column
- PgUp/PgDn          Move up/down by n lines (n=Row hilight major)
+ PgUp/PgDn          Move up/down by n lines (n=Row highlight major)
  Ctrl-PgUp/PgDn     Move to top/bottom of pattern
  Home               Move to start of column/start of line/start of pattern
  End                Move to end of column/end of line/end of pattern
@@ -256,7 +256,7 @@ Block functions.
  Shift-Movement Mark block
  Alt-B          Mark beginning of block
  Alt-E          Mark end of block
- Alt-D          Quick mark n/2n/4n/... lines (n=Row Hilight Major)
+ Alt-D          Quick mark n/2n/4n/... lines (n=Row Highlight Major)
  Alt-L          Mark entire column/pattern
 
  Alt-U          Unmark block/release clipboard

@@ -1,4 +1,4 @@
- ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„
 
 Hints for Composers
  -- Pulse
@@ -80,7 +80,7 @@ Well, I'm not the best person to ask for hints, but here are a few anyway.
     frequencies. Songs with too much bass and too little treble sound rough,
     songs with too much treble and too little bass sound insubstantial.
 
- ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„
 
 Hints for New Composers
 -- John Hawksley (a.k.a. Greebo)
@@ -100,7 +100,7 @@ Hints for New Composers
 4)  Be different. A lot of .MODs are in the same style. Sure, if you
     like this and feel comfortable with it, then go for it! But if you
     want to create a new feel -- do that too.  People are always ready
-    to try new styles.  I personaly enjoy arranging (that covers
+    to try new styles.  I personally enjoy arranging (that covers
     a lot of styles) but you might like composing rock tracks, for
     instance.  So do it!
 
@@ -116,9 +116,9 @@ Hints for New Composers
     later as you try to figure out why half the piece seems to be
     in G# major and half is in Dflat minor.
 
-6)  Chords.  Originaly, people used to sample whole chords to save
+6)  Chords.  Originally, people used to sample whole chords to save
     sample space.  Now we've got this wonderful IT with it's gazillions
-    of channels.  From ST3 onwards, I have been contructing chords
+    of channels.  From ST3 onwards, I have been constructing chords
     from notes because I had the space to do so.  The sound is better
     and is more of a professional approach.  
     However (there's always a 'but'): be very careful! If you decide
@@ -132,7 +132,7 @@ Hints for New Composers
 7)  Saving.  Okay, so IT hasn't crashed on me yet, but when (if) it
     does, I'm not going to loose an hours work.  Save regularly.
     Never use IT or ST3 under the GUI in 95 and under Windows 3.1;
-    I found that occaisionaly, windows would do some swapping while
+    I found that occasionaly, windows would do some swapping while
     ST3 was saving and the module would be corrupt; but ST3 said
     it was saved ok. Lesson learnt.
 
@@ -150,7 +150,7 @@ Good luck!
 
 John H.
 
- ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„
 
 Hints for Composers
 -- ToalNkor / Realtech
@@ -165,14 +165,14 @@ Hints for Composers
 
   If you want the RIGHT channel : Cut the first and last byte of the
   sample (By looping it and using Ctrl-B and Ctrl-L). If the original
-  sample sise was X, then the actual size should be X-2. From now on,
+  sample size was X, then the actual size should be X-2. From now on,
   just follow the same indications as for the left channel and tadaa...
   your Right channel sample is ready for use !
 
-  After all these operations, dont't forget to multiply the mixfrequency
+  After all these operations, don't forget to multiply the mixfrequency
   by two to get the original samplingfrequency back !
 
- ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„
 
  Hints for New Composers
  -- StereoMan
@@ -182,9 +182,9 @@ Hints for Composers
     higher the playing frequency of one of the samples - ie:
 
            1            2                             2          (1 is same)
-    ³... .. .. Xpp³... .. .. Xpp³              ³... .. .. Xpp³
-    ³xxx ii xx ...³xxx ii xx EE1³      or      ³xxx ii xx u11³
-    ³... .. .. ...³... .. .. ...³              ³... .. .. u00³
+    Â³... .. .. XppÂ³... .. .. XppÂ³              Â³... .. .. XppÂ³
+    Â³xxx ii xx ...Â³xxx ii xx EE1Â³      or      Â³xxx ii xx u11Â³
+    Â³... .. .. ...Â³... .. .. ...Â³              Â³... .. .. u00Â³
                                                           u00 and so on.
     <pp>  has the same value in the two channels.
     <ii>  is your instrument number.
@@ -193,7 +193,7 @@ Hints for Composers
  2) You can use the above mentioned effect, but instead of having the channels
     with the same pan position you can put them as Left and Right (full) ie:
 
-    ³... .. .. X00³... .. .. XFF|
+    Â³... .. .. X00Â³... .. .. XFF|
                 . . .
 
     this will give you a smooth three dimensional sound.
@@ -210,13 +210,13 @@ Hints for Composers
      associated with notes (alt-w). Then apply a Dx0 effect (x=1..4 or more)
      for example:
 
-     ³n1. i. .. ...³... .. .. ...³          The results are very good.
-     ³n2. i. .. ...³n1. i. 00 D20³          Once you get used to this you can
-     ³... .. .. ...³n2. i. 00 D..³          achieve !very! smooth sound.
-     ³n3. i. .. ...³... .. .. D..³
-     ³... .. .. ...³n3. i. 00 D..³          The samples must not be too short
-     ³n4  i. .. ...³... .. .. D..³          so Dx0 can take effect.
-     ³... .. .. ...³n4. i. 00 D..³
+     Â³n1. i. .. ...Â³... .. .. ...Â³          The results are very good.
+     Â³n2. i. .. ...Â³n1. i. 00 D20Â³          Once you get used to this you can
+     Â³... .. .. ...Â³n2. i. 00 D..Â³          achieve !very! smooth sound.
+     Â³n3. i. .. ...Â³... .. .. D..Â³
+     Â³... .. .. ...Â³n3. i. 00 D..Â³          The samples must not be too short
+     Â³n4  i. .. ...Â³... .. .. D..Â³          so Dx0 can take effect.
+     Â³... .. .. ...Â³n4. i. 00 D..Â³
 
 
   4) If you make the above channels with different pan positions (x22 and xDD)
@@ -246,7 +246,7 @@ Hints for Composers
 
                             George Marinov a.k.a. StereoMan - <georgehm@bse.bg>
 
- ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„
 
 Hints for composers
 -- Ilpo Karkkainen
@@ -255,7 +255,7 @@ Hints for composers
   versatile. When you listen lots of different kinds of music styles, it also
   makes your composing a lot more wider and colorful.
 
-- When listening to music generally, try to sometimes consentrate to something
+- When listening to music generally, try to sometimes concentrate on something
   specific, for example backing vocals or drums. It helps you realize the whole.
   It's also good to try listen what different notes there are in a chord that
   you hear. At least to me, it has been very helful in chord progression.
@@ -263,7 +263,7 @@ Hints for composers
 - Details make the whole. Use them wisely, though. Too much details make the
   song sound bad. I've noticed that in some of my songs.
 
- ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„
 
                             Onix4MAN's hints
 
@@ -388,7 +388,7 @@ In the following examples, I've set the Panning in the Volume column
 
                                 - Nicolas ARROUET (Onix4MAN) o4m@mail.cpod.fr
 
- ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„
 
 Hints for new composers.
 - Nacho Segura
@@ -464,19 +464,19 @@ know, READ THE #%&@$# MANUAL!!). You'll be surprised.
 
 
 9) Make an economic contribution. I think he has worked hardly and Impulse
-Tracker is the only tracker that gives tracker songs a proffesional sound and
-accoustic. Don't be apologized for sending eight dollars. Is better than zero.
+Tracker is the only tracker that gives tracker songs a professional sound and
+acoustic. Don't be apologized for sending eight dollars. Is better than zero.
 Even if you don't want the ITWAV.DRV you should contribute, at least with a
-simbolic quantity. He has won it.
+symbolic quantity. He has won it.
 
- ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„
 
 Hints for composers
 -- Joakim "Acoustic" Back
 
 1)  Dont use the same bassline, piano chords or whatever the whole song.
-    Remember that a real drummer wont just sit there like a drummachine,
-    nature will make him tap sometimes and he realy wants to make
+    Remember that a real drummer won't just sit there like a drummachine,
+    nature will make him tap sometimes and he really wants to make
     some fills sometimes.
 
 2)  Feel the music. You dont use hammering industrial drums in a soft,
@@ -499,12 +499,12 @@ Hints for composers
     This will make you see that you play the piano with a lot more feeling
     than when you track a song with the computer-keyboard.
 
-6)  Accept failure. Dont get all angry just because your song went totaly
-    nuts. This happends all the time. Your songs will be better and better
+6)  Accept failure. Dont get all angry just because your song went totally
+    nuts. This happens all the time. Your songs will be better and better
     the more you use IT.
 
-7)  Use IT alot! Play around with IT, make crazy songs. This will make you
-    learn ITs features and ways to make nice effects. You wont understand IT
+7)  Use IT a lot! Play around with IT, make crazy songs. This will make you
+    learn ITs features and ways to make nice effects. You won't understand IT
     by reading the effects from Axx to Zxx, or reading hints like these, but
     mostly by using the effects and using IT, only training will get you to
     the top. IT is like a sport, people that dont use it, dont get a thing
@@ -523,7 +523,7 @@ Thanks for reading, I hope it will help you somehow.
 / Acoustic
 n98joab@tycho.helsingborg.se
 
- ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„
 
 Hints for Composers
 - Maarten Van Stien
@@ -563,7 +563,7 @@ Solution:
 Now you have markers in your complex drumloops! And if you did the above stuff
 right, you have perfect loops!
 
-Make sure the metronome-samples start immediatly! Otherwise use the offset
+Make sure the metronome-samples start immediately! Otherwise use the offset
 command (C-4 10 63 O10) or something..
 
 ok.. have a nice diskwrite!

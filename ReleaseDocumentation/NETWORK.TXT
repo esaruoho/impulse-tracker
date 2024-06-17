@@ -45,7 +45,7 @@ a session to join by pressing Enter.
 
 The Username that the IPX driver transmits is associated with each driver file.
 The public distribution identifies itself as "Unregistered". Different
-usernames are availble for US$10 each. Payment can be made via Kagi at
+usernames are available for US$10 each. Payment can be made via Kagi at
 http://order.kagi.com/?4ZM
 
 Please specify a username, maximum length 15 characters, or else one will be

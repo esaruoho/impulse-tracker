@@ -304,7 +304,7 @@ void VSound_InitDSound()
 	CheckHResult("Unlocked failed");
 
     trace("Creating sound thread");
-	BufferUpdateThreadHandle = CreateThread(NULL,					// Security atributes
+	BufferUpdateThreadHandle = CreateThread(NULL,					// Security attributes
 											0,						// Stack size
 											BufferUpdateThread,		// Pointer to thread starting function
 											0,						// Parameter to new thread

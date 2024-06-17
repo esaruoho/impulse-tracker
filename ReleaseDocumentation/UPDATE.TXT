@@ -84,10 +84,10 @@ IT214 Patch 2
   - Bug Fix: 16-bit samples of an exact multiple of 32768 bytes in size were
              getting corrupted on saving.
   - Bug fix: MIDI Macros (unparameterised) were somehow disabled somewhere
-             after IT212.. now reenabled
+             after IT212.. now re-enabled
 
 IT214 Patch 1
-  - Bug fix: EMM4.0 mode reenabled
+  - Bug fix: EMM4.0 mode re-enabled
   - Bug fix: Volume envelopes were skipping some ticks (sounded too fast)
   - Bug fix: Slight problems with the wav writer fixed
   - Bug fix: S3M saving bug fixed (was introduced in IT214 due to a 'bug
@@ -123,7 +123,7 @@ IT213 Update
 
   - Update: More memory available (Help text was manually compressed)
 
-  - Row hilight information is now stored within the .IT module..
+  - Row highlight information is now stored within the .IT module..
 
   - Automatic MIDI Pitch wheel handling. Vibrato, pitch slides, portamentos
     all handled.
@@ -221,21 +221,21 @@ IT212 Update - Special thanks go out to all those that did stability testing
     Check MIDI.TXT for details. (Big thanks to Ozone for writing this)
 
   - Soundcard Driver news
-    þ Inserted a new algorithm into the direct-to-disk writer to remove
+    Ã¾ Inserted a new algorithm into the direct-to-disk writer to remove
       clicks at the end of samples in cases of Note Cut commands, Note Cut NNA
       and instantaneous sample changes in sample mode. For those who have
       sent me money and would like to receive the upgrade, EMail me.
-    þ ESS ES1868 AudioDrive driver. This will NOT support any other ESS
+    Ã¾ ESS ES1868 AudioDrive driver. This will NOT support any other ESS
       chipsets than the ES1868. Do not write to me asking for support for
       other ESS chips unless you are willing to buy me a card (or send me
       the money to do so). This driver supports mixing rates up to 56.8kHz
       (16 bit, stereo) and it also supports MIDI In.
-    þ AWE32 driver update: More accurate tempo control and less clicks under
+    Ã¾ AWE32 driver update: More accurate tempo control and less clicks under
                            Win95
-    þ TB Tropez users: I received an EMail telling me that the GUSMAX drivers
+    Ã¾ TB Tropez users: I received an EMail telling me that the GUSMAX drivers
                        were working fully with the TB Tropez cards! See how
                        it works...
-    þ Sound drivers for the ST97 and EWS64 coming... as soon as I get them
+    Ã¾ Sound drivers for the ST97 and EWS64 coming... as soon as I get them
       working....
 
     Other news: It seems that some people really don't care how much work
@@ -243,7 +243,7 @@ IT212 Update - Special thanks go out to all those that did stability testing
                 are being sought after. Let me make this clear: Distribution
                 of the full version of ITWAV.DRV is NOT appreciated and if I
                 ever find the full version anywhere, IT will no longer be
-                publically released.
+                publicly released.
 
 
 IT211 Update - Not so much this time, as I have been working full time, so
@@ -432,7 +432,7 @@ IT208 Update
  - Template: "Notes only" added. This is different from the other templates
    in that it will NOT copy the template's instruments, volumes or effects.
    Instead, it will change it's instrument/volume/effect according to the
-   last used instrument/volume/effect, and will insert whatever is speicfied
+   last used instrument/volume/effect, and will insert whatever is specified
    by the edit mask.
 
  - Addition: Volume Column effects, Ax, Bx, Cx, Dx, Ex, Fx, Gx and Hx!!!!
@@ -580,7 +580,7 @@ IT 2.06
 
               SB16's MIDI input is somewhat 'iffy'. If you stop receiving
               MIDI input, you need to reinit the soundcard (Ctrl-I) (possibly
-              several times). I don't know why it does this. Dont' write
+              several times). I don't know why it does this. Don't write
               to me about it, 'cos I have spent MANY MANY hours on this little
               problem and I don't want to know about it. Also, in Win95, I
               found it necessary to change my SB16's configuration to EXCLUDE

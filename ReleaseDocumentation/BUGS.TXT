@@ -4,7 +4,7 @@ OK.. here's a list of the known problems - please don't write to me about them!
 1) Apparently, many problems have been encountered with QEMM... I really
    don't know what's going wrong here at the moment (I haven't had any
    experience with QEMM myself), but try using the following line in your
-   CONFIG.SYS file. If this still doesnt' work, I would recommend that you
+   CONFIG.SYS file. If this still doesn't work, I would recommend that you
    steer clear of QEMM if possible for the meantime.
 
                 DEVICE=<path>\QEMM.SYS DMA=64, HANDLES=255
