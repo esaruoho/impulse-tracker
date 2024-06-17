@@ -189,7 +189,7 @@ you played it in a pattern at C-5 with velocity 64, all IT does is read the
 and replace it with '91 3C 40'.
 
 In any of the MIDI output fields, lowercase letters represent variables (or
-subsitutions which IT should make) and uppercase letters or numbers are
+substitutions which IT should make) and uppercase letters or numbers are
 constants which IT writes to the MIDI port directly without any change.
 Therefore, these fields are case se nsitive--for the note on command, '9c n
 v' is blatantly different to '9C n v'. 9c represents 'send byte 09 followed
