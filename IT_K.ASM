@@ -1771,6 +1771,37 @@ Proc            MIDISend Far            ; Given AL = data byte.
                 Pop     DS
                         Assume DS:Keyboard
 
+; System Real-Time messages (0F8h..0FFh) are transparent to running status
+; and must be dispatched here without touching MIDIStatusByte/MIDIDataInput.
+; FA = Start, FB = Continue, FC = Stop. F8 Clock / F9 / FD-FF are ignored.
+
+                Cmp     AL, 0F8h
+                JB      MIDISendNotRealTime
+                Cmp     AL, 0FAh
+                JE      MIDISendRTStart
+                Cmp     AL, 0FBh
+                JE      MIDISendRTStart         ; Continue = Start for v1
+                Cmp     AL, 0FCh
+                JE      MIDISendRTStop
+                Jmp     MIDISendEnd
+
+MIDISendRTStart:
+                PushAD
+                Push    ES
+                Call    Music_KBPlaySong        ; F5 equivalent, idempotent
+                Pop     ES
+                PopAD
+                Jmp     MIDISendEnd
+
+MIDISendRTStop:
+                PushAD
+                Push    ES
+                Call    Music_Stop
+                Pop     ES
+                PopAD
+                Jmp     MIDISendEnd
+
+MIDISendNotRealTime:
                 Test    AL, AL          ; Status byte?
                 JNS     MIDISend1
 
