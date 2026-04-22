@@ -1,0 +1,87 @@
+name: Build IT.EXE
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install DOSBox-X
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dosbox-x unzip
+
+      - name: Restore TASM toolchain from secret
+        env:
+          TASM_TOOLCHAIN_ZIP_B64: ${{ secrets.TASM_TOOLCHAIN_ZIP_B64 }}
+        run: |
+          if [ -z "$TASM_TOOLCHAIN_ZIP_B64" ]; then
+            echo "::error::Repository secret TASM_TOOLCHAIN_ZIP_B64 is not set."
+            echo "::error::TASM 4.1, TLINK 3.01 and Borland MAKE 4.0 are proprietary (Borland/Embarcadero)."
+            echo "::error::Create a zip containing TASM.EXE, TLINK.EXE, MAKE.EXE (and any required DLLs/overlays),"
+            echo "::error::base64-encode it, and add it as a repo secret named TASM_TOOLCHAIN_ZIP_B64:"
+            echo "::error::    base64 -i tasm-toolchain.zip | pbcopy"
+            echo "::error::    gh secret set TASM_TOOLCHAIN_ZIP_B64 --repo esaruoho/impulse-tracker --body \"\$(pbpaste)\""
+            exit 1
+          fi
+          mkdir -p tools
+          echo "$TASM_TOOLCHAIN_ZIP_B64" | base64 -d > tools/tasm-toolchain.zip
+          unzip -o tools/tasm-toolchain.zip -d tools/
+          ls -la tools/
+
+      - name: Write DOSBox-X build script
+        run: |
+          cat > build.conf <<'EOF'
+          [sdl]
+          autolock=false
+          [dosbox]
+          machine=svga_s3
+          [cpu]
+          cycles=max
+          [autoexec]
+          mount c .
+          mount t ./tools
+          set PATH=%PATH%;T:\
+          c:
+          echo === Running MAKE ===
+          make -f MAKEFILE.MAK
+          if errorlevel 1 goto fail
+          echo === Build OK ===
+          echo BUILD_OK > C:\BUILD_STATUS.TXT
+          exit
+          :fail
+          echo === Build FAILED ===
+          echo BUILD_FAIL > C:\BUILD_STATUS.TXT
+          exit
+          EOF
+
+      - name: Build IT.EXE in DOSBox-X
+        run: |
+          dosbox-x -conf build.conf -silent -nolog -fastlaunch -exit || true
+          echo "--- BUILD_STATUS.TXT ---"
+          cat BUILD_STATUS.TXT 2>/dev/null || echo "(missing)"
+          if ! grep -q BUILD_OK BUILD_STATUS.TXT 2>/dev/null; then
+            echo "::error::MAKE reported failure inside DOSBox-X."
+            ls -la *.OBJ *.obj 2>/dev/null || true
+            exit 1
+          fi
+          ls -la IT.EXE IT.exe 2>/dev/null || { echo "::error::IT.EXE was not produced"; exit 1; }
+
+      - name: Upload IT.EXE artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: IT-EXE-${{ github.sha }}
+          path: |
+            IT.EXE
+            IT.exe
+            *.OBJ
+            *.obj
+          if-no-files-found: error
