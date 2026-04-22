@@ -21,3 +21,7 @@
 # network driver
 *.NET
 *.net
+
+# macOS
+.DS_Store
+VSound/.DS_Store
