@@ -3845,6 +3845,10 @@ RenderedFilename        DB      14 Dup (0)
 PatternNamePrefix       DB      "Pattern "
 WAV_ImportedMsg         DB      "Pattern imported as sample ", 0FDh, "D", 0
 WAV_ImportFailedMsg     DB      "Could not import rendered pattern", 0
+WAV_FailNoSlot          DB      "Import failed: no free sample slot", 0
+WAV_FailOpen            DB      "Import failed: cannot open .NNN file", 0
+WAV_FailHeader          DB      "Import failed: bad WAV header", 0
+WAV_FailAlloc           DB      "Import failed: out of memory for sample", 0
 
 Proc            Music_ImportRenderedPattern Far
 
@@ -3898,7 +3902,7 @@ WAVI_CopyName2:
                 ; --- Find next empty sample slot -----------------------------
                 Call    Music_GetNumberOfSamples ; AX = highest used
                 Cmp     AX, 99
-                JAE     WAVI_Failed
+                JAE     WAVI_FailNoSlot
                 Inc     AX                       ; next free slot, 1-based
                 Mov     [CS:WAV_TargetSlot], AX
 
@@ -3908,7 +3912,7 @@ WAVI_CopyName2:
                 Mov     DX, Offset RenderedFilename
                 Mov     AX, 3D00h
                 Int     21h
-                JC      WAVI_Failed
+                JC      WAVI_FailOpen
                 Mov     [CS:WAV_FileHandle], AX
 
                 ; --- Read 44-byte WAV header ---------------------------------
@@ -3920,9 +3924,9 @@ WAVI_CopyName2:
 
                 ; Validate RIFF/WAVE
                 Cmp     DWord Ptr [CS:WAVHeader], 'FFIR'
-                JNE     WAVI_CloseFail
+                JNE     WAVI_CloseHeaderFail
                 Cmp     DWord Ptr [CS:WAVHeader+8], 'EVAW'
-                JNE     WAVI_CloseFail
+                JNE     WAVI_CloseHeaderFail
 
                 ; Extract format params
                 Movzx   EAX, Word Ptr [CS:WAVHeader+22]
@@ -3941,7 +3945,7 @@ WAVI_CopyName2:
                 Call    Music_AllocateSample    ; ES:DI = buffer
                 Mov     AX, ES
                 Test    AX, AX
-                JZ      WAVI_CloseFail
+                JZ      WAVI_CloseAllocFail
 
                 ; --- Stream PCM in 16KB chunks via Music_GetSampleLocation ---
                 ; Music_GetSampleLocation steps in 16KB pages (CH = page number).
@@ -4104,14 +4108,41 @@ WAVI_NoShr2:
                 ClC
                 Ret
 
-WAVI_CloseFail:
+WAVI_CloseHeaderFail:
                 Mov     BX, [CS:WAV_FileHandle]
                 Mov     AH, 3Eh
                 Int     21h
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_FailHeader
+                Jmp     WAVI_FailedTail
+
+WAVI_CloseAllocFail:
+                Mov     BX, [CS:WAV_FileHandle]
+                Mov     AH, 3Eh
+                Int     21h
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_FailAlloc
+                Jmp     WAVI_FailedTail
+
+WAVI_FailNoSlot:
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_FailNoSlot
+                Jmp     WAVI_FailedTail
+
+WAVI_FailOpen:
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_FailOpen
+                Jmp     WAVI_FailedTail
+
 WAVI_Failed:
                 Push    CS
                 Pop     DS
                 Mov     SI, Offset WAV_ImportFailedMsg
+WAVI_FailedTail:
                 Xor     AX, AX
                 Call    SetInfoLine
                 Pop     ES
