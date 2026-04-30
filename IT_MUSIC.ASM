@@ -4129,7 +4129,8 @@ WAVI_NoShr2:
                 Pop     DS
                 Mov     SI, Offset WAV_ImportedMsg
                 Mov     AX, [CS:WAV_TargetSlot]
-                Call    SetInfoLine
+                Mov     BX, 500
+                Call    SetInfoLine2
 
                 Mov     AX, [CS:WAV_TargetSlot]
                 Pop     ES
@@ -4180,7 +4181,8 @@ WAVI_Failed:
                 Mov     SI, Offset WAV_ImportFailedMsg
 WAVI_FailedTail:
                 Xor     AX, AX
-                Call    SetInfoLine
+                Mov     BX, 500
+                Call    SetInfoLine2
                 Pop     ES
                 Pop     DS
                 Pop     BP
