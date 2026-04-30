@@ -2561,6 +2561,29 @@ EndP            Music_GetWaveForm
 
 Proc            Music_Poll Far
 
+                ; --- Single-press WAV-render auto-finalize check -----
+                ; Trigger Music_ToggleWAVRender (leave + import) if:
+                ;   render mode is on, auto-finalize is armed,
+                ;   PlayMode == 0 (playback ended), and we've waited
+                ;   a few frames so WAVDRV's Poll(AX=0) has closed file.
+                Cmp     Byte Ptr [CS:WAV_RenderMode], 0
+                JE      Music_Poll_Drive
+                Cmp     Byte Ptr [CS:WAV_AutoFinalize], 0
+                JE      Music_Poll_Drive
+                Cmp     Word Ptr [CS:PlayMode], 0
+                JNE     Music_Poll_Drive
+                Inc     Byte Ptr [CS:WAV_FinalizeDelay]
+                Cmp     Byte Ptr [CS:WAV_FinalizeDelay], 3
+                JB      Music_Poll_Drive
+
+                ; Disarm and run leave + import (re-enters Toggle proc)
+                Mov     Byte Ptr [CS:WAV_AutoFinalize], 0
+                Mov     Byte Ptr [CS:WAV_FinalizeDelay], 0
+                Xor     AX, AX
+                Call    Music_ToggleWAVRender
+                Ret
+
+Music_Poll_Drive:
                 Mov     AX, CS:PlayMode
                 Mov     BX, CS:CurrentPattern
                 Jmp     [DriverPoll]
@@ -3713,6 +3736,8 @@ EndP            Music_LoadDriver
 
 WAV_DriverName          DB      "ITWAV.DRV", 0
 WAV_RenderMode          DB      0
+WAV_AutoFinalize        DB      0       ; 1 = single-press flow armed
+WAV_FinalizeDelay       DB      0       ; frame counter after PlayMode=0
 WAV_PendingPattern      DW      0
 WAV_SavedDriverName     DD      0
 
@@ -3754,6 +3779,11 @@ Proc            Music_ToggleWAVRender Far       ; AX = pattern (on enter)
                 Xor     CX, CX
                 Call    Music_PlayPattern
 
+                ; Arm async finalize: Music_Poll will trigger leave+import
+                ; once playback stops and WAVDRV has closed its file.
+                Mov     Byte Ptr [CS:WAV_AutoFinalize], 1
+                Mov     Byte Ptr [CS:WAV_FinalizeDelay], 0
+
                 Jmp     WAV_ToggleDone
 
 WAV_LeaveMode:
@@ -3770,6 +3800,8 @@ WAV_LeaveMode:
                 Call    Music_SoundCardLoadAllSamples
 
                 Mov     Byte Ptr [CS:WAV_RenderMode], 0
+                Mov     Byte Ptr [CS:WAV_AutoFinalize], 0
+                Mov     Byte Ptr [CS:WAV_FinalizeDelay], 0
 
                 Call    Music_ImportRenderedPattern
 
@@ -3911,44 +3943,47 @@ WAVI_CopyName2:
                 Test    AX, AX
                 JZ      WAVI_CloseFail
 
-                ; --- Stream PCM in 32KB chunks via Music_GetSampleLocation ---
+                ; --- Stream PCM in 16KB chunks via Music_GetSampleLocation ---
+                ; Music_GetSampleLocation steps in 16KB pages (CH = page number).
+                ; We ignore its returned ECX -- length is unset until later.
                 Mov     EBP, [CS:WAV_DataLength]    ; bytes remaining
-                Xor     CH, CH                     ; CH = page number (0..N)
+                Xor     CH, CH                      ; page 0
 WAVI_ReadLoop:
                 Test    EBP, EBP
                 JZ      WAVI_ReadDone
 
                 Push    CX                      ; save page number
                 Mov     AX, [CS:WAV_TargetSlot] ; 1-based
-                Call    Music_GetSampleLocation ; DS:ESI = chunk dest, ECX = chunk len
-                Pop     CX                      ; restore CH (page)
+                Call    Music_GetSampleLocation ; DS:ESI = page base
+                Pop     CX                      ; restore CH
+                JC      WAVI_ReadDone           ; safety: bail on failure
 
-                ; ECX returned = bytes available in this page
-                ; Cap at min(ECX, EBP, 32768)
-                Mov     EAX, ECX
-                Cmp     EAX, EBP
-                JBE     WAVI_CapOK
+                ; Chunk size = min(EBP, 16384)
                 Mov     EAX, EBP
-WAVI_CapOK:
-                Cmp     EAX, 32768
-                JBE     WAVI_CapOK2
-                Mov     EAX, 32768
-WAVI_CapOK2:
-                ; AX = bytes to read this iteration
-                Mov     CX, AX
-                Mov     DX, SI                  ; DS:DX = chunk write pointer
+                Cmp     EAX, 16384
+                JBE     WAVI_ChunkSize
+                Mov     EAX, 16384
+WAVI_ChunkSize:
+                Mov     CX, AX                  ; CX = bytes to read
+                Mov     DX, SI                  ; DS:DX = page base (SI = 0)
                 Mov     BX, [CS:WAV_FileHandle]
-                Push    AX
+                Push    AX                      ; save requested length
                 Mov     AH, 3Fh
-                Int     21h
-                Pop     AX
+                Int     21h                     ; AX = bytes read
+                Pop     CX                      ; CX = requested length
 
+                ; If we read less than requested, EOF/error -- bail with what we got
+                Cmp     AX, CX
+                JNE     WAVI_ReadShort
                 Movzx   EAX, AX
                 Sub     EBP, EAX
-                Inc     CH                      ; next page
-                Cmp     CH, 32                  ; safety: cap at 32 pages = 1MB
+                Inc     CH                      ; advance to next 16KB page
+                Cmp     CH, 64                  ; safety: cap at 64 pages = 1MB
                 JAE     WAVI_ReadDone
                 Jmp     WAVI_ReadLoop
+WAVI_ReadShort:
+                Movzx   EAX, AX
+                Sub     EBP, EAX                ; account for partial read
 WAVI_ReadDone:
 
                 ; --- Close file ----------------------------------------------
