@@ -55,3 +55,8 @@ BUILD_ST.TXT
 MAKE.LOG
 MDATA.LOG
 DIAG*.LOG
+
+# Local test artifacts
+testp2.conf
+OUTPUT.*
+004_*.it

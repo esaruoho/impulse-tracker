@@ -75,6 +75,7 @@ include network.inc
         Global  Music_GetDisplayVariables:Far
         Global  Music_AutoDetectSoundCard:Far
         Global  Music_ToggleWAVRender:Far
+        Global  Music_ImportRenderedPattern:Far
 
         Global  Music_Poll:Far
 
@@ -3770,6 +3771,8 @@ WAV_LeaveMode:
 
                 Mov     Byte Ptr [CS:WAV_RenderMode], 0
 
+                Call    Music_ImportRenderedPattern
+
 WAV_ToggleDone:
                 Pop     ES
                 Pop     DS
@@ -3781,6 +3784,314 @@ WAV_ToggleDone:
                 Ret
 
 EndP            Music_ToggleWAVRender
+
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+;
+; Music_ImportRenderedPattern - load <songname>.NNN into next free sample slot
+; and auto-create an instrument that points at it.
+;
+; Reads [CS:WAV_PendingPattern] for the pattern number, builds <song>.NNN from
+; the song's filename, opens the WAV, parses the standard 44-byte RIFF header,
+; allocates a sample slot via Music_AllocateSample, streams the PCM in 32KB
+; chunks via Music_GetSampleLocation (handles both conventional RAM and EMS
+; paging), populates the IMPS sample header (length, c5speed, name, format
+; flags), then calls Music_AssignSampleToInstrument to auto-create the
+; instrument with all 120 notes pointing at the new sample.
+;
+; Returns: CF=0 success, AX=slot used; CF=1 on any failure.
+;
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+
+WAVHeader               DB      44 Dup (0)
+WAV_TargetSlot          DW      0
+WAV_FileHandle          DW      0
+WAV_BitsPerSample       DW      0
+WAV_Channels            DW      0
+WAV_SampleRate          DD      0
+WAV_DataLength          DD      0
+RenderedFilename        DB      14 Dup (0)
+PatternNamePrefix       DB      "Pattern "
+WAV_ImportedMsg         DB      "Pattern imported as sample ", 0FDh, "D", 0
+WAV_ImportFailedMsg     DB      "Could not import rendered pattern", 0
+
+Proc            Music_ImportRenderedPattern Far
+
+                Pushf
+                Push    BX
+                Push    CX
+                Push    DX
+                Push    SI
+                Push    DI
+                Push    BP
+                Push    DS
+                Push    ES
+
+                ; --- Build filename <song>.NNN -------------------------------
+                Call    D_GetFileName           ; DS:SI = song's FileName buffer
+                Push    CS
+                Pop     ES
+                Mov     DI, Offset RenderedFilename
+                Mov     CX, 8
+WAVI_CopyName1:
+                LodsB
+                Test    AL, AL
+                JZ      WAVI_CopyName2
+                Cmp     AL, '.'
+                JE      WAVI_CopyName2
+                StosB
+                Loop    WAVI_CopyName1
+WAVI_CopyName2:
+                Mov     AL, '.'
+                StosB
+
+                ; Append 3-digit pattern number
+                Mov     AX, [CS:WAV_PendingPattern]
+                Mov     BX, 100
+                Xor     DX, DX
+                Div     BX
+                Add     AL, '0'
+                StosB
+                Mov     AX, DX
+                Mov     BX, 10
+                Xor     DX, DX
+                Div     BX
+                Add     AL, '0'
+                StosB
+                Mov     AL, DL
+                Add     AL, '0'
+                StosB
+                Xor     AL, AL
+                StosB
+
+                ; --- Find next empty sample slot -----------------------------
+                Call    Music_GetNumberOfSamples ; AX = highest used
+                Cmp     AX, 99
+                JAE     WAVI_Failed
+                Inc     AX                       ; next free slot, 1-based
+                Mov     [CS:WAV_TargetSlot], AX
+
+                ; --- Open file -----------------------------------------------
+                Push    CS
+                Pop     DS
+                Mov     DX, Offset RenderedFilename
+                Mov     AX, 3D00h
+                Int     21h
+                JC      WAVI_Failed
+                Mov     [CS:WAV_FileHandle], AX
+
+                ; --- Read 44-byte WAV header ---------------------------------
+                Mov     BX, AX
+                Mov     AH, 3Fh
+                Mov     CX, 44
+                Mov     DX, Offset WAVHeader
+                Int     21h
+
+                ; Validate RIFF/WAVE
+                Cmp     DWord Ptr [CS:WAVHeader], 'FFIR'
+                JNE     WAVI_CloseFail
+                Cmp     DWord Ptr [CS:WAVHeader+8], 'EVAW'
+                JNE     WAVI_CloseFail
+
+                ; Extract format params
+                Movzx   EAX, Word Ptr [CS:WAVHeader+22]
+                Mov     [CS:WAV_Channels], AX
+                Mov     EAX, DWord Ptr [CS:WAVHeader+24]
+                Mov     [CS:WAV_SampleRate], EAX
+                Movzx   EAX, Word Ptr [CS:WAVHeader+34]
+                Mov     [CS:WAV_BitsPerSample], AX
+                Mov     EAX, DWord Ptr [CS:WAVHeader+40]
+                Mov     [CS:WAV_DataLength], EAX
+
+                ; --- Allocate sample buffer ----------------------------------
+                Mov     AX, [CS:WAV_TargetSlot]
+                Dec     AX                      ; AllocateSample uses 0-based
+                Mov     EDX, [CS:WAV_DataLength]
+                Call    Music_AllocateSample    ; ES:DI = buffer
+                Mov     AX, ES
+                Test    AX, AX
+                JZ      WAVI_CloseFail
+
+                ; --- Stream PCM in 32KB chunks via Music_GetSampleLocation ---
+                Mov     EBP, [CS:WAV_DataLength]    ; bytes remaining
+                Xor     CH, CH                     ; CH = page number (0..N)
+WAVI_ReadLoop:
+                Test    EBP, EBP
+                JZ      WAVI_ReadDone
+
+                Push    CX                      ; save page number
+                Mov     AX, [CS:WAV_TargetSlot] ; 1-based
+                Call    Music_GetSampleLocation ; DS:ESI = chunk dest, ECX = chunk len
+                Pop     CX                      ; restore CH (page)
+
+                ; ECX returned = bytes available in this page
+                ; Cap at min(ECX, EBP, 32768)
+                Mov     EAX, ECX
+                Cmp     EAX, EBP
+                JBE     WAVI_CapOK
+                Mov     EAX, EBP
+WAVI_CapOK:
+                Cmp     EAX, 32768
+                JBE     WAVI_CapOK2
+                Mov     EAX, 32768
+WAVI_CapOK2:
+                ; AX = bytes to read this iteration
+                Mov     CX, AX
+                Mov     DX, SI                  ; DS:DX = chunk write pointer
+                Mov     BX, [CS:WAV_FileHandle]
+                Push    AX
+                Mov     AH, 3Fh
+                Int     21h
+                Pop     AX
+
+                Movzx   EAX, AX
+                Sub     EBP, EAX
+                Inc     CH                      ; next page
+                Cmp     CH, 32                  ; safety: cap at 32 pages = 1MB
+                JAE     WAVI_ReadDone
+                Jmp     WAVI_ReadLoop
+WAVI_ReadDone:
+
+                ; --- Close file ----------------------------------------------
+                Mov     BX, [CS:WAV_FileHandle]
+                Mov     AH, 3Eh
+                Int     21h
+
+                ; --- Populate IMPS sample header in SongDataArea -------------
+                Mov     DS, CS:SongDataArea
+                        Assume DS:Nothing
+                Mov     BX, [CS:WAV_TargetSlot]
+                Dec     BX                      ; 0-based
+                Add     BX, BX
+                Mov     SI, [DS:64912+BX]
+
+                ; Signature
+                Mov     DWord Ptr [DS:SI], 'SPMI'   ; "IMPS" little-endian
+
+                ; Format flag at +12h: bit 0 = present (already set by AllocateSample)
+                ;                      bit 1 = 16-bit
+                ;                      bit 2 = stereo
+                Mov     AL, [DS:SI+12h]
+                Or      AL, 1
+                Cmp     Word Ptr [CS:WAV_BitsPerSample], 16
+                JNE     WAVI_NotSixteen
+                Or      AL, 2
+WAVI_NotSixteen:
+                Cmp     Word Ptr [CS:WAV_Channels], 2
+                JNE     WAVI_NotStereo
+                Or      AL, 4
+WAVI_NotStereo:
+                Mov     [DS:SI+12h], AL
+
+                Mov     Byte Ptr [DS:SI+13h], 64    ; default vol
+                Mov     Byte Ptr [DS:SI+11h], 64    ; global vol
+                Mov     Byte Ptr [DS:SI+2Eh], 1     ; Cvt = signed
+                Mov     Byte Ptr [DS:SI+2Fh], 32    ; default panning (32 = center, no auto)
+
+                ; Length in samples
+                Mov     EAX, [CS:WAV_DataLength]
+                Cmp     Word Ptr [CS:WAV_BitsPerSample], 16
+                JNE     WAVI_NoShr16
+                ShR     EAX, 1
+WAVI_NoShr16:
+                Cmp     Word Ptr [CS:WAV_Channels], 2
+                JNE     WAVI_NoShr2
+                ShR     EAX, 1
+WAVI_NoShr2:
+                Mov     [DS:SI+30h], EAX
+
+                ; C5 speed
+                Mov     EAX, [CS:WAV_SampleRate]
+                Mov     [DS:SI+3Ch], EAX
+
+                ; Loops disabled
+                Mov     DWord Ptr [DS:SI+34h], 0
+                Mov     DWord Ptr [DS:SI+38h], 0
+                Mov     DWord Ptr [DS:SI+40h], 0
+                Mov     DWord Ptr [DS:SI+44h], 0
+
+                ; Sample name "Pattern NNN" at +14h, 26 bytes total
+                Push    DS
+                Pop     ES
+                Lea     DI, [SI+14h]
+                Mov     CX, 26
+                Mov     AL, 0
+                Rep     StosB
+
+                Lea     DI, [SI+14h]
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset PatternNamePrefix
+                Mov     CX, 8
+                Rep     MovsB
+
+                Mov     AX, [CS:WAV_PendingPattern]
+                Mov     BX, 100
+                Xor     DX, DX
+                Div     BX
+                Add     AL, '0'
+                StosB
+                Mov     AX, DX
+                Mov     BX, 10
+                Xor     DX, DX
+                Div     BX
+                Add     AL, '0'
+                StosB
+                Mov     AL, DL
+                Add     AL, '0'
+                StosB
+
+                ; --- Assign to instrument ------------------------------------
+                Mov     BX, [CS:WAV_TargetSlot]
+                Call    Music_AssignSampleToInstrument
+
+                ; --- Upload to active driver ---------------------------------
+                Mov     AX, [CS:WAV_TargetSlot]
+                Dec     AX                      ; SoundCardLoadSample uses 0-based
+                Call    Music_SoundCardLoadSample
+
+                ; --- Status message ------------------------------------------
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_ImportedMsg
+                Mov     AX, [CS:WAV_TargetSlot]
+                Call    SetInfoLine
+
+                Mov     AX, [CS:WAV_TargetSlot]
+                Pop     ES
+                Pop     DS
+                Pop     BP
+                Pop     DI
+                Pop     SI
+                Pop     DX
+                Pop     CX
+                Pop     BX
+                Popf
+                ClC
+                Ret
+
+WAVI_CloseFail:
+                Mov     BX, [CS:WAV_FileHandle]
+                Mov     AH, 3Eh
+                Int     21h
+WAVI_Failed:
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_ImportFailedMsg
+                Xor     AX, AX
+                Call    SetInfoLine
+                Pop     ES
+                Pop     DS
+                Pop     BP
+                Pop     DI
+                Pop     SI
+                Pop     DX
+                Pop     CX
+                Pop     BX
+                Popf
+                StC
+                Ret
+
+EndP            Music_ImportRenderedPattern
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 
