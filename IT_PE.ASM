@@ -622,6 +622,10 @@ ENDIF
                         DW      1800h           ; Alt 'O'
                         DW      Offset PEFunction_BlockOverwrite
 
+                        DB      1               ; Ctrl 'O'
+                        DW      0Fh             ; Ctrl-O = ASCII 15
+                        DW      Offset PEFunction_RenderPattern
+
                         DB      1
                         DW      1900h           ; Alt 'P'
                         DW      Offset PEFunction_BlockPaste
@@ -3879,6 +3883,30 @@ PEFunction_PickUp1:
                 Ret
 
 EndP            PEFunction_PickUp
+
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+;
+; PEFunction_RenderPattern - Ctrl-O handler
+;
+; Renders the currently selected pattern via the active sound driver. When the
+; active driver is the WAV writer (ITWAV.DRV), Music_PlayPattern routes mixed
+; output to <songname>.NNN where NNN is the pattern number. With any other
+; driver, this just plays the pattern (same as F6).
+;
+; This is phase 1 of the Schism-style "pattern-to-sample" feature. Phases 2
+; (auto-driver-swap) and 3 (auto-sample-import) are documented in
+; InternalDocumentation/PATTERN_TO_SAMPLE.md.
+;
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+
+Proc            PEFunction_RenderPattern Far
+
+                Call    Glbl_F6
+
+                Mov     AX, 1
+                Ret
+
+EndP            PEFunction_RenderPattern
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 
