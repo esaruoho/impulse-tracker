@@ -1,5 +1,2 @@
-tasm32 /m /ut310 /la vsnd
-tlink /3 vsnd
-execom vsnd itvsound.drv
-copy itvsound.drv ..
-
+@echo off
+echo Skipping MV.BAT -- requires TASM32 (MMX/3DNow variant)

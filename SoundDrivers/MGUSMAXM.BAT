@@ -1,5 +1,2 @@
-tasm32 /m /ut310 gusmaxmx
-tlink /3 gusmaxmx
-execom gusmaxmx itgusmax.mmx
-copy itgusmax.mmx ..
-
+@echo off
+echo Skipping MGUSMAXM.BAT -- requires TASM32 (MMX/3DNow variant)

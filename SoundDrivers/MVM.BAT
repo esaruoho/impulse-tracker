@@ -1,5 +1,2 @@
-tasm32 /m /ut310 /la vsndmmx
-tlink /3 /m vsndmmx
-execom vsndmmx itvsound.mmx
-copy itvsound.mmx ..
-
+@echo off
+echo Skipping MVM.BAT -- requires TASM32 (MMX/3DNow variant)
