@@ -3775,6 +3775,42 @@ Proc            Music_ToggleWAVRender Far       ; AX = pattern (on enter)
 
                 Mov     Byte Ptr [CS:WAV_RenderMode], 1
 
+                ; Build a unique basename REN<NNN> for this render and
+                ; copy it into the song's FileName buffer so WAVDRV's
+                ; CopyFileName picks it up. This guarantees each Ctrl-O
+                ; produces a distinct file that won't clobber prior renders.
+                Inc     Word Ptr [CS:WAV_RenderCounter]
+                Mov     AX, [CS:WAV_RenderCounter]
+                Xor     DX, DX
+                Mov     BX, 100
+                Div     BX                      ; AL = hundreds, DX = remainder
+                Add     AL, '0'
+                Mov     [CS:WAV_RenderBasename+3], AL
+                Mov     AX, DX
+                Mov     BX, 10
+                Xor     DX, DX
+                Div     BX
+                Add     AL, '0'
+                Mov     [CS:WAV_RenderBasename+4], AL
+                Mov     AL, DL
+                Add     AL, '0'
+                Mov     [CS:WAV_RenderBasename+5], AL
+
+                ; Copy basename into FileName buffer (in DiskDataArea segment)
+                Push    DS
+                Push    ES
+                Call    D_GetFileName           ; DS:SI = FileName buffer
+                Push    DS
+                Pop     ES
+                Mov     DI, SI                  ; ES:DI = FileName dest
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_RenderBasename
+                Mov     CX, 8                   ; copy 7 chars + null
+                Rep     MovsB
+                Pop     ES
+                Pop     DS
+
                 Mov     AX, [CS:WAV_PendingPattern]
                 Xor     CX, CX
                 Call    Music_PlayPattern
@@ -3843,6 +3879,9 @@ WAV_SampleRate          DD      0
 WAV_DataLength          DD      0
 RenderedFilename        DB      14 Dup (0)
 PatternNamePrefix       DB      "Pattern "
+WAV_OutputName          DB      "OUTPUT"
+WAV_RenderCounter       DW      0
+WAV_RenderBasename      DB      "REN000", 0, 0
 WAV_ImportedMsg         DB      "Pattern imported as sample ", 0FDh, "D", 0
 WAV_ImportFailedMsg     DB      "Could not import rendered pattern", 0
 WAV_FailNoSlot          DB      "Import failed: no free sample slot", 0
@@ -3862,21 +3901,18 @@ Proc            Music_ImportRenderedPattern Far
                 Push    DS
                 Push    ES
 
-                ; --- Build filename <song>.NNN -------------------------------
-                Call    D_GetFileName           ; DS:SI = song's FileName buffer
+                ; --- Build filename REN<NNN>.<PPP> ---------------------------
+                ; Use the unique basename we wrote into FileName at enter-mode
+                ; (cached in WAV_RenderBasename) plus the rendered pattern's
+                ; 3-digit number as extension.
+                Push    CS
+                Pop     DS
                 Push    CS
                 Pop     ES
+                Mov     SI, Offset WAV_RenderBasename
                 Mov     DI, Offset RenderedFilename
-                Mov     CX, 8
-WAVI_CopyName1:
-                LodsB
-                Test    AL, AL
-                JZ      WAVI_CopyName2
-                Cmp     AL, '.'
-                JE      WAVI_CopyName2
-                StosB
-                Loop    WAVI_CopyName1
-WAVI_CopyName2:
+                Mov     CX, 6
+                Rep     MovsB                   ; copy 6 chars (e.g. "REN001")
                 Mov     AL, '.'
                 StosB
 
