@@ -35,23 +35,40 @@ subdirectory
 
 ## Building on macOS / Linux (esaruoho fork)
 
-This fork (`esaruoho/impulse-tracker`) builds `IT.EXE` cross-platform via
-DOSBox-X. The required Borland binaries are not redistributable, but a public
-mirror exists at [zajo/TASM](https://github.com/zajo/TASM) — TASM 4.1, Turbo
-Link 7.1, Borland MAKE 4.0. The 16-bit DPMI variant `TASMX.EXE` is required for
-`IT_MDATA.asm` (the stock `TASM.EXE` runs out of memory on its large data
-tables); the build setup uses `TASMX.EXE` renamed to `TASM.EXE`.
+This fork (`esaruoho/impulse-tracker`) builds `IT.EXE` **and all 42+ drivers**
+cross-platform via DOSBox-X. The required Borland binaries are not
+redistributable, but two public GitHub mirrors cover the toolchain:
 
-Note: `IT.EXE` builds with TLINK 7.1, but the `SoundDrivers/M*.BAT` scripts do
-not — TLINK 7.1 enforces a program entry point that the driver objects do not
-declare. Driver builds are blocked pending TLINK 3.x or an entry-point
-workaround.
+- **TASM 4.1 + Borland MAKE 4.0** from [zajo/TASM](https://github.com/zajo/TASM).
+  The 16-bit DPMI variant `TASMX.EXE` is required for `IT_MDATA.asm` (the stock
+  `TASM.EXE` runs out of memory on its large data tables); rename `TASMX.EXE`
+  to `TASM.EXE` in your toolchain directory.
+- **TLINK 3.01** from [nolanvenhola/zeliard2026](https://github.com/nolanvenhola/zeliard2026)
+  at `3_Assembly/tasm/tool/tasm201/TLINK.EXE` (53,510 bytes, 1990 Borland).
+  Skip the TLINK 7.1 that ships with `zajo/TASM` — it rejects driver objects
+  with `Fatal: No program entry point`. TLINK 3.x links both `IT.EXE` and every
+  driver without modification. (Alternate source:
+  [darkhani/kstools](https://github.com/darkhani/kstools).)
 
-See [CLAUDE.md](CLAUDE.md) for step-by-step build instructions.
+Drop both into `tools-local/` (gitignored) and run `BUILDALL.BAT` from the repo
+root inside DOSBox-X. The `buildall.conf.sample` file ships a working DOSBox-X
+config — copy it to `buildall.conf` (also gitignored), then:
+
+```
+dosbox-x -conf buildall.conf -fastlaunch -exit -nogui -nomenu
+```
+
+Total wall time: ~57 seconds on an M1 Mac. Outputs: `IT.EXE` (462 KB), 42
+sound drivers (`IT*.DRV`), `ITIPX.NET`, plus `MAKE.LOG`, `DRV_SND.LOG`,
+`DRV_NET.LOG`.
+
+See [CLAUDE.md](CLAUDE.md) for full architecture / patch / contribution
+documentation.
 
 GitHub Actions CI: see `.github/workflows/build.yml`. Requires the toolchain
 to be uploaded as 13 base64-chunked repo secrets `TASM_TOOLCHAIN_B64_01`
 through `TASM_TOOLCHAIN_B64_13` (single-secret 48 KB limit forces chunking).
+Bundle TASM, TASMX (renamed to TASM), MAKE, **and TLINK 3.01** into the ZIP.
 
 ## Quick File Overview
 

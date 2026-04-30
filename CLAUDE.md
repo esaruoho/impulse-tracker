@@ -11,13 +11,19 @@ Full Impulse Tracker 2.15 source, BSD-3-Clause. Originally released 2014 on Bitb
 ## Toolchain (from README + MAKEFILE.MAK)
 
 - Turbo Assembler v4.1 (`TASM /m /uT310 /jSMART`)
-- Turbo Link — historically v3.01 per upstream README; the public `zajo/TASM` mirror used by this fork ships **TLINK 7.1** instead. `IT.EXE` builds fine on TLINK 7.1, but the per-driver `M*.BAT` scripts do not (TLINK 7.1 enforces a program entry point that the driver objects do not declare). Driver builds therefore require either an authentic TLINK 3.x or a small entry-point workaround.
+- **Turbo Link v3.01** — links both `IT.EXE` and every driver
 - Borland MAKE v4.0
 - DOS (or DOSBox-X / vDosPlus / real hardware)
 
-**TASMX rename trick.** `IT_MDATA.ASM` has data tables large enough to exhaust real-mode `TASM.EXE`. The 16-bit DPMI variant `TASMX.EXE` (also in `zajo/TASM`) handles it. The convention used by this fork's CI and local setups is to **rename `TASMX.EXE` to `TASM.EXE`** so the unmodified `MAKEFILE.MAK` (`TASM /m /uT310 /jSMART $*.asm`) picks up the DPMI build.
+**Critical: TLINK 3.x, not 7.1.** The public [`zajo/TASM`](https://github.com/zajo/TASM) mirror ships TLINK 7.1, which links `IT.EXE` fine but **rejects every driver** with `Fatal: No program entry point` — driver objects don't declare an entry point because `EXECOM.COM` strips the EXE header at conversion time, and TLINK 7.1 (1996) treats this as fatal where TLINK 3.x (1990) only warned. Use TLINK 3.x and everything builds.
 
-**Public toolchain mirror.** [`zajo/TASM`](https://github.com/zajo/TASM) ships TASM 4.1, TASMX, TLINK 7.1, and Borland MAKE 4.0 — a viable stand-in for the original Borland CDs and the basis for this fork's reproducible builds.
+**Public TLINK 3.01 source.** [`nolanvenhola/zeliard2026`](https://github.com/nolanvenhola/zeliard2026) at `3_Assembly/tasm/tool/tasm201/TLINK.EXE` — 53,510 bytes, banner "Turbo Link Version 3.01 Copyright (c) 1987, 1990 Borland International". A second copy lives at [`darkhani/kstools`](https://github.com/darkhani/kstools) (`TLINK.EXE`, 53,414 bytes). Drop either into `tools-local/` (overwriting any TLINK 7.1 from `zajo/TASM`).
+
+**TASMX rename trick.** `IT_MDATA.ASM` has data tables large enough to exhaust real-mode `TASM.EXE`. The 16-bit DPMI variant `TASMX.EXE` (in `zajo/TASM`) handles it. Convention: **rename `TASMX.EXE` to `TASM.EXE`** so the unmodified `MAKEFILE.MAK` (`TASM /m /uT310 /jSMART $*.asm`) picks up the DPMI build.
+
+**Public TASM 4.1 source.** [`zajo/TASM`](https://github.com/zajo/TASM) ships TASM 4.1, TASMX, and Borland MAKE 4.0. Skip its TLINK 7.1 in favour of TLINK 3.01 from the source above.
+
+**Verified build time.** Full `IT.EXE` + 42 sound drivers + 1 network driver = **~57 seconds** in DOSBox-X (`cycles=max`, M1 Mac).
 
 `source.lst` is the link response file consumed by TLINK — do **not** add it to `.gitignore`; the existing `.gitignore` explicitly unignores it.
 
@@ -91,7 +97,7 @@ Three convenience batch files are included for full rebuilds inside DOSBox-X / D
 
 Run `BUILDALL.BAT` from the repo root with TASM/TLINK/MAKE on `PATH`. `EXECOM.COM` is shipped inside `SoundDrivers/` and `Network/`, so no extra tooling is needed.
 
-> **Status:** `IT.EXE` builds cleanly with the `zajo/TASM` toolchain (TLINK 7.1). Driver builds invoked by the two `BUILDALL.BAT`s currently fail at the TLINK step — TLINK 7.1 demands an entry point that the driver objects do not declare. The `BUILDALL.BAT`s are committed as scaffolding and will work as-is once a TLINK 3.x is dropped into the toolchain (or when an entry-point workaround lands in the per-driver `M*.BAT`s). Treat driver-build output as advisory until then.
+> **Status:** Verified working end-to-end with TLINK 3.01 in `tools-local/`. Builds `IT.EXE` (462,082 bytes), 42 sound drivers (`*.DRV` in repo root), and `ITIPX.NET` in ~57 seconds.
 
 A `buildall.conf.sample` is included for one-shot DOSBox-X local builds. Copy it to `buildall.conf` (gitignored — paths are machine-specific) and run:
 
@@ -101,7 +107,7 @@ dosbox-x -conf buildall.conf -fastlaunch -exit -nogui -nomenu
 
 It mounts the repo as `C:`, `tools-local/` as `T:`, runs `BUILDALL.BAT`, and writes `MAKE.LOG`, `DRV_SND.LOG`, `DRV_NET.LOG`, and `BUILDALL.STAT`.
 
-> **DOSBox-X shell quirks** to be aware of when iterating: COMMAND.COM does not understand `2>&1` (it creates a literal file called `&1`), and `>` redirects do not always propagate through `for ... call` chains. Stick to plain `>` (no stderr merge) and accept that nested `M*.BAT` output may not always reach the parent log. The `.gitignore` is set up to ignore `&1`, `copy`, and other stray redirect artifacts these quirks produce.
+> **DOSBox-X shell quirks** to be aware of when iterating: COMMAND.COM does not understand `2>&1` (it creates a literal file called `&1`), and `>` redirects on a parent `call` do not propagate into the called batch's nested `for / call` chain. The driver `BUILDALL.BAT`s work around this by managing their own log redirect (`>> ..\DRV_SND.LOG`) instead of relying on the parent. The `.gitignore` covers stray redirect artifacts (`&1`, `copy`, `*.LOGcd`).
 
 ### Option B — Cross-assemble with JWasm/UASM + wlink
 
