@@ -62,6 +62,7 @@ EndS
                 Extrn   Music_SoloChannel:Far
                 Extrn   Music_GetPlayMode:Far
                 Extrn   Music_PlayPattern:Far
+                Extrn   Music_ToggleWAVRender:Far
                 Extrn   Music_GetLastChannel:Far
                 Extrn   Music_SetNextOrder:Far
                 Extrn   Music_NextOrder:Far
@@ -3888,20 +3889,23 @@ EndP            PEFunction_PickUp
 ;
 ; PEFunction_RenderPattern - Ctrl-O handler
 ;
-; Renders the currently selected pattern via the active sound driver. When the
-; active driver is the WAV writer (ITWAV.DRV), Music_PlayPattern routes mixed
-; output to <songname>.NNN where NNN is the pattern number. With any other
-; driver, this just plays the pattern (same as F6).
+; Toggles ITWAV.DRV as the active sound driver and triggers a render of the
+; current pattern. Press once to enter render mode (driver swaps to ITWAV.DRV,
+; pattern N renders to <songname>.NNN). Press again to swap back to the
+; original sound card driver and resume normal playback.
 ;
-; This is phase 1 of the Schism-style "pattern-to-sample" feature. Phases 2
-; (auto-driver-swap) and 3 (auto-sample-import) are documented in
+; Phase 2a: toggle render mode. First Ctrl-O swaps to ITWAV.DRV and starts
+; rendering the current pattern (writes <songname>.NNN). Second Ctrl-O
+; swaps back to the original sound card driver. Phase 3 (auto-import the
+; rendered .NNN as a sample + instrument) is documented in
 ; InternalDocumentation/PATTERN_TO_SAMPLE.md.
 ;
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
 
 Proc            PEFunction_RenderPattern Far
 
-                Call    Glbl_F6
+                Call    PE_GetCurrentPattern    ; AX = pattern number
+                Call    Music_ToggleWAVRender
 
                 Mov     AX, 1
                 Ret

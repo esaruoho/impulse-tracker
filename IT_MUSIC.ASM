@@ -74,6 +74,7 @@ include network.inc
 
         Global  Music_GetDisplayVariables:Far
         Global  Music_AutoDetectSoundCard:Far
+        Global  Music_ToggleWAVRender:Far
 
         Global  Music_Poll:Far
 
@@ -3685,6 +3686,101 @@ ENDIF
                 Ret
 
 EndP            Music_LoadDriver
+
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+;
+; Music_ToggleWAVRender - one-key swap to ITWAV.DRV and back
+;
+; First call (render mode off):
+;   - Caches current driver name
+;   - Stops playback, uninits + unloads current driver
+;   - Sets DriverName to ITWAV.DRV, calls Music_AutoDetectSoundCard to
+;     load+detect+init the WAV writer
+;   - Music_SoundCardLoadAllSamples re-uploads all samples
+;   - Kicks off Music_PlayPattern with the supplied pattern in AX,
+;     which causes WAVDRV's Poll(AX=1) to write <songname>.NNN
+;
+; Second call (render mode on):
+;   - Stops playback (which closes the .NNN via WAVDRV's Poll(AX=0))
+;   - Uninits + unloads WAVDRV
+;   - Restores cached driver name, runs Music_AutoDetectSoundCard
+;   - Music_SoundCardLoadAllSamples re-uploads samples to original card
+;
+; Input:  AX = pattern number to render (used only on first call)
+;
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+
+WAV_DriverName          DB      "ITWAV.DRV", 0
+WAV_RenderMode          DB      0
+WAV_PendingPattern      DW      0
+WAV_SavedDriverName     DD      0
+
+Proc            Music_ToggleWAVRender Far       ; AX = pattern (on enter)
+
+                Push    BX
+                Push    CX
+                Push    DX
+                Push    SI
+                Push    DI
+                Push    DS
+                Push    ES
+
+                Mov     [CS:WAV_PendingPattern], AX
+
+                Cmp     Byte Ptr [CS:WAV_RenderMode], 0
+                JNE     WAV_LeaveMode
+
+                ; --- Enter WAV render mode -----------------------------------
+
+                Mov     EAX, DWord Ptr [CS:DriverName]
+                Mov     DWord Ptr [CS:WAV_SavedDriverName], EAX
+
+                Call    Music_Stop
+                Call    Music_UnInitSoundCard
+                Call    Music_UnloadDriver
+
+                Mov     AX, Offset WAV_DriverName
+                Mov     Word Ptr [CS:DriverName], AX
+                Mov     AX, CS
+                Mov     Word Ptr [CS:DriverName+2], AX
+
+                Call    Music_AutoDetectSoundCard
+                Call    Music_SoundCardLoadAllSamples
+
+                Mov     Byte Ptr [CS:WAV_RenderMode], 1
+
+                Mov     AX, [CS:WAV_PendingPattern]
+                Xor     CX, CX
+                Call    Music_PlayPattern
+
+                Jmp     WAV_ToggleDone
+
+WAV_LeaveMode:
+                ; --- Leave WAV render mode -----------------------------------
+
+                Call    Music_Stop
+                Call    Music_UnInitSoundCard
+                Call    Music_UnloadDriver
+
+                Mov     EAX, DWord Ptr [CS:WAV_SavedDriverName]
+                Mov     DWord Ptr [CS:DriverName], EAX
+
+                Call    Music_AutoDetectSoundCard
+                Call    Music_SoundCardLoadAllSamples
+
+                Mov     Byte Ptr [CS:WAV_RenderMode], 0
+
+WAV_ToggleDone:
+                Pop     ES
+                Pop     DS
+                Pop     DI
+                Pop     SI
+                Pop     DX
+                Pop     CX
+                Pop     BX
+                Ret
+
+EndP            Music_ToggleWAVRender
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 
