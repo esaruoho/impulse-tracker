@@ -115,18 +115,61 @@ The actual offline render:
   `0Ah` for Ctrl-J at line 666, `14h` for Ctrl-T at line 682). Ctrl-O =
   ASCII `0Fh`. Ctrl-O is currently unbound.
 
-### What we don't yet have (P2/P3)
-- **Hot-swap to WAVDRV.** The driver init/uninit lifecycle is in
-  `IT_MUSIC.ASM` — we'd need to find `Music_LoadDriver` (or equivalent),
-  cache the current driver name, swap in `ITWAV.DRV`, render, then swap
-  back. Risk: any sample data the active driver caches in card RAM
-  (GUS, AWE32) gets dropped.
-- **WAV-load-into-sample.** `Music_AssignSampleToInstrument:Far` is
-  declared in `IT_DISK.ASM:69`, body unfound. Standalone-WAV parsing
-  may live in an `IT_D_*.INC` we haven't located. Needs another
-  Explore pass before P3.
-- **Sample/instrument allocation.** `Music_AllocateSample` declared at
-  `IT_DISK.ASM:59`; body unfound. Same Explore pass.
+### What we now have (after a deep dive — 2026-04-30)
+
+**Driver hot-swap path (P2 unblocked):**
+
+| Symbol | Location | Contract |
+|--------|----------|----------|
+| `Music_LoadDriver` | `IT_MUSIC.ASM:3429` | Given `DS:DX = filename`. Opens the `.DRV`, validates the IT-driver header signature, allocates a conventional-RAM segment with `Int 21h AH=48h`, reads driver code + 16 bytes of variables + the 17-slot driver function pointer table. CF clear on success. |
+| `Music_ClearDriverTables` | `IT_MUSIC.ASM:3393–3425` | Resets the 17 driver function pointers to no-op stubs (`NoFunction`/`NoFunction2`). Called before each driver load. |
+| `DriverName` | `IT_MUSIC.ASM:438` | `DD 0` — far pointer (offset:segment) to the *currently loaded* driver's filename string. Read this to cache before the WAV swap; pass it back via `Music_LoadDriver` to restore. |
+| `Music_SetSoundCardDriver` | `IT_MUSIC.ASM:6606` | Stores `DS:SI` into `DriverName`. |
+| `StartDriverFunctions` | `IT_MUSIC.ASM:681–705` | The 17 function pointers IT calls into the active driver (DD each): `DriverDetectCard`, `DriverInitSound` (+8), `DriverReinitSound`, `DriverUninitSound` (+12), `DriverPoll` (+16), `DriverSetTempo`, `DriverSetMixVolume`, `DriverSetStereo`, `DriverLoadSample` (+32), `DriverReleaseSample`, `DriverResetMemory`, `DriverGetStatus`, `DriverSoundCardScreen`, `DriverGetVariable`, `DriverSetVariable`, `DriverMIDIOut`, `DriverGetWaveform`. |
+| `Music_SoundCardLoadAllSamples` | declared `IT_PE.ASM:74` | After loading a driver, re-uploads every sample to the new driver via that driver's `DriverLoadSample`. Means the WAV swap is **safe** for sample data: IT keeps canonical sample bytes in main RAM + EMS; the active driver's card RAM is just a cache. |
+
+**Render life cycle inside WAVDRV:** `Poll` with `AX=1, BX=pattern` creates `<song>.NNN`; subsequent `Poll AX=1` calls write PCM; first `Poll AX=0` after the pattern ends closes the file. So "render complete" is observable from the host as "song stopped + WAVDRV's FileHandle was non-zero, now zero".
+
+**WAV-load-into-sample path (P3 unblocked):**
+
+| Symbol | Location | Contract |
+|--------|----------|----------|
+| `D_GetSampleInfo` | `IT_D_INF.INC:353` (the 772-line format-detection router) | Identifies file format by magic bytes. WAV detection inlined at lines 856–1000 (no `IT_D_WAV.INC`). For WAV: writes IT-internal sample descriptor (length, c5speed, format flags) into the per-slot record. Format codes: 5 = 8-bit WAV, 6 = 8-bit stereo, 7 = 16-bit. C5 speed read from WAV header at offset `+18h` (44100 typically). |
+| `Music_AllocateSample` | `IT_MUSIC.ASM:3008–3106` | `AX = sample number (0-based)`, `EDX = length in bytes`. Returns `ES:DI = allocated buffer` (`ES = 0` on failure). Uses DOS conventional alloc (`Int 21h AH=48h`) for small samples; falls back to EMS pages for ≥1024 bytes. Implicitly calls `Music_ReleaseSample` first to clear any existing data in that slot. |
+| `Music_AssignSampleToInstrument` | `IT_MUSIC.ASM:6672–6766` | `BX = sample number (1-based)`. Returns `AX = instrument index (1-99)`, `CF = 1` on failure. Searches instruments 1–99 for an empty slot (all-zeros 80-byte header). Fills all 120 MIDI notes of the instrument's note-map at offset `+20h` to point at sample `BX`. Copies sample name → instrument name. **No separate "fill instrument note-map" helper needed — this proc does it all.** |
+| Sample slot count | `IT_MUSIC.ASM:5418–5455` (`Music_GetNumberOfSamples`) | 100 slots (1–99 used; 0 reserved). Empty-slot detection: `RepE CmpsB` of 80-byte sample header against zero template. |
+| `Music_SoundCardLoadSample` | declared `IT_PE.ASM:73` | After populating a sample slot, call this to push the new sample to the active driver's card RAM. |
+
+**Calling-convention summary for P3 sequence:**
+
+```
+1. Save Cx (current sample/instrument focus) for status display
+2. Free a sample slot index by scanning 1..99 for empty SampleHeader
+   (or just pick slot N+1 where N = current sample selection)
+3. Read <song>.NNN header into the 60000h buffer
+4. ES:DI := DiskDataArea + (slot * 96)
+   BX := slot * 96
+   Call D_GetSampleInfo  ; Populates ES:DI with parsed metadata
+5. AX := slot, EDX := length-in-bytes (from descriptor)
+   Call Music_AllocateSample  ; Returns ES:DI = sample buffer
+6. Read PCM data from <song>.NNN into ES:DI (skip RIFF header)
+7. BX := slot
+   Call Music_AssignSampleToInstrument  ; Auto-creates instrument
+   ; Returns AX = instrument index (or CF=1 if all 99 instruments used)
+8. Call Music_SoundCardLoadSample  ; Upload new sample to active card
+9. Set info-line message: "Pattern N -> sample S, instrument I"
+```
+
+**Open question — destination filename + directory.** WAVDRV's
+`WAVDirectory` (in `WAVDRV.ASM`) is configurable via the driver's
+config screen. To find the rendered file from P3, we either:
+(a) read WAVDirectory from the driver's variable area (the 16-byte
+slot read by `Music_LoadDriver`),
+(b) query via `DriverGetVariable` (offset +52),
+(c) hardcode "current directory" assumption (works if user hasn't
+changed WAV output directory).
+
+Option (b) is cleanest and survives user customization.
 
 ### MVP for P2 — leveraging existing IT machinery
 A less invasive P2 might *not* hot-swap drivers at all, but instead
@@ -147,14 +190,84 @@ Less elegant than Schism's RAM-only flow but reuses existing,
 proven IT.EXE codepaths instead of inventing a memory-render
 backend.
 
-## Open questions before P2/P3 commit
-1. Where is `Music_LoadDriver` (or whatever swaps drivers at runtime)?
-   Driver Setup screen must call something.
-2. Does `IT.EXE` flush sample data from card RAM on driver swap? If
-   yes, we need to reload after the round-trip.
-3. Where does the WAV-format parser live? Some `IT_D_*.INC`?
-4. Schism's `name[23]=0xFF; name[24]=pattern` marker — would we use
-   the equivalent of IT's sample-name field for the same trick?
+## Open questions before P2/P3 commit (resolved 2026-04-30)
+1. ~~Where is `Music_LoadDriver`?~~ **`IT_MUSIC.ASM:3429`.** `DS:DX = filename`.
+2. ~~Does IT.EXE flush sample data from card RAM on driver swap?~~ **No flush
+   risk for our use.** IT keeps canonical sample bytes in main RAM/EMS;
+   `Music_SoundCardLoadAllSamples` re-uploads them to the new driver.
+3. ~~Where does the WAV-format parser live?~~ **Inlined in `IT_D_INF.INC`
+   lines 856–1000.** Entry via `D_GetSampleInfo` at line 353.
+4. **Sample-name "bind" marker** — IT's sample-name is 26 chars (verify in
+   sample header struct). Schism uses bytes 23–24 specifically because
+   they fall in IT's sample-name field. We can use the same trick — set
+   `name[23] = 0xFF; name[24] = pattern_num` after the import, and on
+   subsequent Ctrl-O scans, look for already-bound samples to avoid
+   duplicate renders.
+
+## P2/P3 implementation skeleton
+
+```asm
+; PEFunction_RenderPatternToSample - Ctrl-Shift-O (or upgrade Ctrl-O)
+;
+;   Phase 2: hot-swap to ITWAV.DRV, render, swap back.
+;   Phase 3: import the resulting <song>.NNN as a new sample + instrument.
+
+Proc PEFunction_RenderPatternToSample Far
+
+        ; --- Phase 2: driver swap --------------------------------------
+        Push    Word Ptr [CS:DriverName]        ; cache offset
+        Push    Word Ptr [CS:DriverName+2]      ; cache segment
+
+        Mov     SI, Offset WAVDriverName        ; "ITWAV.DRV", 0
+        Push    CS
+        Pop     DS
+        Mov     DX, SI
+        Call    Music_LoadDriver                ; CF=1 means abort + restore
+        Jc      RPS_RestoreOriginalDriver
+
+        Call    PE_GetCurrentPattern            ; AX = pattern number
+        Mov     BX, AX                          ; pattern -> BX for Music_PlayPattern
+        Xor     CX, CX
+        Call    Music_PlayPattern               ; WAVDRV catches AX=1 in Poll
+
+        ; --- Wait for render complete (FileHandle goes 0 again) ---------
+        ; ... poll [SoundDriverSegment:FileHandle] until 0 ...
+
+        ; --- Phase 2 cleanup: restore original driver -------------------
+RPS_RestoreOriginalDriver:
+        Pop     ES                              ; original DriverName segment
+        Pop     DX                              ; original DriverName offset
+        Mov     DS, ES
+        Call    Music_LoadDriver
+
+        ; --- Phase 3: import the rendered file --------------------------
+        ; ... build "<song>.NNN" filename ...
+        ; ... open file, read header into 60000h buffer ...
+        ; ... call D_GetSampleInfo to parse WAV ...
+        ; ... call Music_AllocateSample ...
+        ; ... read PCM into allocated buffer ...
+        ; ... call Music_AssignSampleToInstrument ...
+        ; ... call Music_SoundCardLoadSample ...
+        ; ... set sample name = "Pattern NNN" + bind marker ...
+        ; ... display info-line "Pattern N -> sample S, instr I" ...
+
+        Mov     AX, 1
+        Ret
+EndP
+
+WAVDriverName   DB      "ITWAV.DRV", 0
+```
+
+**Risks not yet validated:**
+- Does `Music_LoadDriver` correctly tear down the previous driver
+  before loading the new one? If not, we need an explicit
+  `[CS:DriverUninitSound]` call between the cache-and-load steps.
+- What does `Music_PlayPattern` return / when does it return? Sync or
+  async? If async, we need a polling loop before the swap-back. If
+  sync (blocks until pattern ends), we can swap back immediately
+  after.
+- Does WAVDRV's `Poll` actually fire when called via the standard
+  IT polling loop, or is there a setup step we're missing?
 
 References:
 - Schism: `~/work/schismtracker/schism/disko.c`,
