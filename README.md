@@ -33,6 +33,26 @@ Once you have these, building IT.EXE should be just a single call to `MAKE`
 Sound drivers are build individually via M\*.BAT files inside the SoundDrivers
 subdirectory
 
+## Building on macOS / Linux (esaruoho fork)
+
+This fork (`esaruoho/impulse-tracker`) builds `IT.EXE` cross-platform via
+DOSBox-X. The required Borland binaries are not redistributable, but a public
+mirror exists at [zajo/TASM](https://github.com/zajo/TASM) — TASM 4.1, Turbo
+Link 7.1, Borland MAKE 4.0. The 16-bit DPMI variant `TASMX.EXE` is required for
+`IT_MDATA.asm` (the stock `TASM.EXE` runs out of memory on its large data
+tables); the build setup uses `TASMX.EXE` renamed to `TASM.EXE`.
+
+Note: `IT.EXE` builds with TLINK 7.1, but the `SoundDrivers/M*.BAT` scripts do
+not — TLINK 7.1 enforces a program entry point that the driver objects do not
+declare. Driver builds are blocked pending TLINK 3.x or an entry-point
+workaround.
+
+See [CLAUDE.md](CLAUDE.md) for step-by-step build instructions.
+
+GitHub Actions CI: see `.github/workflows/build.yml`. Requires the toolchain
+to be uploaded as 13 base64-chunked repo secrets `TASM_TOOLCHAIN_B64_01`
+through `TASM_TOOLCHAIN_B64_13` (single-secret 48 KB limit forces chunking).
+
 ## Quick File Overview
 
 - IT.ASM:

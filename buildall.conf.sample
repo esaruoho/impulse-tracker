@@ -1,0 +1,19 @@
+[sdl]
+autolock=false
+[dosbox]
+machine=svga_s3
+memsize=64
+[cpu]
+cycles=max
+[dos]
+ver=6.22
+xms=true
+ems=true
+lfn=true
+[autoexec]
+mount c .
+mount t ./tools-local
+set PATH=T:\;%PATH%
+c:
+BUILDALL.BAT
+exit

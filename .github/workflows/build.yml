@@ -17,71 +17,113 @@ jobs:
       - name: Install DOSBox-X
         run: |
           sudo apt-get update
-          sudo apt-get install -y dosbox-x unzip
+          sudo apt-get install -y dosbox-x unzip xvfb
 
-      - name: Restore TASM toolchain from secret
+      - name: Reassemble TASM toolchain from chunked secrets
         env:
-          TASM_TOOLCHAIN_ZIP_B64: ${{ secrets.TASM_TOOLCHAIN_ZIP_B64 }}
+          C01: ${{ secrets.TASM_TOOLCHAIN_B64_01 }}
+          C02: ${{ secrets.TASM_TOOLCHAIN_B64_02 }}
+          C03: ${{ secrets.TASM_TOOLCHAIN_B64_03 }}
+          C04: ${{ secrets.TASM_TOOLCHAIN_B64_04 }}
+          C05: ${{ secrets.TASM_TOOLCHAIN_B64_05 }}
+          C06: ${{ secrets.TASM_TOOLCHAIN_B64_06 }}
+          C07: ${{ secrets.TASM_TOOLCHAIN_B64_07 }}
+          C08: ${{ secrets.TASM_TOOLCHAIN_B64_08 }}
+          C09: ${{ secrets.TASM_TOOLCHAIN_B64_09 }}
+          C10: ${{ secrets.TASM_TOOLCHAIN_B64_10 }}
+          C11: ${{ secrets.TASM_TOOLCHAIN_B64_11 }}
+          C12: ${{ secrets.TASM_TOOLCHAIN_B64_12 }}
+          C13: ${{ secrets.TASM_TOOLCHAIN_B64_13 }}
         run: |
-          if [ -z "$TASM_TOOLCHAIN_ZIP_B64" ]; then
-            echo "::error::Repository secret TASM_TOOLCHAIN_ZIP_B64 is not set."
-            echo "::error::TASM 4.1, TLINK 3.01 and Borland MAKE 4.0 are proprietary (Borland/Embarcadero)."
-            echo "::error::Create a zip containing TASM.EXE, TLINK.EXE, MAKE.EXE (and any required DLLs/overlays),"
-            echo "::error::base64-encode it, and add it as a repo secret named TASM_TOOLCHAIN_ZIP_B64:"
-            echo "::error::    base64 -i tasm-toolchain.zip | pbcopy"
-            echo "::error::    gh secret set TASM_TOOLCHAIN_ZIP_B64 --repo esaruoho/impulse-tracker --body \"\$(pbpaste)\""
+          if [ -z "$C01" ]; then
+            echo "::error::Repo secrets TASM_TOOLCHAIN_B64_01..13 are not set."
+            echo "::error::See README.md (TASM toolchain section) for setup."
             exit 1
           fi
           mkdir -p tools
-          echo "$TASM_TOOLCHAIN_ZIP_B64" | base64 -d > tools/tasm-toolchain.zip
+          {
+            printf '%s' "$C01"
+            printf '%s' "$C02"
+            printf '%s' "$C03"
+            printf '%s' "$C04"
+            printf '%s' "$C05"
+            printf '%s' "$C06"
+            printf '%s' "$C07"
+            printf '%s' "$C08"
+            printf '%s' "$C09"
+            printf '%s' "$C10"
+            printf '%s' "$C11"
+            printf '%s' "$C12"
+            printf '%s' "$C13"
+          } | base64 -d > tools/tasm-toolchain.zip
           unzip -o tools/tasm-toolchain.zip -d tools/
+          rm tools/tasm-toolchain.zip
           ls -la tools/
 
       - name: Write DOSBox-X build script
         run: |
-          cat > build.conf <<'EOF'
+          cat > build.conf <<EOF
           [sdl]
           autolock=false
           [dosbox]
           machine=svga_s3
+          memsize=64
           [cpu]
           cycles=max
+          [dos]
+          ver=6.22
+          xms=true
+          ems=true
+          lfn=true
           [autoexec]
-          mount c .
-          mount t ./tools
-          set PATH=%PATH%;T:\
+          mount c $GITHUB_WORKSPACE
+          mount t $GITHUB_WORKSPACE/tools
+          set PATH=T:\;%PATH%
           c:
-          echo === Running MAKE ===
-          make -f MAKEFILE.MAK
-          if errorlevel 1 goto fail
-          echo === Build OK ===
-          echo BUILD_OK > C:\BUILD_STATUS.TXT
-          exit
-          :fail
-          echo === Build FAILED ===
-          echo BUILD_FAIL > C:\BUILD_STATUS.TXT
+          make -f MAKEFILE.MAK > C:\MAKE.LOG
+          echo IT_DONE ec=%ERRORLEVEL% > C:\BUILD_ST.TXT
+          cd SoundDrivers
+          call BUILDALL.BAT > C:\DRV_SND.LOG
+          cd ..
+          cd Network
+          call BUILDALL.BAT > C:\DRV_NET.LOG
+          cd ..
+          echo ALL_DONE >> C:\BUILD_ST.TXT
           exit
           EOF
 
-      - name: Build IT.EXE in DOSBox-X
+      - name: Build IT.EXE + drivers in DOSBox-X
         run: |
-          dosbox-x -conf build.conf -silent -nolog -fastlaunch -exit || true
-          echo "--- BUILD_STATUS.TXT ---"
-          cat BUILD_STATUS.TXT 2>/dev/null || echo "(missing)"
-          if ! grep -q BUILD_OK BUILD_STATUS.TXT 2>/dev/null; then
-            echo "::error::MAKE reported failure inside DOSBox-X."
-            ls -la *.OBJ *.obj 2>/dev/null || true
+          # Need a virtual display because dosbox-x is SDL2-linked even with -nogui
+          xvfb-run -a dosbox-x -conf build.conf -fastlaunch -exit -nogui -nomenu || true
+          echo "--- BUILD_ST.TXT ---"
+          cat BUILD_ST.TXT 2>/dev/null || echo "(missing)"
+          echo "--- MAKE.LOG (last 100) ---"
+          tail -100 MAKE.LOG 2>/dev/null || echo "(missing)"
+          echo "--- DRV_SND.LOG (last 100) ---"
+          tail -100 DRV_SND.LOG 2>/dev/null || echo "(missing)"
+          echo "--- DRV_NET.LOG (last 50) ---"
+          tail -50 DRV_NET.LOG 2>/dev/null || echo "(missing)"
+          if [ ! -f IT.EXE ]; then
+            echo "::error::IT.EXE was not produced"
             exit 1
           fi
-          ls -la IT.EXE IT.exe 2>/dev/null || { echo "::error::IT.EXE was not produced"; exit 1; }
+          echo "--- IT.EXE ---"
+          ls -la IT.EXE
+          echo "--- Sound drivers (root, *.DRV) ---"
+          ls -la *.DRV 2>/dev/null || echo "(none copied)"
+          echo "--- Network drivers (*.NET) ---"
+          ls -la *.NET 2>/dev/null || echo "(none copied)"
 
-      - name: Upload IT.EXE artifact
+      - name: Upload IT.EXE + drivers artifact
         uses: actions/upload-artifact@v4
         with:
           name: IT-EXE-${{ github.sha }}
           path: |
             IT.EXE
-            IT.exe
-            *.OBJ
-            *.obj
-          if-no-files-found: error
+            *.DRV
+            *.NET
+            MAKE.LOG
+            DRV_SND.LOG
+            DRV_NET.LOG
+          if-no-files-found: warn

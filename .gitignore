@@ -25,3 +25,33 @@
 # macOS
 .DS_Store
 VSound/.DS_Store
+
+# local build toolchain (TASM/TLINK/MAKE — proprietary, fetched out-of-band)
+tools/
+tools-local/
+
+# stray DOS redirect artifacts (DOSBox-X COMMAND.COM doesn't grok 2>&1
+# and occasionally drops files named after redirect tokens it couldn't parse)
+&1
+SoundDrivers/&1
+Network/&1
+copy
+SoundDrivers/copy
+Network/copy
+*.LOGcd
+D.TXT
+DRV.LOG
+DRV_DONE.TXT
+DRV_SND.LOG
+DRV_NET.LOG
+BUILDALL.LOG
+BUILDALL.STAT
+
+# local DOSBox-X driver config (paths machine-specific; example shipped as buildall.conf.sample)
+buildall.conf
+
+# DOSBox-X build artifacts
+BUILD_ST.TXT
+MAKE.LOG
+MDATA.LOG
+DIAG*.LOG
