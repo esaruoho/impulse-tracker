@@ -17,6 +17,7 @@ include network.inc
         Extrn   D_GetFileName:Far
         Extrn   D_SetCurrentSample:Far
         Extrn   D_SetCurrentInstrument:Far
+        Extrn   PE_SetLastInstrument:Far
         Extrn   D_Showtime:Far
 
         Extrn   E_EMSAvailable:Far
@@ -4120,15 +4121,20 @@ WAVI_NoShr2:
                 Add     AL, '0'
                 StosB
 
-                ; --- Auto-select the new sample so F3 lands on it ------------
+                ; --- Auto-select the new sample (default for both modes) -----
+                ; LastInstrument is the F3/F4 cursor variable. Setting it to the
+                ; new sample slot makes the sample list land on the new sample.
+                ; CurrentSample is also updated for the file dialog state.
                 Mov     AX, [CS:WAV_TargetSlot]
                 Call    D_SetCurrentSample
+                Mov     AX, [CS:WAV_TargetSlot]
+                Call    PE_SetLastInstrument
 
                 ; --- Instrument-mode check -----------------------------------
                 ; Music_GetInstrumentMode returns AH=4 (instrument) or 0 (sample),
-                ; ZF set when sample mode. Only create + auto-select an
-                ; instrument when in Instrument mode -- otherwise we would
-                ; pollute F4's list with auto-renders the user can't see.
+                ; ZF set when sample mode. In Instrument mode, also create an
+                ; instrument and switch the cursor to it (since F4 is what the
+                ; user navigates in that mode).
                 Call    Music_GetInstrumentMode
                 JZ      WAVI_SkipInstrument
 
@@ -4136,7 +4142,11 @@ WAVI_NoShr2:
                 Call    Music_AssignSampleToInstrument ; AX = inst num, CF on fail
                 JC      WAVI_SkipInstrument
 
+                ; AX = instrument number returned -- select it for F4
+                Push    AX
                 Call    D_SetCurrentInstrument
+                Pop     AX
+                Call    PE_SetLastInstrument
 
 WAVI_SkipInstrument:
                 ; --- Upload to active driver ---------------------------------

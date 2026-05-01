@@ -141,6 +141,7 @@ ENDIF
 
                 Global  PE_SetPatternModified:Far
                 Global  PE_GetLastInstrument:Far
+                Global  PE_SetLastInstrument:Far
                 Global  PE_DrawPatternEdit:Far
                 Global  PE_PrePatternEdit:Far
                 Global  PE_PostPatternEdit:Far
@@ -10521,6 +10522,15 @@ Proc            PE_GetLastInstrument Far
                 Ret
 
 EndP            PE_GetLastInstrument
+
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+
+Proc            PE_SetLastInstrument Far    ; AL = sample/instrument 1..99
+
+                Mov     [CS:LastInstrument], AL
+                Ret
+
+EndP            PE_SetLastInstrument
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 
