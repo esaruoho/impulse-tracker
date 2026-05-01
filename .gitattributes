@@ -1,0 +1,16 @@
+# Lock encoding for the assembly source. The original Borland-era source uses
+# code page 437 box-drawing characters (single-byte 0xC4 / 0xC1 / 0xBF / 0xDA
+# etc) for the visual divider lines that appear at the top and around every
+# proc. Modern editors that re-save as UTF-8 replace each of those with the
+# 3-byte U+FFFD replacement sequence (EF BF BD), shredding the visual style.
+#
+# `working-tree-encoding=ISO-8859-1` keeps the bytes intact in the working
+# tree. `eol=crlf text=auto` enforces DOS line endings, since TASM reads
+# CRLF-terminated source.
+*.ASM   text=auto eol=crlf working-tree-encoding=ISO-8859-1
+*.INC   text=auto eol=crlf working-tree-encoding=ISO-8859-1
+*.BAT   text=auto eol=crlf
+
+# Markdown / docs / config: normal UTF-8, LF or CRLF either OK.
+*.md    text
+*.MD    text
