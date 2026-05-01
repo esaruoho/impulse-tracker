@@ -83,6 +83,7 @@ include network.inc
         Global  Music_ToggleWAVRender:Far
         Global  Music_SetTempoFromClocks:Far
         Global  Music_ImportRenderedPattern:Far
+        Global  WAV_LoopRender:Byte
 
         Global  Music_Poll:Far
 
@@ -3953,6 +3954,7 @@ WAV_Channels            DW      0
 WAV_SampleRate          DD      0
 WAV_DataLength          DD      0
 WAV_CwdSaved            DB      0       ; reentrancy gate for D_SaveCwd
+WAV_LoopRender          DB      1       ; 1 = forward-loop imported sample
 WAV_Page                DB      0
 RenderedFilename        DB      14 Dup (0)
 PatternNamePrefix       DB      "Pattern "
@@ -4072,7 +4074,17 @@ WAVI_HaveMax:
                 Call    Music_AllocateSample    ; ES:DI = buffer
                 Mov     AX, ES
                 Test    AX, AX
-                JZ      WAVI_CloseAllocFail
+                JNZ     WAVI_AllocOK
+
+                ; Allocation failed. Music_ReleaseSample already wiped the slot's
+                ; data, but the header may be in a partial state. Reset it to
+                ; the empty template so F3 shows it as cleanly empty.
+                Mov     AX, [CS:WAV_TargetSlot]
+                Dec     AX
+                Call    Music_ClearSampleName
+                Jmp     WAVI_CloseAllocFail
+
+WAVI_AllocOK:
 
                 ; --- Stream PCM in 16KB chunks via Music_GetSampleLocation ---
                 ; Page counter is held in [CS:WAV_Page] -- holding it in CH
@@ -4138,7 +4150,10 @@ WAVI_ReadDone:
                 ;                      bit 2 = stereo
                 Mov     AL, [DS:SI+12h]
                 Or      AL, 1                       ; bit 0 = sample present
+                Cmp     Byte Ptr [CS:WAV_LoopRender], 0
+                JE      WAVI_NoLoop
                 Or      AL, 10h                     ; bit 4 = forward loop
+WAVI_NoLoop:
                 Cmp     Word Ptr [CS:WAV_BitsPerSample], 16
                 JNE     WAVI_NotSixteen
                 Or      AL, 2                       ; bit 1 = 16-bit
@@ -4166,9 +4181,16 @@ WAVI_NoShr16:
 WAVI_NoShr2:
                 Mov     [DS:SI+30h], EAX            ; length in samples
 
-                ; Loop start = 0, Loop end = length (EAX still holds length)
+                ; Loop start = 0, Loop end = length when looping (EAX = length).
+                ; If loops are off, both fields stay zero -- IT plays once + stops.
                 Mov     DWord Ptr [DS:SI+34h], 0
+                Cmp     Byte Ptr [CS:WAV_LoopRender], 0
+                JE      WAVI_NoLoopEnd
                 Mov     [DS:SI+38h], EAX
+                Jmp     WAVI_LoopEndDone
+WAVI_NoLoopEnd:
+                Mov     DWord Ptr [DS:SI+38h], 0
+WAVI_LoopEndDone:
 
                 ; Sustain loops disabled
                 Mov     DWord Ptr [DS:SI+40h], 0
