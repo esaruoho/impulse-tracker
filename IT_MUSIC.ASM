@@ -3834,20 +3834,26 @@ Proc            Music_ToggleWAVRender Far       ; AX = pattern (on enter)
                 ; produces a distinct file that won't clobber prior renders.
                 Inc     Word Ptr [CS:WAV_RenderCounter]
                 Mov     AX, [CS:WAV_RenderCounter]
+                Mov     BX, 1000
                 Xor     DX, DX
-                Mov     BX, 100
-                Div     BX                      ; AL = hundreds, DX = remainder
+                Div     BX                      ; AX/1000, rem in DX
                 Add     AL, '0'
                 Mov     [CS:WAV_RenderBasename+3], AL
+                Mov     AX, DX
+                Mov     BX, 100
+                Xor     DX, DX
+                Div     BX
+                Add     AL, '0'
+                Mov     [CS:WAV_RenderBasename+4], AL
                 Mov     AX, DX
                 Mov     BX, 10
                 Xor     DX, DX
                 Div     BX
                 Add     AL, '0'
-                Mov     [CS:WAV_RenderBasename+4], AL
+                Mov     [CS:WAV_RenderBasename+5], AL
                 Mov     AL, DL
                 Add     AL, '0'
-                Mov     [CS:WAV_RenderBasename+5], AL
+                Mov     [CS:WAV_RenderBasename+6], AL
 
                 ; Copy basename into FileName buffer (in DiskDataArea segment)
                 Push    DS
@@ -3859,15 +3865,20 @@ Proc            Music_ToggleWAVRender Far       ; AX = pattern (on enter)
                 Push    CS
                 Pop     DS
                 Mov     SI, Offset WAV_RenderBasename
-                Mov     CX, 8                   ; copy 7 chars + null
+                Mov     CX, 9                   ; copy 8 chars (RND0000.) + null
                 Rep     MovsB
                 Pop     ES
                 Pop     DS
 
                 ; Save cwd + cd to user's SampleDirectory so the rendered
-                ; .NNN file lands there. WAVDRV writes to whatever cwd it
-                ; finds (its own home-dir dance was disabled).
+                ; .NNN file lands there. Reentrancy gate: only save the
+                ; cwd on a clean entry, not if we're somehow re-entering
+                ; while still in render mode.
+                Cmp     Byte Ptr [CS:WAV_CwdSaved], 0
+                JNE     WAV_SkipCwdSave
                 Call    D_SaveCwd
+                Mov     Byte Ptr [CS:WAV_CwdSaved], 1
+WAV_SkipCwdSave:
                 Call    D_GotoSampleDirectory
 
                 Mov     AX, [CS:WAV_PendingPattern]
@@ -3899,7 +3910,11 @@ WAV_LeaveMode:
                 Mov     Byte Ptr [CS:WAV_FinalizeDelay], 0
 
                 Call    Music_ImportRenderedPattern
+                Cmp     Byte Ptr [CS:WAV_CwdSaved], 0
+                JE      WAV_SkipCwdRestore
                 Call    D_RestoreCwd                 ; restore caller's cwd
+                Mov     Byte Ptr [CS:WAV_CwdSaved], 0
+WAV_SkipCwdRestore:
 
 WAV_ToggleDone:
                 Pop     ES
@@ -3937,12 +3952,13 @@ WAV_BitsPerSample       DW      0
 WAV_Channels            DW      0
 WAV_SampleRate          DD      0
 WAV_DataLength          DD      0
+WAV_CwdSaved            DB      0       ; reentrancy gate for D_SaveCwd
 WAV_Page                DB      0
 RenderedFilename        DB      14 Dup (0)
 PatternNamePrefix       DB      "Pattern "
 WAV_OutputName          DB      "OUTPUT"
 WAV_RenderCounter       DW      0
-WAV_RenderBasename      DB      "REN000.", 0
+WAV_RenderBasename      DB      "RND0000.", 0
 WAV_ImportedMsg         DB      "Pattern imported as sample ", 0FDh, "D", 0
 WAV_ImportFailedMsg     DB      "Could not import rendered pattern", 0
 WAV_FailNoSlot          DB      "Import failed: no free sample slot", 0
@@ -3972,8 +3988,8 @@ Proc            Music_ImportRenderedPattern Far
                 Pop     ES
                 Mov     SI, Offset WAV_RenderBasename
                 Mov     DI, Offset RenderedFilename
-                Mov     CX, 6
-                Rep     MovsB                   ; copy 6 chars (e.g. "REN001")
+                Mov     CX, 7
+                Rep     MovsB                   ; copy 7 chars (e.g. "RND0001")
                 Mov     AL, '.'
                 StosB
 
@@ -4033,6 +4049,10 @@ WAVI_HaveMax:
                 Cmp     DWord Ptr [CS:WAVHeader], 'FFIR'
                 JNE     WAVI_CloseHeaderFail
                 Cmp     DWord Ptr [CS:WAVHeader+8], 'EVAW'
+                JNE     WAVI_CloseHeaderFail
+                Cmp     Word Ptr [CS:WAVHeader+20], 1   ; PCM format code
+                JNE     WAVI_CloseHeaderFail
+                Cmp     DWord Ptr [CS:WAVHeader+16], 16 ; fmt chunk size
                 JNE     WAVI_CloseHeaderFail
 
                 ; Extract format params
