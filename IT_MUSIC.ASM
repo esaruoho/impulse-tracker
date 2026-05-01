@@ -81,6 +81,7 @@ include network.inc
         Global  Music_GetDisplayVariables:Far
         Global  Music_AutoDetectSoundCard:Far
         Global  Music_ToggleWAVRender:Far
+        Global  Music_SetTempoFromClocks:Far
         Global  Music_ImportRenderedPattern:Far
 
         Global  Music_Poll:Far
@@ -2609,6 +2610,49 @@ Proc            Music_InitTempo Far
                 Ret
 
 EndP            Music_InitTempo
+
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+;
+; Music_SetTempoFromClocks - apply external MIDI clock to IT tempo
+;
+; Caller has measured DOS-tick delta across 24 MIDI Clock messages (one
+; quarter note at MIDI's 24 PPQ standard). We derive BPM from that:
+;   BPM = (60 sec/min * 18.2 ticks/sec) / delta_ticks ~= 1092 / delta
+; and apply via Music_InitTempo so the driver's timer re-arms.
+;
+; Input:  EAX = DOS-tick delta across one quarter note
+; Output: tempo set if 32 <= BPM <= 255, otherwise unchanged
+;
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+
+Proc            Music_SetTempoFromClocks Far
+
+                Test    EAX, EAX
+                JZ      MSTC_End                ; no time elapsed
+
+                Push    EBX
+                Push    EDX
+
+                Mov     EBX, EAX
+                Mov     EAX, 1092
+                Xor     EDX, EDX
+                Div     EBX                     ; AX = BPM
+
+                Cmp     AX, 32
+                JB      MSTC_PopEnd             ; below IT min tempo
+                Cmp     AX, 255
+                JBE     MSTC_Apply
+                Mov     AX, 255                 ; clamp to IT max
+MSTC_Apply:
+                Mov     [CS:Tempo], AL
+                Call    Music_InitTempo         ; re-arm timer
+MSTC_PopEnd:
+                Pop     EDX
+                Pop     EBX
+MSTC_End:
+                Ret
+
+EndP            Music_SetTempoFromClocks
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 

@@ -17,6 +17,7 @@ include switch.inc
                 Extrn   S_GetDestination:Far
                 Extrn   Music_Stop:Far
                 Extrn   Music_KBPlaySong:Far
+                Extrn   Music_SetTempoFromClocks:Far
                 Extrn   Music_IncreaseVolume:Far
                 Extrn   Music_DecreaseVolume:Far
                 Extrn   S_DrawString:Far
@@ -87,6 +88,8 @@ KeypadValueFlag         DB      0
 KeypadValue             DB      0
 
 MIDIStatusByte          DB      0
+MIDIClockCount          DB      0       ; 0..23 within current quarter
+MIDIClockLastTick       DW      0       ; DOS Int 1Ah AH=0 DX at last beat
 MIDIDataByte1           DB      0
 MIDIDataByte2           DB      0
 MIDIDataInput           DB      0
@@ -1777,6 +1780,7 @@ Proc            MIDISend Far            ; Given AL = data byte.
 
                 Cmp     AL, 0F8h
                 JB      MIDISendNotRealTime
+                JE      MIDISendRTClock
                 Cmp     AL, 0FAh
                 JE      MIDISendRTStart
                 Cmp     AL, 0FBh
@@ -1786,6 +1790,14 @@ Proc            MIDISend Far            ; Given AL = data byte.
                 Jmp     MIDISendEnd
 
 MIDISendRTStart:
+                Mov     [MIDIClockCount], 0     ; reset clock-tracking
+                ; capture current DOS tick as anchor for first beat
+                PushA
+                Mov     AH, 0
+                Int     1Ah                     ; CX:DX = ticks since midnight
+                Mov     [MIDIClockLastTick], DX
+                PopA
+
                 PushAD
                 Push    ES
                 Call    Music_KBPlaySong        ; F5 equivalent, idempotent
@@ -1797,6 +1809,29 @@ MIDISendRTStop:
                 PushAD
                 Push    ES
                 Call    Music_Stop
+                Pop     ES
+                PopAD
+                Jmp     MIDISendEnd
+
+MIDISendRTClock:
+                ; F8 MIDI Clock: count to 24 (one quarter note), then derive
+                ; BPM from elapsed DOS ticks across the beat and apply.
+                Inc     Byte Ptr [MIDIClockCount]
+                Cmp     Byte Ptr [MIDIClockCount], 24
+                JB      MIDISendEnd
+                Mov     Byte Ptr [MIDIClockCount], 0
+
+                PushAD
+                Push    ES
+
+                Mov     AH, 0
+                Int     1Ah                     ; DX = current ticks (low)
+                Mov     AX, DX
+                Sub     AX, [MIDIClockLastTick] ; AX = delta this beat
+                Mov     [MIDIClockLastTick], DX
+                Movzx   EAX, AX
+                Call    Music_SetTempoFromClocks
+
                 Pop     ES
                 PopAD
                 Jmp     MIDISendEnd
