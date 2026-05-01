@@ -271,6 +271,8 @@ EndP            Glbl_F2
 
 Proc            Glbl_F3 Far
 
+                Call    Glbl_InstrumentToSample ; translate F4 -> F3 cursor
+
                 Call    I_DrawWaveForm
 
                 Mov     AX, 5
@@ -983,6 +985,66 @@ Glbl_SampleToInstrument1:
                 Ret
 
 EndP            Glbl_SampleToInstrument
+                Assume ES:Nothing
+
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+;
+; Glbl_InstrumentToSample - F4 -> F3 cursor translation
+;
+; Mirror of Glbl_SampleToInstrument: when transitioning from F4 (instrument
+; list, CurrentMode == 4) into F3 (sample list) WITH instrument mode active,
+; translate LastInstrument from the F4 cursor's instrument number to the
+; sample that instrument plays for note 60 (C-5). That makes F3 land on the
+; sample the user actually cares about instead of blindly mirroring slot N.
+;
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+
+Proc            Glbl_InstrumentToSample
+
+                Cmp     CS:CurrentMode, 4       ; only when coming from F4
+                JNE     Glbl_InstrumentToSample1
+
+                Call    Music_GetSongSegment
+                Mov     DS, AX
+                        Assume DS:Nothing
+
+                Test    Byte Ptr [DS:2Ch], 4    ; only in instrument mode
+                JZ      Glbl_InstrumentToSample1
+
+                Mov     AX, Pattern
+                Mov     ES, AX
+                        Assume ES:Pattern
+
+                Mov     AL, ES:LastInstrument   ; 1-based instrument number
+                Test    AL, AL
+                JZ      Glbl_InstrumentToSample1
+
+                ; Compute base offset of instrument N within SongDataArea:
+                ;   base = [DS:64712] + (N-1) * 554
+                ; Then sample byte for note 60 is at base + 65 + 60*2 = base + 185
+                Push    BX
+                Push    DX
+                Xor     BH, BH
+                Mov     BL, AL
+                Dec     BX                      ; 0-based
+                Mov     AX, 554
+                Mul     BX                      ; DX:AX = (N-1) * 554
+                Add     AX, [DS:64712]          ; AX = instrument N base
+                Add     AX, 185                 ; AX = note 60 sample byte
+                Mov     BX, AX
+                Mov     AL, [DS:BX]
+                Pop     DX
+                Pop     BX
+
+                Test    AL, AL
+                JZ      Glbl_InstrumentToSample1   ; instrument has no sample mapped
+
+                Mov     ES:LastInstrument, AL
+
+Glbl_InstrumentToSample1:
+                Ret
+
+EndP            Glbl_InstrumentToSample
                 Assume ES:Nothing
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
