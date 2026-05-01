@@ -3751,12 +3751,15 @@ Proc            Music_ToggleWAVRender Far       ; AX = pattern (on enter)
                 Push    DS
                 Push    ES
 
-                Mov     [CS:WAV_PendingPattern], AX
-
                 Cmp     Byte Ptr [CS:WAV_RenderMode], 0
                 JNE     WAV_LeaveMode
 
                 ; --- Enter WAV render mode -----------------------------------
+                ; Capture the pattern number passed in by the caller. The leave
+                ; path must not touch this -- the auto-finalize trigger calls
+                ; us with AX=0 to swap back, and the import code still needs
+                ; the pattern that was captured when we entered.
+                Mov     [CS:WAV_PendingPattern], AX
 
                 Mov     EAX, DWord Ptr [CS:DriverName]
                 Mov     DWord Ptr [CS:WAV_SavedDriverName], EAX
