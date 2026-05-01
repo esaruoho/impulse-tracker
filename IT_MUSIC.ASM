@@ -3955,6 +3955,7 @@ WAV_SampleRate          DD      0
 WAV_DataLength          DD      0
 WAV_CwdSaved            DB      0       ; reentrancy gate for D_SaveCwd
 WAV_LoopRender          DB      1       ; 1 = forward-loop imported sample
+WAV_TruncatedFlag       DB      0       ; set if read loop hit the 1MB cap
 WAV_Page                DB      0
 RenderedFilename        DB      14 Dup (0)
 PatternNamePrefix       DB      "Pattern "
@@ -3967,6 +3968,7 @@ WAV_FailNoSlot          DB      "Import failed: no free sample slot", 0
 WAV_FailOpen            DB      "Import failed: cannot open .NNN file", 0
 WAV_FailHeader          DB      "Import failed: bad WAV header", 0
 WAV_FailAlloc           DB      "Import failed: out of memory for sample", 0
+WAV_TruncatedMsg        DB      "Pattern truncated to 1MB; sample ", 0FDh, "D", 0
 
 Proc            Music_ImportRenderedPattern Far
 
@@ -4128,6 +4130,18 @@ WAVI_ReadShort:
                 Movzx   EAX, AX
                 Sub     EBP, EAX
 WAVI_ReadDone:
+                ; Remaining bytes in EBP -- if non-zero, we hit the safety
+                ; cap (1MB) before reading everything. Subtract from
+                ; WAV_DataLength so the IMPS length field reflects the
+                ; truncated content, and arm WAV_TruncatedFlag for status.
+                Mov     Byte Ptr [CS:WAV_TruncatedFlag], 0
+                Test    EBP, EBP
+                JZ      WAVI_NotTruncated
+                Mov     EAX, [CS:WAV_DataLength]
+                Sub     EAX, EBP
+                Mov     [CS:WAV_DataLength], EAX
+                Mov     Byte Ptr [CS:WAV_TruncatedFlag], 1
+WAVI_NotTruncated:
 
                 ; --- Close file ----------------------------------------------
                 Mov     BX, [CS:WAV_FileHandle]
@@ -4292,6 +4306,10 @@ WAVI_SkipInstrument:
                 Push    CS
                 Pop     DS
                 Mov     SI, Offset WAV_ImportedMsg
+                Cmp     Byte Ptr [CS:WAV_TruncatedFlag], 0
+                JE      WAVI_NormalMsg
+                Mov     SI, Offset WAV_TruncatedMsg
+WAVI_NormalMsg:
                 Mov     AX, [CS:WAV_TargetSlot]
                 Mov     BX, 500
                 Call    SetInfoLine2
