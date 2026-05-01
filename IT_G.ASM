@@ -1018,28 +1018,51 @@ Proc            Glbl_InstrumentToSample
                 Mov     AL, ES:LastInstrument   ; 1-based instrument number
                 Test    AL, AL
                 JZ      Glbl_InstrumentToSample1
+                Cmp     AL, 99                  ; bounds check
+                JA      Glbl_InstrumentToSample1
 
-                ; Compute base offset of instrument N within SongDataArea:
-                ;   base = [DS:64712] + (N-1) * 554
-                ; Then sample byte for note 60 is at base + 65 + 60*2 = base + 185
                 Push    BX
+                Push    CX
                 Push    DX
+
+                ; Compute base of instrument N: [DS:64712] + (N-1)*554
                 Xor     BH, BH
                 Mov     BL, AL
                 Dec     BX                      ; 0-based
                 Mov     AX, 554
-                Mul     BX                      ; DX:AX = (N-1) * 554
+                Mul     BX                      ; AX = (N-1)*554
                 Add     AX, [DS:64712]          ; AX = instrument N base
-                Add     AX, 185                 ; AX = note 60 sample byte
+                Add     AX, 41h                 ; +65 = first note's sample byte
                 Mov     BX, AX
-                Mov     AL, [DS:BX]
-                Pop     DX
-                Pop     BX
 
+                ; Try note 60 first (most common pitch); if that's empty,
+                ; scan all 120 notes for the first non-zero entry.
+                Mov     AL, [DS:BX+60*2]
                 Test    AL, AL
-                JZ      Glbl_InstrumentToSample1   ; instrument has no sample mapped
+                JNZ     Glbl_InstrumentToSample2
 
+                Mov     CX, 120
+Glbl_InstrumentToSample3:
+                Mov     AL, [DS:BX]
+                Test    AL, AL
+                JNZ     Glbl_InstrumentToSample2
+                Add     BX, 2
+                Loop    Glbl_InstrumentToSample3
+                ; All 120 entries are zero -- instrument has no sample mapped.
+                Pop     DX
+                Pop     CX
+                Pop     BX
+                Jmp     Glbl_InstrumentToSample1
+
+Glbl_InstrumentToSample2:
+                ; AL = sample number; bounds-check it too
+                Cmp     AL, 99
+                JA      Glbl_InstrumentToSample4
                 Mov     ES:LastInstrument, AL
+Glbl_InstrumentToSample4:
+                Pop     DX
+                Pop     CX
+                Pop     BX
 
 Glbl_InstrumentToSample1:
                 Ret
