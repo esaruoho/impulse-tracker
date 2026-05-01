@@ -3942,11 +3942,21 @@ Proc            Music_ImportRenderedPattern Far
                 Xor     AL, AL
                 StosB
 
-                ; --- Find next empty sample slot -----------------------------
-                Call    Music_GetNumberOfSamples ; AX = highest used
+                ; --- Find next slot empty in BOTH sample and instrument ------
+                ; Use max(highest_sample, highest_instrument) + 1 so slot N is
+                ; guaranteed empty in both lists. The instrument we create later
+                ; lives at the same number, which makes F3 / F4 navigation
+                ; consistent: in slot N, sample N is referenced by instrument N.
+                Call    Music_GetNumberOfSamples         ; AX = highest sample
+                Mov     BX, AX                            ; BX = sample max
+                Call    Music_GetNumberOfInstruments     ; AX = highest inst
+                Cmp     AX, BX
+                JAE     WAVI_HaveMax
+                Mov     AX, BX                            ; AX = max(samp,inst)
+WAVI_HaveMax:
                 Cmp     AX, 99
                 JAE     WAVI_FailNoSlot
-                Inc     AX                       ; next free slot, 1-based
+                Inc     AX                                ; next free slot
                 Mov     [CS:WAV_TargetSlot], AX
 
                 ; --- Open file -----------------------------------------------
