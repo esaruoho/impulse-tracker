@@ -15,6 +15,8 @@ include network.inc
         Extrn   D_GotoStartingDirectory:Far
         Extrn   D_SetDriveDirectoryFar:Far
         Extrn   D_GetFileName:Far
+        Extrn   D_SetCurrentSample:Far
+        Extrn   D_SetCurrentInstrument:Far
         Extrn   D_Showtime:Far
 
         Extrn   E_EMSAvailable:Far
@@ -4118,10 +4120,25 @@ WAVI_NoShr2:
                 Add     AL, '0'
                 StosB
 
-                ; --- Assign to instrument ------------------------------------
-                Mov     BX, [CS:WAV_TargetSlot]
-                Call    Music_AssignSampleToInstrument
+                ; --- Auto-select the new sample so F3 lands on it ------------
+                Mov     AX, [CS:WAV_TargetSlot]
+                Call    D_SetCurrentSample
 
+                ; --- Instrument-mode check -----------------------------------
+                ; Music_GetInstrumentMode returns AH=4 (instrument) or 0 (sample),
+                ; ZF set when sample mode. Only create + auto-select an
+                ; instrument when in Instrument mode -- otherwise we would
+                ; pollute F4's list with auto-renders the user can't see.
+                Call    Music_GetInstrumentMode
+                JZ      WAVI_SkipInstrument
+
+                Mov     BX, [CS:WAV_TargetSlot]
+                Call    Music_AssignSampleToInstrument ; AX = inst num, CF on fail
+                JC      WAVI_SkipInstrument
+
+                Call    D_SetCurrentInstrument
+
+WAVI_SkipInstrument:
                 ; --- Upload to active driver ---------------------------------
                 Mov     AX, [CS:WAV_TargetSlot]
                 Dec     AX                      ; SoundCardLoadSample uses 0-based

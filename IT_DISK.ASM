@@ -144,6 +144,8 @@ ENDIF
 ;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
 
                 Global  D_GetFileName:Far
+                Global  D_SetCurrentSample:Far
+                Global  D_SetCurrentInstrument:Far
                 Global  D_SetDriveDirectoryFar:Far
 
                 Global  D_RestorePreShellDirectory:Far
@@ -10271,6 +10273,24 @@ Proc            D_GetFileName Far
                 Ret
 
 EndP            D_GetFileName
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+Proc            D_SetCurrentSample Far          ; AX = sample number (1..99)
+
+                Mov     CS:CurrentSample, AX
+                Ret
+
+EndP            D_SetCurrentSample
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+Proc            D_SetCurrentInstrument Far      ; AX = instrument number (1..99)
+
+                Mov     CS:CurrentInstrument, AX
+                Ret
+
+EndP            D_SetCurrentInstrument
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
