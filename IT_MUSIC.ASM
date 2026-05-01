@@ -3881,7 +3881,7 @@ RenderedFilename        DB      14 Dup (0)
 PatternNamePrefix       DB      "Pattern "
 WAV_OutputName          DB      "OUTPUT"
 WAV_RenderCounter       DW      0
-WAV_RenderBasename      DB      "REN000", 0, 0
+WAV_RenderBasename      DB      "REN000.", 0
 WAV_ImportedMsg         DB      "Pattern imported as sample ", 0FDh, "D", 0
 WAV_ImportFailedMsg     DB      "Could not import rendered pattern", 0
 WAV_FailNoSlot          DB      "Import failed: no free sample slot", 0
