@@ -30,6 +30,8 @@ include switch.inc
 ;³ Globals                                                                     ³
 ;ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
 
+                Global  MIDISyncEnable:Byte
+
                 Global  K_DrawTables:Far
                 Global  K_InitKeyBoard:Far
                 Global  K_UnInitKeyBoard:Far
@@ -90,6 +92,7 @@ KeypadValue             DB      0
 MIDIStatusByte          DB      0
 MIDIClockCount          DB      0       ; 0..23 within current quarter
 MIDIClockLastTick       DW      0       ; DOS Int 1Ah AH=0 DX at last beat
+MIDISyncEnable          DB      0       ; 0 = ignore F8 Clock, 1 = sync
 MIDIDataByte1           DB      0
 MIDIDataByte2           DB      0
 MIDIDataInput           DB      0
@@ -1814,8 +1817,11 @@ MIDISendRTStop:
                 Jmp     MIDISendEnd
 
 MIDISendRTClock:
-                ; F8 MIDI Clock: count to 24 (one quarter note), then derive
-                ; BPM from elapsed DOS ticks across the beat and apply.
+                ; F8 MIDI Clock: gated by MIDISyncEnable. When enabled,
+                ; count to 24 (one quarter note at 24 PPQ standard) and
+                ; derive BPM from DOS-tick delta across the beat.
+                Cmp     Byte Ptr [MIDISyncEnable], 0
+                JE      MIDISendEnd
                 Inc     Byte Ptr [MIDIClockCount]
                 Cmp     Byte Ptr [MIDIClockCount], 24
                 JB      MIDISendEnd
@@ -1827,11 +1833,24 @@ MIDISendRTClock:
                 Mov     AH, 0
                 Int     1Ah                     ; DX = current ticks (low)
                 Mov     AX, DX
-                Sub     AX, [MIDIClockLastTick] ; AX = delta this beat
+                Sub     AX, [MIDIClockLastTick] ; AX = delta (DOS DX wraps
+                                                ; every ~58 min; subtraction
+                                                ; mod 65536 still gives the
+                                                ; right elapsed-since-last
+                                                ; provided beat < 58 min)
                 Mov     [MIDIClockLastTick], DX
+
+                ; Sanity: reject delta of 0 (clock too fast for timer
+                ; resolution) or huge (>2730 ticks ~= 150 sec, BPM<0.4)
+                Test    AX, AX
+                JZ      MIDISendRTClockSkip
+                Cmp     AX, 2730
+                JA      MIDISendRTClockSkip
+
                 Movzx   EAX, AX
                 Call    Music_SetTempoFromClocks
 
+MIDISendRTClockSkip:
                 Pop     ES
                 PopAD
                 Jmp     MIDISendEnd
