@@ -742,12 +742,12 @@ ENDIF
 
                 Pop     AX
 
-                Mov     SI, Offset OldDirectory
-                Mov     Word Ptr [SI], '.'
-                Call    SetDirectory
-                Call    GotoHomeDirectory
-                Mov     SI, Offset WAVDirectory
-                Call    SetDirectory
+                ; --- WAVDirectory dance removed -----------------------------
+                ; The host (IT.EXE Music_ToggleWAVRender) now sets cwd before
+                ; the render begins, so this driver writes to whatever cwd it
+                ; finds. The original dance was: save current dir, cd home,
+                ; cd WAVDirectory -- but it never actually restored on exit
+                ; (OldDirectory was just '.' = no-op).
 
                 Cmp     AX, 1
                 JE      Poll9

@@ -146,6 +146,9 @@ ENDIF
                 Global  D_GetFileName:Far
                 Global  D_SetCurrentSample:Far
                 Global  D_SetCurrentInstrument:Far
+                Global  D_GotoSampleDirectory:Far
+                Global  D_SaveCwd:Far
+                Global  D_RestoreCwd:Far
                 Global  D_SetDriveDirectoryFar:Far
 
                 Global  D_RestorePreShellDirectory:Far
@@ -10291,6 +10294,90 @@ Proc            D_SetCurrentInstrument Far      ; AX = instrument number (1..99)
                 Ret
 
 EndP            D_SetCurrentInstrument
+
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+
+; CwdSave: 1 byte drive + 64 bytes path (DOS AH=47h fills past the byte
+;  for the leading backslash convention).
+
+CwdSaveDrive            DB      0
+CwdSavePath             DB      "\\", 64 Dup (0)
+
+Proc            D_SaveCwd Far
+
+                Push    AX
+                Push    DS
+                Push    SI
+                Push    DX
+
+                Mov     AH, 19h                 ; get current drive
+                Int     21h
+                Mov     [CS:CwdSaveDrive], AL
+
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset CwdSavePath + 1
+                Xor     DL, DL                  ; current drive
+                Mov     AH, 47h
+                Int     21h                     ; fill DS:SI with cwd
+
+                Pop     DX
+                Pop     SI
+                Pop     DS
+                Pop     AX
+                Ret
+
+EndP            D_SaveCwd
+
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+
+Proc            D_RestoreCwd Far
+
+                Push    AX
+                Push    DX
+                Push    DS
+                Push    SI
+
+                ; restore drive
+                Mov     DL, [CS:CwdSaveDrive]
+                Mov     AH, 0Eh                 ; set current drive
+                Int     21h
+
+                ; restore directory (relative to drive root)
+                Push    CS
+                Pop     DS
+                Mov     DX, Offset CwdSavePath
+                Mov     AH, 3Bh                 ; chdir
+                Int     21h
+
+                Pop     SI
+                Pop     DS
+                Pop     DX
+                Pop     AX
+                Ret
+
+EndP            D_RestoreCwd
+
+;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+
+Proc            D_GotoSampleDirectory Far
+
+                Push    DS
+                Push    SI
+
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset SampleDirectory
+                Cmp     Byte Ptr [SI], 0
+                JE      D_GotoSampleDirectory1  ; empty -> no-op
+                Call    D_SetDriveDirectory
+D_GotoSampleDirectory1:
+
+                Pop     SI
+                Pop     DS
+                Ret
+
+EndP            D_GotoSampleDirectory
 
 ;컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
 

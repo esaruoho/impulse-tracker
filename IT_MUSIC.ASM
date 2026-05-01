@@ -15,6 +15,9 @@ include network.inc
         Extrn   D_GotoStartingDirectory:Far
         Extrn   D_SetDriveDirectoryFar:Far
         Extrn   D_GetFileName:Far
+        Extrn   D_SaveCwd:Far
+        Extrn   D_RestoreCwd:Far
+        Extrn   D_GotoSampleDirectory:Far
         Extrn   D_SetCurrentSample:Far
         Extrn   D_SetCurrentInstrument:Far
         Extrn   PE_SetLastInstrument:Far
@@ -3817,6 +3820,12 @@ Proc            Music_ToggleWAVRender Far       ; AX = pattern (on enter)
                 Pop     ES
                 Pop     DS
 
+                ; Save cwd + cd to user's SampleDirectory so the rendered
+                ; .NNN file lands there. WAVDRV writes to whatever cwd it
+                ; finds (its own home-dir dance was disabled).
+                Call    D_SaveCwd
+                Call    D_GotoSampleDirectory
+
                 Mov     AX, [CS:WAV_PendingPattern]
                 Xor     CX, CX
                 Call    Music_PlayPattern
@@ -3846,6 +3855,7 @@ WAV_LeaveMode:
                 Mov     Byte Ptr [CS:WAV_FinalizeDelay], 0
 
                 Call    Music_ImportRenderedPattern
+                Call    D_RestoreCwd                 ; restore caller's cwd
 
 WAV_ToggleDone:
                 Pop     ES
@@ -4063,14 +4073,15 @@ WAVI_ReadDone:
                 ;                      bit 1 = 16-bit
                 ;                      bit 2 = stereo
                 Mov     AL, [DS:SI+12h]
-                Or      AL, 1
+                Or      AL, 1                       ; bit 0 = sample present
+                Or      AL, 10h                     ; bit 4 = forward loop
                 Cmp     Word Ptr [CS:WAV_BitsPerSample], 16
                 JNE     WAVI_NotSixteen
-                Or      AL, 2
+                Or      AL, 2                       ; bit 1 = 16-bit
 WAVI_NotSixteen:
                 Cmp     Word Ptr [CS:WAV_Channels], 2
                 JNE     WAVI_NotStereo
-                Or      AL, 4
+                Or      AL, 4                       ; bit 2 = stereo
 WAVI_NotStereo:
                 Mov     [DS:SI+12h], AL
 
@@ -4089,17 +4100,19 @@ WAVI_NoShr16:
                 JNE     WAVI_NoShr2
                 ShR     EAX, 1
 WAVI_NoShr2:
-                Mov     [DS:SI+30h], EAX
+                Mov     [DS:SI+30h], EAX            ; length in samples
+
+                ; Loop start = 0, Loop end = length (EAX still holds length)
+                Mov     DWord Ptr [DS:SI+34h], 0
+                Mov     [DS:SI+38h], EAX
+
+                ; Sustain loops disabled
+                Mov     DWord Ptr [DS:SI+40h], 0
+                Mov     DWord Ptr [DS:SI+44h], 0
 
                 ; C5 speed
                 Mov     EAX, [CS:WAV_SampleRate]
                 Mov     [DS:SI+3Ch], EAX
-
-                ; Loops disabled
-                Mov     DWord Ptr [DS:SI+34h], 0
-                Mov     DWord Ptr [DS:SI+38h], 0
-                Mov     DWord Ptr [DS:SI+40h], 0
-                Mov     DWord Ptr [DS:SI+44h], 0
 
                 ; Sample name "Pattern NNN" at +14h, 26 bytes total
                 Push    DS
