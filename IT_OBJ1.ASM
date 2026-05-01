@@ -76,6 +76,7 @@ ENDIF
                 Extrn   LSWindow_Down:Far
 
                 Extrn   SongDirectory:Byte
+                Extrn   QuickSaveDirectory:Byte
                 Extrn   FileSpecifier:Byte
 
                 Extrn   F_InstrumentButtonHandler:Far
@@ -319,6 +320,7 @@ ENDIF
                 Extrn   SongDirectory:Byte
                 Extrn   SampleDirectory:Byte
                 Extrn   InstrumentDirectory:Byte
+                Extrn   QuickSaveDirectory:Byte
 
                 Extrn   IdleUpdateInfoLine:Far
                 Extrn   DOSShell:Far
@@ -5333,8 +5335,9 @@ O1_ConfigureITList      DW      14                      ; Song name input
                         DW      Near Ptr SongDirectoryInput     ; 28
                         DW      Near Ptr SampleDirectoryInput   ; 29
                         DW      Near Ptr InstrumentDirectoryInput       ; 30
-                        DW      Near Ptr SaveDirectoryConfigButton      ; 31
-                        DW      Near Ptr LinkCommandGToggle     ; 32
+                        DW      Near Ptr QuickSaveDirectoryInput        ; 31
+                        DW      Near Ptr SaveDirectoryConfigButton      ; 32
+                        DW      Near Ptr LinkCommandGToggle     ; 33
                         DW      Near Ptr SetHelpContext5
                         DW      0
 
@@ -5400,10 +5403,11 @@ DirectoryText2          DW      1
                         DB      0FFh, 4, " Module", 13
                         DB      0FFh, 4, " Sample", 13
                         DB      "Instrument", 13
+                        DB      0FFh, 1, " Quicksave", 13
                         DB      0
 
 DirectoryInputBox       DW      0
-                        DB      12, 41, 78, 45
+                        DB      12, 41, 78, 46
                         DB      27
 
 SongNameInput           DW      16
@@ -5562,14 +5566,21 @@ InstrumentDirectoryInput DW      16
                         DD      0
                         DW      29, 31, 31, 29
 
+QuickSaveDirectoryInput DW      16
+                        DB      13, 45
+                        DW      0, Offset QuickSaveDirectory
+                        DW      65
+                        DD      0
+                        DW      30, 32, 32, 30
+
 SaveDirectoryConfigButton DW    2
-                        DW      30, 0FFFFh, 0FFFFh, 0FFFFh
+                        DW      31, 0FFFFh, 0FFFFh, 0FFFFh
                         DW      0
                         DW      0, 0            ; Press... no data reqd
                         DW      2
                         DD      DWord Ptr D_SaveDirectoryConfiguration
                         DW      0, 0, 0         ; Unused data..
-                        DB      27, 46, 52, 48
+                        DB      27, 47, 52, 49
                         DB      8               ; Thin box up
                         DB      0               ; Button up
                         DB      "  Save all Preferences", 0
