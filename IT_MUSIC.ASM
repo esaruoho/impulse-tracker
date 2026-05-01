@@ -3883,6 +3883,7 @@ WAV_BitsPerSample       DW      0
 WAV_Channels            DW      0
 WAV_SampleRate          DD      0
 WAV_DataLength          DD      0
+WAV_Page                DB      0
 RenderedFilename        DB      14 Dup (0)
 PatternNamePrefix       DB      "Pattern "
 WAV_OutputName          DB      "OUTPUT"
@@ -3990,19 +3991,20 @@ Proc            Music_ImportRenderedPattern Far
                 JZ      WAVI_CloseAllocFail
 
                 ; --- Stream PCM in 16KB chunks via Music_GetSampleLocation ---
-                ; Music_GetSampleLocation steps in 16KB pages (CH = page number).
-                ; We ignore its returned ECX -- length is unset until later.
+                ; Page counter is held in [CS:WAV_Page] -- holding it in CH
+                ; doesn't survive the 'Mov CX, AX' chunk-size load (when
+                ; AX = 0x4000, that puts 0x40 = 64 into CH, immediately
+                ; tripping the safety cap and bailing after one chunk).
                 Mov     EBP, [CS:WAV_DataLength]    ; bytes remaining
-                Xor     CH, CH                      ; page 0
+                Mov     Byte Ptr [CS:WAV_Page], 0
 WAVI_ReadLoop:
                 Test    EBP, EBP
                 JZ      WAVI_ReadDone
 
-                Push    CX                      ; save page number
-                Mov     AX, [CS:WAV_TargetSlot] ; 1-based
-                Call    Music_GetSampleLocation ; DS:ESI = page base
-                Pop     CX                      ; restore CH
-                JC      WAVI_ReadDone           ; safety: bail on failure
+                Mov     AX, [CS:WAV_TargetSlot]     ; 1-based
+                Mov     CH, [CS:WAV_Page]           ; load page for proc
+                Call    Music_GetSampleLocation     ; DS:ESI = page base
+                JC      WAVI_ReadDone
 
                 ; Chunk size = min(EBP, 16384)
                 Mov     EAX, EBP
@@ -4018,18 +4020,17 @@ WAVI_ChunkSize:
                 Int     21h                     ; AX = bytes read
                 Pop     CX                      ; CX = requested length
 
-                ; If we read less than requested, EOF/error -- bail with what we got
                 Cmp     AX, CX
                 JNE     WAVI_ReadShort
                 Movzx   EAX, AX
                 Sub     EBP, EAX
-                Inc     CH                      ; advance to next 16KB page
-                Cmp     CH, 64                  ; safety: cap at 64 pages = 1MB
+                Inc     Byte Ptr [CS:WAV_Page]      ; next 16KB page
+                Cmp     Byte Ptr [CS:WAV_Page], 64  ; safety cap at 1MB
                 JAE     WAVI_ReadDone
                 Jmp     WAVI_ReadLoop
 WAVI_ReadShort:
                 Movzx   EAX, AX
-                Sub     EBP, EAX                ; account for partial read
+                Sub     EBP, EAX
 WAVI_ReadDone:
 
                 ; --- Close file ----------------------------------------------
@@ -4139,6 +4140,9 @@ WAVI_NoShr2:
                 JZ      WAVI_SkipInstrument
 
                 Mov     BX, [CS:WAV_TargetSlot]
+                Dec     BX                      ; proc takes BX as 0-based --
+                                                ; it does Inc BX inside before
+                                                ; writing into the note-map
                 Call    Music_AssignSampleToInstrument ; AX = inst num, CF on fail
                 JC      WAVI_SkipInstrument
 
