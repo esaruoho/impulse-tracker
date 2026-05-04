@@ -179,6 +179,7 @@ ENDIF
                 Extrn   Glbl_Alt_F7:Far
                 Extrn   Glbl_Alt_F8:Far
                 Extrn   Glbl_Alt_W:Far
+                Extrn   Glbl_Alt_F12:Far
                 Extrn   Glbl_LoadSample:Far
                 Extrn   Glbl_LoadInstrument:Far
                 Extrn   Glbl_LeftBrace:Far
@@ -3231,6 +3232,10 @@ ENDIF
                         DB      2               ; Alt..
                         DW      157h            ; F11
                         DD      DWord Ptr Music_ToggleOrderUpdate
+
+                        DB      2               ; Alt-F12 = toggle MIDI Sync (F8 Clock)
+                        DW      158h
+                        DD      DWord Ptr Glbl_Alt_F12
 
                         DB      2               ; Alt-W = quick-save;
                         DW      111h            ; Shift-Alt-W = memorize.
