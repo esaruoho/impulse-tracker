@@ -5,7 +5,7 @@ TUTORIAL        = 0
 
   EMSUSE41        = 0
 
-  SHOWVERSION         = 0
+  SHOWVERSION         = 1
   SHOWREGISTERNAME    = 1
 
   USE32BITSCREENCOPY  = 0
@@ -41,4 +41,4 @@ IF TUTORIAL
  DDCOMPRESS      = 1
 ENDIF
 
-TRACKERVERSION  = 217h          ; Still have to change text in IT.ASM, IT_F.ASM
+TRACKERVERSION  = 2354h         ; v2.354 (esaruoho fork). Still have to change text in IT.ASM, IT_F.ASM
