@@ -3235,10 +3235,6 @@ ENDIF
                         DW      157h            ; F11
                         DD      DWord Ptr Music_ToggleOrderUpdate
 
-                        DB      2               ; Alt-F12 = toggle MIDI Sync (F8 Clock)
-                        DW      158h
-                        DD      DWord Ptr Glbl_Alt_F12
-
                         DB      2               ; Alt-W = quick-save;
                         DW      111h            ; Shift-Alt-W = memorize.
                         DD      DWord Ptr Glbl_Alt_W
@@ -8623,6 +8619,7 @@ O1_MIDIScreen           DW      7
                         DW      Near Ptr MIDIPWDInput           ; 20
                         DW      Near Ptr MIDIEmbedBox
                         DW      NEar Ptr MIDIEmbedToggle
+                        DW      Near Ptr MIDISyncToggleButton
                         DW      Near Ptr SetHelpContext13
                         DW      0
 
@@ -8664,7 +8661,7 @@ MIDIOutputButton        DW      2
                         DB      "  MIDI Output Configuration", 0
 
 MIDISaveConfigButton    DW      2
-                        DW      15, 0FFFFh, 0FFFFh, 0FFFFh
+                        DW      15, 23, 0FFFFh, 0FFFFh
                         DW      0
                         DW      0, 0
                         DW      2
@@ -8674,6 +8671,18 @@ MIDISaveConfigButton    DW      2
                         DB      8
                         DB      0
                         DB      "  Save Output Configuration", 0
+
+MIDISyncToggleButton    DW      2
+                        DW      16, 0FFFFh, 0FFFFh, 0FFFFh
+                        DW      0
+                        DW      0, 0
+                        DW      2
+                        DD      DWord Ptr Glbl_Alt_F12
+                        DW      0, 0, 0
+                        DB      2, 40, 32, 42
+                        DB      8
+                        DB      0
+                        DB      "  Toggle MIDI Sync (F8 Clock)", 0
 
 ShowMIDIInput           DW      8
 MIDIIdleList            DD      DWord Ptr K_ShowMIDIInput
