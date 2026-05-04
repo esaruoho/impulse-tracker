@@ -56,8 +56,12 @@ Segment         Music BYTE Public 'Code'
                 Extrn   MIDIDataArea:Word
 EndS
 
-Segment         Disk BYTE Public 'Code'
+Segment         Disk BYTE Public 'Code' USE16
                 Extrn   DiskDataArea:Word
+                Extrn   SongDirectory:Byte
+                Extrn   SampleDirectory:Byte
+                Extrn   InstrumentDirectory:Byte
+                Extrn   QuickSaveDirectory:Byte
 EndS
 
 Segment         Screen BYTE Public 'Code'
@@ -3181,6 +3185,23 @@ F_PostStringInput12:
 
                 Mov     DI, [SI+8]
                 Call    F_GetStringInputOffset
+
+                ; Finnish-keyboard quickfix: '/' -> '\' in dir input fields.
+                ; After F_GetStringInputOffset, DS=Disk + SI=buffer base for
+                ; the four directory fields, so an offset compare identifies them.
+                Cmp     DL, '/'
+                JNE     F_PostStringInputNotDirSlash
+                Cmp     SI, Offset SongDirectory
+                JE      F_PostStringInputDirSlash
+                Cmp     SI, Offset SampleDirectory
+                JE      F_PostStringInputDirSlash
+                Cmp     SI, Offset InstrumentDirectory
+                JE      F_PostStringInputDirSlash
+                Cmp     SI, Offset QuickSaveDirectory
+                JNE     F_PostStringInputNotDirSlash
+F_PostStringInputDirSlash:
+                Mov     DL, '\'
+F_PostStringInputNotDirSlash:
 
                 Xor     BX, BX
 
