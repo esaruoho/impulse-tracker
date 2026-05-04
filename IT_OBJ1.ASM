@@ -161,6 +161,8 @@ ENDIF
                 Extrn   Glbl_F10:Far
                 Extrn   Glbl_F11:Far
                 Extrn   Glbl_F12:Far
+                Extrn   D_PickModuleDir:Far
+                Extrn   D_PickerEsc:Far
                 Extrn   Glbl_F2:Far
                 Extrn   Glbl_F3:Far
                 Extrn   Glbl_F4:Far
@@ -3153,7 +3155,7 @@ OrderKeyValue           DW      157h
 
                         DB      0               ; ESC
                         DW      101h
-                        DD      DWord Ptr F_MainMenu
+                        DD      DWord Ptr D_PickerEsc
 
                         DB      1
                         DW      04h             ; Ctrl 'D'
@@ -5554,7 +5556,7 @@ SongDirectoryInput      DW      16
                         DB      13, 42
                         DW      0, Offset SongDirectory
                         DW      65
-                        DD      0
+                        DD      DWord Ptr D_PickModuleDir
                         DW      26, 29, 29, 26
 
 SampleDirectoryInput    DW      16

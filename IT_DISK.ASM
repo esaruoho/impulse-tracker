@@ -134,7 +134,10 @@ ENDIF
                 Extrn   ClearInfoLine:Far
 
                 Extrn   Glbl_SetCurrentMode:Far
+                Extrn   Glbl_F9:Far
                 Extrn   Glbl_F10:Far
+                Extrn   Glbl_F12:Far
+                Extrn   F_MainMenu:Far
 
                 Extrn   GetKeyboardLock:Far, GetTimerCounter:Far
                 Extrn   MouseUpdateEnable:Far, MouseUpdateDisable:Far
@@ -231,6 +234,9 @@ ENDIF
 
                 Global  D_QuickSave:Far
                 Global  D_MemorizeQuickSaveDir:Far
+                Global  D_PickModuleDir:Far
+                Global  D_PickerEsc:Far
+                Global  DirectoryPickerActive:Byte
 
                 Global  D_SaveSample:Far
                 Global  D_SaveRawSample:Far
@@ -341,6 +347,7 @@ CountryTableConfig      DB      0
 QuickSaveDirectory      DB      0
                         DB      69 Dup (0)
 QuickSaveBackup         DB      70 Dup (0)
+DirectoryPickerActive   DB      0
 QuickSaveNoFolderMsg    DB      "Quick-save folder not configured.", 0
 QuickSaveMemorizedMsg   DB      "Quick-save folder memorized.", 0
 
@@ -4145,6 +4152,12 @@ Proc            D_PostFileLoadWindow Far
 ;                Cmp     DX, 13
                 Cmp     CX, 11Ch
                 JNE     D_PostFileWindow
+                                        ; Directory-picker gate: swallow Enter on a
+                                        ; file when picker is active so we do not
+                                        ; destructively load a song while the user
+                                        ; is browsing for a directory.
+                Cmp     CS:DirectoryPickerActive, 0
+                JNE     D_PostFileLoadWindow1
                                         ; Load file routines.
 
 D_PostFileLoadWindowLink:
@@ -7820,6 +7833,50 @@ Proc            D_MemorizeQuickSaveDir Far
                 Ret
 
 EndP            D_MemorizeQuickSaveDir
+                Assume DS:Nothing
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+; D_PickModuleDir: Enter callback for the F12 Module-directory input row.
+; Sets the picker flag and tail-jumps to Glbl_F9 (Load Module screen).
+; F9 navigates SongDirectory directly, which IS the Module-directory target,
+; so no buffer copy is needed at commit time.
+
+Proc            D_PickModuleDir Far
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Disk
+
+                Mov     DirectoryPickerActive, 1
+                Jmp     Glbl_F9
+
+EndP            D_PickModuleDir
+                Assume DS:Nothing
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+; D_PickerEsc: Esc handler that replaces F_MainMenu in GlobalKeyChain.
+; When the directory picker is active, Esc commits the current path
+; (already in SongDirectory due to F9 navigation) and returns to F12.
+; Otherwise, falls through to F_MainMenu (normal Esc = main menu).
+
+Proc            D_PickerEsc Far
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Disk
+
+                Cmp     DirectoryPickerActive, 0
+                JE      D_PickerEsc1
+
+                Mov     DirectoryPickerActive, 0
+                Jmp     Glbl_F12
+
+D_PickerEsc1:
+                Jmp     F_MainMenu
+
+EndP            D_PickerEsc
                 Assume DS:Nothing
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
