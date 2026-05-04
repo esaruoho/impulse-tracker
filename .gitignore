@@ -60,3 +60,5 @@ DIAG*.LOG
 testp2.conf
 OUTPUT.*
 004_*.it
+004_*.001
+CACHE.ITS
