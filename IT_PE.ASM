@@ -697,8 +697,8 @@ ENDIF
                         DW      Offset PEFunction_ToggleDivision
 
                         DB      1
-                        DW      1300h           ; Alt 'R'
-                        DW      Offset PEFunction_ReplicateAtCursor
+                        DW      1300h           ; Alt 'R' / Shift-Alt 'R'
+                        DW      Offset PEFunction_AltR_Dispatch
 
                         DB      1
                         DW      1500h           ; Alt 'Y'
@@ -6460,32 +6460,72 @@ EndP            PEFunction_BlockDouble
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
+; Alt-R dispatcher: M_FunctionDivider sees both Alt-R and Shift-Alt-R as
+; the same word (1300h) because Alt suppresses ASCII and Shift doesn't
+; change R's scancode. So we bind Alt-R to this dispatcher and split on
+; the live shift-key state. Shift held -> ClearViews. Shift not held ->
+; ReplicateAtCursor.
+
+Proc            PEFunction_AltR_Dispatch Far
+
+                Mov     BX, 02Ah                ; Left Shift scancode
+                Call    K_IsKeyDown
+                JNE     PEFunction_AltR_Shift
+                Mov     BX, 036h                ; Right Shift scancode
+                Call    K_IsKeyDown
+                JNE     PEFunction_AltR_Shift
+
+                Jmp     PEFunction_ReplicateAtCursor
+
+PEFunction_AltR_Shift:
+                Jmp     PEFunction_ClearViews
+
+EndP            PEFunction_AltR_Dispatch
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
 ; Replicate at Cursor (Alt-R) -- port of Paketti's feature as it lives in
 ; ztrackerprime (src/CUI_Patterneditor.cpp:2581). Single-channel operation:
-;   source chunk = rows 0..Row-1 of the current Channel
-;   fill rows Row..MaxRow of the same Channel by repeating that chunk:
-;       dest[j] = source[(j - Row) mod Row]
+;
+;   If Row > 0:
+;     source chunk = rows 0..Row-1 of the current Channel (chunk_len = Row)
+;     fill rows Row..MaxRow of the same Channel by repeating that chunk
+;
+;   If Row == 0:
+;     source chunk = row 0 itself (chunk_len = 1)
+;     fill rows 1..MaxRow with copies of row 0
+;
 ; Empty source events are copied through as-is (mirror semantics), so the
-; destination is an exact tiling of the chunk above the cursor.
-; No-op if cursor is at row 0 (no chunk above) or past MaxRow.
+; destination is an exact tiling. No-op if cursor is past MaxRow, or if
+; dest_start would already be past MaxRow (1-row pattern, etc).
 
 Proc            PEFunction_ReplicateAtCursor Far
 
                 Mov     AX, Row
-                Test    AX, AX
-                JZ      PEFunction_ReplicateAtCursorDone   ; nothing above cursor
-
                 Cmp     AX, MaxRow
                 JA      PEFunction_ReplicateAtCursorDone   ; cursor past last row
+
+                                                ; chunk_len = max(Row, 1)
+                                                ; dest_start = max(Row, 1)
+                Test    AX, AX
+                JNZ     PEFunction_ReplicateAtCursorHaveChunk
+                Mov     AX, 1                   ; Row == 0: tile row 0 downward
+
+PEFunction_ReplicateAtCursorHaveChunk:
+                                                ; AX now = chunk_len = dest_start
+                Cmp     AX, MaxRow
+                JA      PEFunction_ReplicateAtCursorDone   ; nothing to fill
+                Mov     BP, AX                  ; BP = chunk_len (preserved)
 
                 Mov     DI, 23                  ; undo tag (next unused)
                 Call    PE_AddToUndoBuffer
 
                 Mov     BL, Byte Ptr Channel
-                Mov     BH, Byte Ptr Row
+                Mov     AX, BP
+                Mov     BH, AL                  ; BH = dest_start row (low byte)
                 Mov     CL, 1                   ; width = 1 channel
                 Mov     CH, Byte Ptr MaxRow
-                Sub     CH, BH                  ; height = (MaxRow - Row) + 1
+                Sub     CH, BH                  ; height = (MaxRow - start) + 1
                 Inc     CH
                 Call    NetworkPatternBlock
 
@@ -6494,14 +6534,12 @@ Proc            PEFunction_ReplicateAtCursor Far
                 Mul     Channel
                 Mov     BX, AX                  ; BX = channel byte offset
 
-                Mov     BP, Row                 ; BP = chunk_len (preserved)
-
                 Mov     DS, PatternDataArea
                 Push    DS
                 Pop     ES
                         Assume DS:Nothing, ES:Nothing
 
-                Mov     CX, BP                  ; CX = dest_row, start at Row
+                Mov     CX, BP                  ; CX = dest_row = dest_start
                 Xor     DX, DX                  ; DX = src_row, start at 0
 
 PEFunction_ReplicateAtCursorLoop:
