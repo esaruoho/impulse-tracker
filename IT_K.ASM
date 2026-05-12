@@ -32,6 +32,7 @@ include switch.inc
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
                 Global  MIDISyncEnable:Byte
+                Global  MIDISyncLoaderSuppress:Byte
                 Global  Glbl_Alt_F12:Far
 
                 Global  K_DrawTables:Far
@@ -55,6 +56,7 @@ include switch.inc
                 Global  CountryTable:Byte
 
                 Public  MIDIBufferEmpty, MIDISend, K_ShowMIDIInput
+                Public  MIDI_SetLoaderSuppress, MIDI_ClearLoaderSuppress
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
@@ -95,6 +97,13 @@ MIDIStatusByte          DB      0
 MIDIClockCount          DB      0       ; 0..23 within current quarter
 MIDIClockLastTick       DW      0       ; DOS Int 1Ah AH=0 DX at last beat
 MIDISyncEnable          DB      1       ; default ON. Alt-F12 toggles.
+MIDISyncLoaderSuppress  DB      0       ; non-zero while F3 loader keyjazz is in
+                                        ; flight (LoadSample -> PlaySample). Stops
+                                        ; MIDISend from re-entering playback while
+                                        ; slot 99 is mid-write. RT counters still
+                                        ; tick, only the start/stop/continue
+                                        ; CALLBACKS into Music_KBPlaySong /
+                                        ; Music_Stop are suppressed.
 MIDIDataByte1           DB      0
 MIDIDataByte2           DB      0
 MIDIDataInput           DB      0
@@ -1886,6 +1895,8 @@ MIDISendRTStart_Play:
                 Mov     [MIDIClockLastTick], DX
                 PopA
 
+                Cmp     Byte Ptr [MIDISyncLoaderSuppress], 0
+                JNE     MIDISendEnd             ; loader keyjazz in flight, skip
                 PushAD
                 Push    ES
                 Call    Music_KBPlaySong        ; F5 equivalent, idempotent
@@ -1901,6 +1912,8 @@ MIDISendRTStop:
                 Int     1Ah
                 Mov     [MIDIMon_LastRTTick], DX
                 PopA
+                Cmp     Byte Ptr [MIDISyncLoaderSuppress], 0
+                JNE     MIDISendEnd             ; loader keyjazz in flight, skip
                 PushAD
                 Push    ES
                 Call    Music_Stop
@@ -1980,6 +1993,36 @@ MIDISendEnd:
                 Ret
 
 EndP            MIDISend
+                Assume DS:Nothing
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
+; Loader keyjazz hang fix: set/clear the MIDI sync suppress flag from
+; IT_DISK.ASM around the LoadSample -> Music_PlaySample critical section.
+; Without these, an FA/FC that arrives during Music_Stop's Cli window would
+; re-enter Music_KBPlaySong / Music_Stop while slot 99 is mid-write, racing
+; the mixer against a half-loaded sample header.
+
+Proc            MIDI_SetLoaderSuppress Far
+                Push    DS
+                Push    CS
+                Pop     DS
+                        Assume DS:Keyboard
+                Mov     Byte Ptr [MIDISyncLoaderSuppress], 1
+                Pop     DS
+                Ret
+EndP            MIDI_SetLoaderSuppress
+                Assume DS:Nothing
+
+Proc            MIDI_ClearLoaderSuppress Far
+                Push    DS
+                Push    CS
+                Pop     DS
+                        Assume DS:Keyboard
+                Mov     Byte Ptr [MIDISyncLoaderSuppress], 0
+                Pop     DS
+                Ret
+EndP            MIDI_ClearLoaderSuppress
                 Assume DS:Nothing
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½

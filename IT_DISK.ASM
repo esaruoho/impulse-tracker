@@ -47,6 +47,9 @@ EndS
                 Extrn   K_ClearKeyBoardQueue:Far
                 Extrn   K_GetKey:Far
 
+                Extrn   MIDI_SetLoaderSuppress:Far
+                Extrn   MIDI_ClearLoaderSuppress:Far
+
                 Extrn   M_FunctionDivider:Far
                 Extrn   M_Object1List:Far
 
@@ -5933,6 +5936,14 @@ D_PostLoadSampleWindow2:
                 Call    D_DebugMark
                 Pop     AX
 
+                ; Suppress MIDI sync playback callbacks (Music_KBPlaySong /
+                ; Music_Stop) for the duration of the LoadSample -> PlaySample
+                ; sequence. Otherwise an FA/FC arriving during Music_Stop's
+                ; Cli window restarts playback while slot 99 is mid-write.
+                Push    AX
+                Call    MIDI_SetLoaderSuppress
+                Pop     AX
+
                 Mov     DS, DiskDataArea
                 Mov     AX, 99
                 Call    LoadSample
@@ -5976,6 +5987,11 @@ D_PostLoadSampleWindow5:
                 Call    Music_PlayNote
 
 D_PostLoadSampleWindow4:
+                ; Always clear the suppress flag on exit -- idempotent if it
+                ; was never set this iteration. Safe under repeated calls.
+                Push    AX
+                Call    MIDI_ClearLoaderSuppress
+                Pop     AX
                 Mov     AX, 1
                 Ret
 
