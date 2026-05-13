@@ -104,8 +104,17 @@ jobs:
           echo "Found ${#DRVS[@]} driver(s), ${#NETS[@]} network driver(s)"
           ls -la IT.EXE it.exe ${DRVS[@]} ${NETS[@]} 2>/dev/null || true
           if [ ${#DRVS[@]} -eq 0 ]; then
-            echo "::error::No sound drivers produced — DRV_SND.LOG tail follows."
-            tail -200 DRV_SND.LOG 2>/dev/null || echo "(no DRV_SND.LOG)"
+            echo "::error::No sound drivers produced. Diagnostics follow."
+            echo "--- SoundDrivers/ contents (post-build) ---"
+            ls -la SoundDrivers/ | head -80
+            echo "--- DRV_SND.LOG (full) ---"
+            cat DRV_SND.LOG 2>/dev/null || echo "(no DRV_SND.LOG)"
+            echo "--- MAKE.LOG tail ---"
+            tail -50 MAKE.LOG 2>/dev/null || echo "(no MAKE.LOG)"
+            echo "--- BUILD_ST.TXT ---"
+            cat BUILD_ST.TXT 2>/dev/null || echo "(no BUILD_ST.TXT)"
+            echo "--- tools/ TLINK version check ---"
+            ls -la tools/TLINK* tools/tlink* 2>/dev/null || echo "(no TLINK in tools/)"
             exit 1
           fi
 
@@ -234,6 +243,18 @@ jobs:
           ls -la "$ZIP"
           unzip -l "$ZIP" | head -60
           echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
+
+      - name: Upload build logs (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs-${{ steps.name.outputs.name || github.sha }}
+          path: |
+            MAKE.LOG
+            DRV_SND.LOG
+            DRV_NET.LOG
+            BUILD_ST.TXT
+          if-no-files-found: warn
 
       - name: Upload zip artifact
         uses: actions/upload-artifact@v4
