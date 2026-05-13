@@ -177,14 +177,15 @@ jobs:
           # Core program — copy as uppercase IT.EXE regardless of source case
           for f in IT.EXE it.exe; do [ -f "$f" ] && cp "$f" "$STAGE/IT.EXE" && break; done
 
-          # Drivers — DOSBox-X on Linux writes lowercase .drv/.net; uppercase for DOS PCs
+          # Drivers — case-insensitive glob (DOSBox-X case varies); strip extension
+          # case-insensitively and re-emit uppercase NAME.DRV for DOS PCs.
           for f in *.drv; do
-            base=$(basename "$f" .drv)
+            base="${f%.*}"
             UP=$(echo "$base" | tr '[:lower:]' '[:upper:]')
             cp "$f" "$STAGE/$UP.DRV"
           done
           for f in *.net; do
-            base=$(basename "$f" .net)
+            base="${f%.*}"
             UP=$(echo "$base" | tr '[:lower:]' '[:upper:]')
             cp "$f" "$STAGE/$UP.NET"
           done
