@@ -5,14 +5,13 @@ on:
     tags: ['v*']
   workflow_dispatch:
     inputs:
-      release_name:
-        description: 'Release name (e.g. IT215-esaruoho-2026-05-13). Leave blank to derive from commit sha.'
-        required: false
-        default: ''
-      create_release:
-        description: 'Attach zip to a GitHub Release (true/false). Only meaningful for tag pushes or manual runs.'
-        required: false
-        default: 'false'
+      version:
+        description: 'Version number for this release (e.g. 2.355). A v-prefixed tag will be created automatically.'
+        required: true
+        default: '2.355'
+
+permissions:
+  contents: write
 
 jobs:
   package:
@@ -20,6 +19,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Create tag (manual run only)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ github.event.inputs.version }}
+        run: |
+          TAG="v${VERSION#v}"
+          echo "Creating tag $TAG at $GITHUB_SHA"
+          if gh api "repos/$GITHUB_REPOSITORY/git/refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "::error::Tag $TAG already exists. Pick a different version."
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Impulse Tracker $TAG (esaruoho fork)"
+          git push origin "$TAG"
+          echo "RESOLVED_TAG=$TAG" >> "$GITHUB_ENV"
 
       - name: Install DOSBox-X
         run: |
@@ -153,9 +170,8 @@ jobs:
       - name: Determine release name
         id: name
         run: |
-          INPUT="${{ github.event.inputs.release_name }}"
-          if [ -n "$INPUT" ]; then
-            NAME="$INPUT"
+          if [ -n "$RESOLVED_TAG" ]; then
+            NAME="IT-$RESOLVED_TAG"
           elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
             NAME="IT-${GITHUB_REF#refs/tags/}"
           else
@@ -297,9 +313,10 @@ jobs:
           if-no-files-found: error
 
       - name: Attach zip to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.create_release == 'true'
+        if: startsWith(github.ref, 'refs/tags/') || env.RESOLVED_TAG != ''
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.RESOLVED_TAG }}
           files: ${{ steps.zip.outputs.zip }}
           generate_release_notes: true
           fail_on_unmatched_files: true
