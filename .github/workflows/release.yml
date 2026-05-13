@@ -93,12 +93,21 @@ jobs:
       - name: Build IT.EXE + drivers in DOSBox-X
         run: |
           xvfb-run -a dosbox-x -conf build.conf -fastlaunch -exit -nogui -nomenu || true
-          if [ ! -f IT.EXE ]; then
+          shopt -s nullglob nocaseglob
+          if [ ! -f IT.EXE ] && [ ! -f it.exe ]; then
             echo "::error::IT.EXE was not produced. See MAKE.LOG."
             tail -100 MAKE.LOG 2>/dev/null || true
             exit 1
           fi
-          ls -la IT.EXE *.DRV *.NET 2>/dev/null || true
+          DRVS=( *.drv )
+          NETS=( *.net )
+          echo "Found ${#DRVS[@]} driver(s), ${#NETS[@]} network driver(s)"
+          ls -la IT.EXE it.exe ${DRVS[@]} ${NETS[@]} 2>/dev/null || true
+          if [ ${#DRVS[@]} -eq 0 ]; then
+            echo "::error::No sound drivers produced — DRV_SND.LOG tail follows."
+            tail -200 DRV_SND.LOG 2>/dev/null || echo "(no DRV_SND.LOG)"
+            exit 1
+          fi
 
       - name: Determine release name
         id: name
@@ -122,17 +131,37 @@ jobs:
           NAME="${{ steps.name.outputs.name }}"
           STAGE="dist/$NAME"
           mkdir -p "$STAGE"
+          shopt -s nullglob nocaseglob
 
-          # Core program + drivers
-          cp IT.EXE "$STAGE/"
-          cp *.DRV "$STAGE/" 2>/dev/null || true
-          cp *.NET "$STAGE/" 2>/dev/null || true
+          # Core program — copy as uppercase IT.EXE regardless of source case
+          for f in IT.EXE it.exe; do [ -f "$f" ] && cp "$f" "$STAGE/IT.EXE" && break; done
+
+          # Drivers — DOSBox-X on Linux writes lowercase .drv/.net; uppercase for DOS PCs
+          for f in *.drv; do
+            base=$(basename "$f" .drv)
+            UP=$(echo "$base" | tr '[:lower:]' '[:upper:]')
+            cp "$f" "$STAGE/$UP.DRV"
+          done
+          for f in *.net; do
+            base=$(basename "$f" .net)
+            UP=$(echo "$base" | tr '[:lower:]' '[:upper:]')
+            cp "$f" "$STAGE/$UP.NET"
+          done
+
+          DRVCOUNT=$(ls "$STAGE"/*.DRV 2>/dev/null | wc -l)
+          NETCOUNT=$(ls "$STAGE"/*.NET 2>/dev/null | wc -l)
+          echo "Staged $DRVCOUNT sound drivers, $NETCOUNT network drivers"
+          if [ "$DRVCOUNT" -eq 0 ]; then
+            echo "::error::No .DRV files reached the staging directory"
+            exit 1
+          fi
 
           # Default config (committed to repo root)
           [ -f ITMIDI.CFG ] && cp ITMIDI.CFG "$STAGE/"
 
           # Release documentation — flat in root, mirroring original IT215.zip layout
           cp ReleaseDocumentation/*.TXT "$STAGE/" 2>/dev/null || true
+          cp ReleaseDocumentation/*.FAQ "$STAGE/" 2>/dev/null || true
           cp ReleaseDocumentation/FILE_ID.DIZ "$STAGE/" 2>/dev/null || true
           cp ReleaseDocumentation/IT256.ICO "$STAGE/" 2>/dev/null || true
 
