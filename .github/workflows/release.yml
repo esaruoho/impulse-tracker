@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version number for this release (e.g. 2.355). A v-prefixed tag will be created automatically.'
+        description: 'Version number for this release (e.g. 2.354). If a release with this tag already exists, it will be deleted and replaced.'
         required: true
-        default: '2.355'
+        default: '2.354'
 
 permissions:
   contents: write
@@ -20,17 +20,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create tag (manual run only)
+      - name: Create or replace tag (manual run only)
         if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ github.event.inputs.version }}
         run: |
           TAG="v${VERSION#v}"
-          echo "Creating tag $TAG at $GITHUB_SHA"
+          echo "Target tag: $TAG at $GITHUB_SHA"
+          # Delete existing release (if any) so the new build replaces it cleanly
+          if gh release view --repo "$GITHUB_REPOSITORY" "$TAG" >/dev/null 2>&1; then
+            echo "Existing release $TAG found — deleting it"
+            gh release delete --repo "$GITHUB_REPOSITORY" "$TAG" --yes --cleanup-tag || true
+          fi
+          # Delete remote tag if still present (cleanup-tag should have handled it,
+          # but be defensive in case the release didn't exist but a stale tag did)
           if gh api "repos/$GITHUB_REPOSITORY/git/refs/tags/$TAG" >/dev/null 2>&1; then
-            echo "::error::Tag $TAG already exists. Pick a different version."
-            exit 1
+            echo "Stale tag $TAG still present — deleting"
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$TAG"
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
