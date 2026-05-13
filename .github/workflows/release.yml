@@ -1,0 +1,221 @@
+name: Package DOS release zip
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      release_name:
+        description: 'Release name (e.g. IT215-esaruoho-2026-05-13). Leave blank to derive from commit sha.'
+        required: false
+        default: ''
+      create_release:
+        description: 'Attach zip to a GitHub Release (true/false). Only meaningful for tag pushes or manual runs.'
+        required: false
+        default: 'false'
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install DOSBox-X
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dosbox-x unzip xvfb zip
+
+      - name: Reassemble TASM toolchain from chunked secrets
+        env:
+          C01: ${{ secrets.TASM_TOOLCHAIN_B64_01 }}
+          C02: ${{ secrets.TASM_TOOLCHAIN_B64_02 }}
+          C03: ${{ secrets.TASM_TOOLCHAIN_B64_03 }}
+          C04: ${{ secrets.TASM_TOOLCHAIN_B64_04 }}
+          C05: ${{ secrets.TASM_TOOLCHAIN_B64_05 }}
+          C06: ${{ secrets.TASM_TOOLCHAIN_B64_06 }}
+          C07: ${{ secrets.TASM_TOOLCHAIN_B64_07 }}
+          C08: ${{ secrets.TASM_TOOLCHAIN_B64_08 }}
+          C09: ${{ secrets.TASM_TOOLCHAIN_B64_09 }}
+          C10: ${{ secrets.TASM_TOOLCHAIN_B64_10 }}
+          C11: ${{ secrets.TASM_TOOLCHAIN_B64_11 }}
+          C12: ${{ secrets.TASM_TOOLCHAIN_B64_12 }}
+          C13: ${{ secrets.TASM_TOOLCHAIN_B64_13 }}
+        run: |
+          if [ -z "$C01" ]; then
+            echo "::error::Repo secrets TASM_TOOLCHAIN_B64_01..13 are not set."
+            echo "::error::See README.md (TASM toolchain section) for setup."
+            exit 1
+          fi
+          mkdir -p tools
+          {
+            printf '%s' "$C01"; printf '%s' "$C02"; printf '%s' "$C03"
+            printf '%s' "$C04"; printf '%s' "$C05"; printf '%s' "$C06"
+            printf '%s' "$C07"; printf '%s' "$C08"; printf '%s' "$C09"
+            printf '%s' "$C10"; printf '%s' "$C11"; printf '%s' "$C12"
+            printf '%s' "$C13"
+          } | base64 -d > tools/tasm-toolchain.zip
+          unzip -o tools/tasm-toolchain.zip -d tools/
+          rm tools/tasm-toolchain.zip
+
+      - name: Write DOSBox-X build script
+        run: |
+          cat > build.conf <<EOF
+          [sdl]
+          autolock=false
+          [dosbox]
+          machine=svga_s3
+          memsize=64
+          [cpu]
+          cycles=max
+          [dos]
+          ver=6.22
+          xms=true
+          ems=true
+          lfn=true
+          [autoexec]
+          mount c $GITHUB_WORKSPACE
+          mount t $GITHUB_WORKSPACE/tools
+          set PATH=T:\;%PATH%
+          c:
+          make -f MAKEFILE.MAK > C:\MAKE.LOG
+          echo IT_DONE ec=%ERRORLEVEL% > C:\BUILD_ST.TXT
+          cd SoundDrivers
+          call BUILDALL.BAT > C:\DRV_SND.LOG
+          cd ..
+          cd Network
+          call BUILDALL.BAT > C:\DRV_NET.LOG
+          cd ..
+          echo ALL_DONE >> C:\BUILD_ST.TXT
+          exit
+          EOF
+
+      - name: Build IT.EXE + drivers in DOSBox-X
+        run: |
+          xvfb-run -a dosbox-x -conf build.conf -fastlaunch -exit -nogui -nomenu || true
+          if [ ! -f IT.EXE ]; then
+            echo "::error::IT.EXE was not produced. See MAKE.LOG."
+            tail -100 MAKE.LOG 2>/dev/null || true
+            exit 1
+          fi
+          ls -la IT.EXE *.DRV *.NET 2>/dev/null || true
+
+      - name: Determine release name
+        id: name
+        run: |
+          INPUT="${{ github.event.inputs.release_name }}"
+          if [ -n "$INPUT" ]; then
+            NAME="$INPUT"
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            NAME="IT-${GITHUB_REF#refs/tags/}"
+          else
+            NAME="IT-esaruoho-${GITHUB_SHA::7}"
+          fi
+          # DOS-friendly: uppercase, strip anything weird
+          NAME=$(echo "$NAME" | tr '[:lower:]' '[:upper:]' | tr -c 'A-Z0-9.-' '-' | sed 's/--*/-/g; s/^-//; s/-$//')
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "Release name: $NAME"
+
+      - name: Stage DOS distribution
+        id: stage
+        run: |
+          NAME="${{ steps.name.outputs.name }}"
+          STAGE="dist/$NAME"
+          mkdir -p "$STAGE"
+
+          # Core program + drivers
+          cp IT.EXE "$STAGE/"
+          cp *.DRV "$STAGE/" 2>/dev/null || true
+          cp *.NET "$STAGE/" 2>/dev/null || true
+
+          # Default config (committed to repo root)
+          [ -f ITMIDI.CFG ] && cp ITMIDI.CFG "$STAGE/"
+
+          # Release documentation — flat in root, mirroring original IT215.zip layout
+          cp ReleaseDocumentation/*.TXT "$STAGE/" 2>/dev/null || true
+          cp ReleaseDocumentation/FILE_ID.DIZ "$STAGE/" 2>/dev/null || true
+          cp ReleaseDocumentation/IT256.ICO "$STAGE/" 2>/dev/null || true
+
+          # Tutorial subset
+          if [ -d Tutorial ]; then
+            mkdir -p "$STAGE/TUTORIAL"
+            cp Tutorial/IT_TUTORIAL.EXE "$STAGE/TUTORIAL/" 2>/dev/null || true
+            cp Tutorial/TUTE.IT "$STAGE/TUTORIAL/" 2>/dev/null || true
+          fi
+
+          # VSound (Windows 9x VxD MIDI helper) — ship if present, as original did
+          if [ -d VSound ]; then
+            mkdir -p "$STAGE/VSOUND"
+            cp -r VSound/. "$STAGE/VSOUND/" 2>/dev/null || true
+          fi
+
+          # Keyboard layout sources
+          if [ -d Keyboard ]; then
+            mkdir -p "$STAGE/KEYBOARD"
+            cp Keyboard/*.ASM Keyboard/*.TXT "$STAGE/KEYBOARD/" 2>/dev/null || true
+          fi
+
+          # Build manifest — provenance + this fork's feature list
+          cat > "$STAGE/BUILD.TXT" <<EOF
+Impulse Tracker (esaruoho fork) — DOS distribution
+==================================================
+
+Release   : $NAME
+Commit    : $GITHUB_SHA
+Ref       : $GITHUB_REF
+Built     : $(date -u +%Y-%m-%dT%H:%M:%SZ)
+Source    : https://github.com/esaruoho/impulse-tracker
+Upstream  : https://github.com/jthlim/impulse-tracker (read-only)
+Toolchain : TASM 4.1 / TLINK 3.01 / Borland MAKE 4.0 under DOSBox-X
+
+Fork features over upstream IT 2.15:
+  - External MIDI sync: Start/Stop/Continue + F8 Clock tempo
+  - Driver-level F8-FF passthrough across 16 sound drivers
+  - Ctrl-O WAV render + auto-import (Paketti-style P3)
+  - F3 sample-loader keyjazz hang fix (MIDISyncLoaderSuppress)
+  - Alt-R Replicate at Cursor (Paketti port), Shift-Alt-R = ClearViews
+  - Quicksave folder, F12 Module Directory picker
+  - Shift-F1 MIDI Monitor screen
+
+Installation
+------------
+Copy the whole folder onto your DOS PC (or DOSBox-X mount), CD into it,
+and run IT.EXE. Sound + network drivers (.DRV / .NET) must live alongside
+IT.EXE so the runtime loader can find them.
+
+License: BSD-3-Clause. See README.TXT and IT.TXT.
+EOF
+
+          # File list
+          ( cd "$STAGE" && ls -la ) > "$STAGE/PACKAGED.TXT"
+
+          echo "stage=$STAGE" >> "$GITHUB_OUTPUT"
+          echo "--- Staged contents ---"
+          find "$STAGE" -maxdepth 2 -print
+
+      - name: Create zip
+        id: zip
+        run: |
+          NAME="${{ steps.name.outputs.name }}"
+          STAGE="${{ steps.stage.outputs.stage }}"
+          ZIP="$NAME.zip"
+          # Zip from inside dist/ so the archive contains a single top-level NAME/ folder
+          ( cd dist && zip -r "../$ZIP" "$NAME" )
+          ls -la "$ZIP"
+          unzip -l "$ZIP" | head -60
+          echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
+
+      - name: Upload zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.name.outputs.name }}
+          path: ${{ steps.zip.outputs.zip }}
+          if-no-files-found: error
+
+      - name: Attach zip to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.create_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.zip.outputs.zip }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
