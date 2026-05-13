@@ -58,6 +58,38 @@ jobs:
           unzip -o tools/tasm-toolchain.zip -d tools/
           rm tools/tasm-toolchain.zip
 
+      - name: Overwrite TLINK with 3.01 (toolchain ships 7.1 which can't link drivers)
+        run: |
+          # CLAUDE.md: TLINK 7.1 links IT.EXE fine but fatal-errors on every
+          # driver ("No program entry point"). Need TLINK 3.01 (53,510 bytes).
+          # Public copy: nolanvenhola/zeliard2026.
+          # Find wherever TASM/MAKE got placed and replace TLINK.EXE next to them.
+          mapfile -t TASM_PATHS < <(find tools -iname 'TASM.EXE' -o -iname 'tasm.exe')
+          if [ ${#TASM_PATHS[@]} -eq 0 ]; then
+            echo "::error::TASM.EXE not found anywhere under tools/ — secret may be corrupt"
+            find tools -maxdepth 3 -printf '%p\n' | head -40
+            exit 1
+          fi
+          TLINK_URL="https://raw.githubusercontent.com/nolanvenhola/zeliard2026/main/3_Assembly/tasm/tool/tasm201/TLINK.EXE"
+          curl -fsSL -o /tmp/TLINK.EXE "$TLINK_URL"
+          SIZE=$(stat -c%s /tmp/TLINK.EXE)
+          if [ "$SIZE" -ne 53510 ]; then
+            echo "::error::Downloaded TLINK.EXE is $SIZE bytes; expected 53510 (TLINK 3.01)"
+            exit 1
+          fi
+          for tasm in "${TASM_PATHS[@]}"; do
+            d=$(dirname "$tasm")
+            # Cover both upper and lower case so the case-sensitive Linux fs and
+            # DOSBox-X 8.3 lookup both find it.
+            cp /tmp/TLINK.EXE "$d/TLINK.EXE"
+            cp /tmp/TLINK.EXE "$d/tlink.exe"
+            echo "Installed TLINK 3.01 ($SIZE bytes) into $d/"
+          done
+          # Sanity: any flat tools/TLINK.EXE also gets overwritten
+          [ -f tools/TLINK.EXE ] && cp /tmp/TLINK.EXE tools/TLINK.EXE
+          [ -f tools/tlink.exe ] && cp /tmp/TLINK.EXE tools/tlink.exe
+          ls -la $(find tools -iname 'tlink.exe')
+
       - name: Write DOSBox-X build script
         run: |
           cat > build.conf <<EOF
