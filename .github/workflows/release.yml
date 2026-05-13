@@ -156,35 +156,36 @@ jobs:
           fi
 
           # Build manifest — provenance + this fork's feature list
-          cat > "$STAGE/BUILD.TXT" <<EOF
-Impulse Tracker (esaruoho fork) — DOS distribution
-==================================================
-
-Release   : $NAME
-Commit    : $GITHUB_SHA
-Ref       : $GITHUB_REF
-Built     : $(date -u +%Y-%m-%dT%H:%M:%SZ)
-Source    : https://github.com/esaruoho/impulse-tracker
-Upstream  : https://github.com/jthlim/impulse-tracker (read-only)
-Toolchain : TASM 4.1 / TLINK 3.01 / Borland MAKE 4.0 under DOSBox-X
-
-Fork features over upstream IT 2.15:
-  - External MIDI sync: Start/Stop/Continue + F8 Clock tempo
-  - Driver-level F8-FF passthrough across 16 sound drivers
-  - Ctrl-O WAV render + auto-import (Paketti-style P3)
-  - F3 sample-loader keyjazz hang fix (MIDISyncLoaderSuppress)
-  - Alt-R Replicate at Cursor (Paketti port), Shift-Alt-R = ClearViews
-  - Quicksave folder, F12 Module Directory picker
-  - Shift-F1 MIDI Monitor screen
-
-Installation
-------------
-Copy the whole folder onto your DOS PC (or DOSBox-X mount), CD into it,
-and run IT.EXE. Sound + network drivers (.DRV / .NET) must live alongside
-IT.EXE so the runtime loader can find them.
-
-License: BSD-3-Clause. See README.TXT and IT.TXT.
-EOF
+          BUILT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          {
+            echo "Impulse Tracker (esaruoho fork) — DOS distribution"
+            echo "=================================================="
+            echo
+            echo "Release   : $NAME"
+            echo "Commit    : $GITHUB_SHA"
+            echo "Ref       : $GITHUB_REF"
+            echo "Built     : $BUILT"
+            echo "Source    : https://github.com/esaruoho/impulse-tracker"
+            echo "Upstream  : https://github.com/jthlim/impulse-tracker (read-only)"
+            echo "Toolchain : TASM 4.1 / TLINK 3.01 / Borland MAKE 4.0 under DOSBox-X"
+            echo
+            echo "Fork features over upstream IT 2.15:"
+            echo "  - External MIDI sync: Start/Stop/Continue + F8 Clock tempo"
+            echo "  - Driver-level F8-FF passthrough across 16 sound drivers"
+            echo "  - Ctrl-O WAV render + auto-import (Paketti-style P3)"
+            echo "  - F3 sample-loader keyjazz hang fix (MIDISyncLoaderSuppress)"
+            echo "  - Alt-R Replicate at Cursor (Paketti port), Shift-Alt-R = ClearViews"
+            echo "  - Quicksave folder, F12 Module Directory picker"
+            echo "  - Shift-F1 MIDI Monitor screen"
+            echo
+            echo "Installation"
+            echo "------------"
+            echo "Copy the whole folder onto your DOS PC (or DOSBox-X mount), CD into it,"
+            echo "and run IT.EXE. Sound + network drivers (.DRV / .NET) must live alongside"
+            echo "IT.EXE so the runtime loader can find them."
+            echo
+            echo "License: BSD-3-Clause. See README.TXT and IT.TXT."
+          } > "$STAGE/BUILD.TXT"
 
           # File list
           ( cd "$STAGE" && ls -la ) > "$STAGE/PACKAGED.TXT"
