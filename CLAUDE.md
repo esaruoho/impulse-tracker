@@ -308,6 +308,94 @@ No conventional-commit prefixes.
 | @cs127                | External contributor (PR #3, #6 — build/typo fixes) |
 | @esaruoho             | Fork owner                                          |
 
+## Mixer & Slave Channel Layout (from MIX.INC + IT_MUSIC.ASM)
+
+**Important:** `SoundDrivers/MIX.INC` (1014 lines) and `MIXWAV.INC` (1065 lines) are the actual mixer source. They get included into each sound driver at assembly time. The `.MMX` / `.3DN` extensions are object files, not source, but the source is right here in the tree. Read `MIX.INC` before reasoning about voice rendering, page mapping, or "what does the mixer do when X."
+
+### Constants (`IT_MUSIC.ASM:211-213`)
+
+| Symbol | Value | Notes |
+|--------|-------|-------|
+| `HOSTCHANNELSIZE` | 80 bytes | Per-channel host slot in `HostChannelInformationTable` |
+| `SLAVECHANNELSIZE` | 128 bytes | Per-voice slave slot in `SlaveChannelInformationTable` |
+| `MAXSLAVECHANNELS` | 256 | Slave pool size — 64 master × up to 4 NNA per channel |
+| `NONOTE` | `0FDh` | Empty pattern event note byte |
+
+### Slave channel struct (`SlaveChannelInformationTable`, 128 bytes per slave)
+
+Authoritative offsets observed in both MIX.INC (mixer side) and IT_MUSIC.ASM (control side). DS:SI points to the slave entry; ES typically holds `SongDataArea` when crossing into sample-header fields via `[SI+34h]`.
+
+| Offset | Width | Name / EQU (in MIX.INC) | Purpose |
+|--------|-------|--------------------------|---------|
+| `[SI+00h]` | Word | flags | **Bit 0 = active**; **`200h` = voice-off** (sample finished, NNA cut, or manually stopped). Mixer writes `200h` at MIX.INC:79/90/323 when it terminates a voice. `Music_StopChannels`, `Music_Stop`, and the new `Music_SilenceSampleVoices` all use the same `200h` value. **This is the canonical "voice is off" sentinel.** |
+| `[SI+02h]` | DWord | `STEPVALUE` | 16.16 fixed-point pitch step per output sample |
+| `[SI+0Bh]` | Byte | `DIRECTIONFLAG` | Ping-pong loop direction |
+| `[SI+2Ch]` | DWord | `OLDPOSITION` | Last frame's sample position (for ramping?) |
+| `[SI+30h]` | Word | InsOffset | Pointer to instrument header in SongDataArea |
+| `[SI+32h]` | Word | Nte&Ins | Note byte (low) + instrument byte (high) |
+| `[SI+34h]` | Word | Sample header ptr | Offset into SongDataArea of the sample-header struct. **Mixer rereads this every Mix call via `PrepareSampleSegment` — do not assume cached pointers.** |
+| `[SI+36h]` | Byte | Sample slot | 1-based sample number, 1..99. **`100` = MIDI slave** (filter trick: sample slots can't collide with the MIDI sentinel). |
+| `[SI+38h]` | Word | HCOffset | Host channel offset back-reference |
+| `[SI+3Ah]` | Byte | HCN | Host Channel Number (0..63). **Bit 7 = disowned** (channel was reassigned via NNA) |
+| `[SI+3Eh]` | Word | Filter cutoff | `0FFh` = default / unset |
+| `[SI+40h]` | DWord | `LOOPSTART` | Loop start, in samples |
+| `[SI+44h]` | DWord | `LOOPEND` | Loop end, in samples |
+| `[SI+48h]` | Word | `CURRENTPOSITIONERROR` | Fractional position (low 16 of 16.16) |
+| `[SI+4Ch]` | DWord | `CURRENTPOSITION` | Integer position (high 32 of 16.16) |
+
+Remaining bytes (up to 128) hold envelope state, volume ramps, NNA chain pointers, etc. — extend this table when you observe new offsets in working code.
+
+### Sample header struct (pointed to by `[SI+34h]`, lives in `SongDataArea`)
+
+Authoritative offsets observed across `IT_MUSIC.ASM` (`Music_GetSampleLocation`, `Music_ReleaseSample`) and `MIX.INC` (`PrepareSampleSegment`).
+
+| Offset | Width | Purpose |
+|--------|-------|---------|
+| `[BX+12h]` | Byte | **Sample flags.** Bit 0 = sample exists (gates `Music_GetSampleLocation` — returns Carry if clear). Bit 1 = 16-bit (Zero-flag set in GetSampleLocation if cleared). |
+| `[BX+14h..2Eh]` | bytes | Sample name (26 chars) and filename area |
+| `[BX+30h]` | DWord | Sample length in samples |
+| `[BX+48h]` | Byte | **MemoryType.** 0 = none, 1 = conventional RAM, 2 = EMS. Mixer's `PrepareSampleSegment` reads `[BX+48h]` as a DWord into the triplet below in one instruction. |
+| `[BX+49h]` | Byte | NumPages (for EMS) |
+| `[BX+4Ah]` | Word | **SampleLocation** — either EMS handle (MemoryType=2) or conventional base segment (MemoryType=1) |
+
+### Mixer state cache (per-driver, in driver's CS, from `MIX.INC:27-47`)
+
+Read & repopulated by `PrepareSampleSegment` on every Mix call — **not cached across calls.**
+
+| Symbol | Width | Purpose |
+|--------|-------|---------|
+| `MixBlockSize` | DWord | Bytes to mix this call |
+| `MixFunction` | Word | Pointer to current Mix routine |
+| `MemoryType` | Byte | Refetched from `[SampleHeader+48h]` each call |
+| `NumPages` | Byte | EMS page count |
+| `SampleLocation` | Word | EMS handle or conventional base seg |
+| `EMSPageFrame` | Word | Cached frame segment for EMS mapping |
+| `LastPage` | Word | Last mapped EMS page (`0FFFFh` = none cached) |
+
+### Mixer entry & voice-off semantics
+
+Mixer driver loop walks `SlaveChannelInformationTable`. For each slave:
+
+1. Test `[SI]` bit 0 (active) — skip if clear.
+2. Call `PrepareSampleSegment` → reads `[ES:[SI+34h]+48h]` triplet fresh.
+3. Run one of `MixNoLoop` / `MixForwardsLoop` / `MixPingPongLoop` based on sample flags.
+4. On sample-end, mixer writes `Word Ptr [SI], 200h` itself.
+
+**Consequence for sample reload:** Setting `Word Ptr [SI] = 200h` externally puts the voice in the same state the mixer puts it in at natural sample-end. Next pattern hit on that slot allocates a fresh slave normally. The mixer's lack of caching across mix calls means there's no "stale pointer race" — header mutation is visible on the next call.
+
+**Used by:**
+- `Music_Stop` (`IT_MUSIC.ASM:6618`) — sets `200h` on all slaves via `Music_Clear2` loop.
+- `Music_StopChannels` (`IT_MUSIC.ASM:6565`) — sets `200h` on all slaves with MIDI handling first.
+- `Music_SilenceSampleVoices` (`IT_MUSIC.ASM`, commit `a44c41b`) — sets `200h` only on slaves matching a given sample slot. Strict subset of the above two.
+
+### Where to put new mixer-side flags
+
+If you need the mixer to behave differently for some condition (e.g. a fade-out, a "reloading" gate), you generally have three options:
+
+1. **Per-slave flag in `[SI]`** — cheapest. Pick an unused bit in the flags word. Mixer is `Test Byte Ptr [SI], 1` to enter; add a second test if needed.
+2. **Per-slot flag in the sample header `[BX+12h]`** — already gates `Music_GetSampleLocation`. Bit 0 clear → mixer can't refetch pages, voice effectively silenced after next page boundary.
+3. **Mixer global in driver's CS** — like `MemoryType` / `LastPage`. Useful for "pause all rendering" or "suspend until flag clear" patterns. Cost: every driver needs the addition (16 sound drivers in `SoundDrivers/`).
+
 ## Quick Reference
 
 | Item                  | Value                                                       |
