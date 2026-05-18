@@ -32,7 +32,9 @@ include switch.inc
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
                 Global  MIDISyncEnable:Byte
+                Global  MIDITransportEnable:Byte
                 Global  MIDISyncLoaderSuppress:Byte
+                Global  Glbl_MIDITransport_Toggle:Far
                 Global  Glbl_Alt_F12:Far
 
                 Global  K_DrawTables:Far
@@ -96,7 +98,15 @@ KeypadValue             DB      0
 MIDIStatusByte          DB      0
 MIDIClockCount          DB      0       ; 0..23 within current quarter
 MIDIClockLastTick       DW      0       ; DOS Int 1Ah AH=0 DX at last beat
-MIDISyncEnable          DB      1       ; default ON. Alt-F12 toggles.
+MIDISyncEnable          DB      1       ; default ON. Shift-F1 toggles. Gates
+                                        ; F8 Clock tempo derivation only.
+MIDITransportEnable     DB      1       ; default ON. Shift-F1 toggles. Gates
+                                        ; FA Start / FB Continue / FC Stop
+                                        ; transport response. Set OFF when you
+                                        ; want IT to ignore Logic's transport
+                                        ; (e.g. Logic 5.5.1 sending 125 BPM
+                                        ; clock that fluctuates IT between
+                                        ; 121-136 BPM is noise).
 MIDISyncLoaderSuppress  DB      0       ; non-zero while F3 loader keyjazz is in
                                         ; flight (LoadSample -> PlaySample). Stops
                                         ; MIDISend from re-entering playback while
@@ -121,6 +131,8 @@ MIDIMonCntMsg           DB      "Counters  FA:", 0FDh, "D  FB:", 0FDh, "D  FC:",
 MIDIMonRTMsg            DB      "Last RT byte: ", 0FDh, "X  tick=", 0FDh, "D       ", 0
 MIDISyncOnMsg           DB      "MIDI Sync (F8 Clock): ON", 0
 MIDISyncOffMsg          DB      "MIDI Sync (F8 Clock): OFF", 0
+MIDITransportOnMsg      DB      "MIDI Transport (FA/FB/FC): ON", 0
+MIDITransportOffMsg     DB      "MIDI Transport (FA/FB/FC): OFF", 0
 
 TranslationTable        Label   DWord
 TranslationTableOffset  DW      Offset  USKeyboardTable
@@ -1733,6 +1745,31 @@ EndP            Glbl_Alt_F12
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
+Proc            Glbl_MIDITransport_Toggle Far
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Keyboard
+
+                Xor     Byte Ptr [MIDITransportEnable], 1
+                JZ      Glbl_MIDITransport_Toggle_Off
+
+                Mov     SI, Offset MIDITransportOnMsg
+                Call    SetInfoLine
+                Mov     AX, 1
+                Ret
+
+Glbl_MIDITransport_Toggle_Off:
+                Mov     SI, Offset MIDITransportOffMsg
+                Call    SetInfoLine
+                Mov     AX, 1
+                Ret
+
+EndP            Glbl_MIDITransport_Toggle
+                Assume DS:Nothing
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
 Proc            K_InstallKeyboardType Far
 
                 Call    D_GotoStartingDirectory
@@ -1895,6 +1932,12 @@ MIDISendRTStart_Play:
                 Mov     [MIDIClockLastTick], DX
                 PopA
 
+                ; Transport gate: if user has turned off MIDI Transport on
+                ; the Shift-F1 screen, swallow FA/FB without starting
+                ; playback. Monitor counters above already ticked.
+                Cmp     Byte Ptr [MIDITransportEnable], 0
+                JE      MIDISendEnd
+
                 Cmp     Byte Ptr [MIDISyncLoaderSuppress], 0
                 JNE     MIDISendEnd             ; loader keyjazz in flight, skip
                 PushAD
@@ -1912,6 +1955,12 @@ MIDISendRTStop:
                 Int     1Ah
                 Mov     [MIDIMon_LastRTTick], DX
                 PopA
+
+                ; Transport gate: same as FA/FB. Without this, FC would
+                ; still stop IT even though the user disabled transport.
+                Cmp     Byte Ptr [MIDITransportEnable], 0
+                JE      MIDISendEnd
+
                 Cmp     Byte Ptr [MIDISyncLoaderSuppress], 0
                 JNE     MIDISendEnd             ; loader keyjazz in flight, skip
                 PushAD
