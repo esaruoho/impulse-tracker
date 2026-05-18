@@ -58,6 +58,7 @@ EndS
                 Extrn   Music_ReleaseAllPatterns:Far
                 Extrn   Music_ReleaseAllSamples:Far
                 Extrn   Music_ReleaseSample:Far
+                Extrn   Music_SilenceSampleVoices:Far
                 Extrn   Music_GetSongSegment:Far
                 Extrn   Music_AllocateSample:Far
                 Extrn   Music_ClearAllSampleNames:Far
@@ -7180,17 +7181,22 @@ LoadSample4:
                 PushF
                 Push    AX
                 Mov     AL, 32
-                Mov     AH, 'M'                 ; before Music_Stop
+                Mov     AH, 'M'                 ; before voice silence
                 Call    D_DebugMark
                 Pop     AX
                 PopF
 
-                Call    Music_Stop
+                                                ; Silence only the slaves
+                                                ; currently reading the target
+                                                ; slot. Song keeps playing.
+                                                ; AX still = target sample
+                                                ; number from LoadSample entry.
+                Call    Music_SilenceSampleVoices
 
                 PushF
                 Push    AX
                 Mov     AL, 33
-                Mov     AH, 'N'                 ; after  Music_Stop
+                Mov     AH, 'N'                 ; after voice silence
                 Call    D_DebugMark
                 Pop     AX
                 PopF
@@ -7469,7 +7475,16 @@ LSWindow_EnterLoadInSampleData:
                 Assume DS:Nothing
 
 LSWindow_EnterSample:
-                Call    Music_Stop
+                                                ; No more brute Music_Stop here.
+                                                ; Music_ReleaseSample (called
+                                                ; just below for slot 99) and
+                                                ; LoadSample (called after the
+                                                ; init-instrument dialog) both
+                                                ; self-silence affected slave
+                                                ; channels via
+                                                ; Music_SilenceSampleVoices,
+                                                ; so song playback can continue
+                                                ; across an Enter-to-load.
 
                 Mov     AX, [Word Ptr CS:CheckDataArea+2Eh]
                 Mov     [SI+2Eh], AX

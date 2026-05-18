@@ -142,6 +142,7 @@ include network.inc
         Global  Music_PlaySample:Far
         Global  Music_PlayNote:Far
         Global  Music_Stop:Far
+        Global  Music_SilenceSampleVoices:Far
         Global  Music_PlaySong:Far
         Global  Music_ToggleChannel:Far
         Global  Music_SoloChannel:Far
@@ -3193,6 +3194,13 @@ Proc            Music_ReleaseSample Far         ; AX = sample number, 0 based
 
                 Mov     DX, AX
                 And     AX, 0FFh
+
+                                                ; Silence any slave channel
+                                                ; currently reading this slot
+                                                ; before its EMS pages are
+                                                ; freed / overwritten. Other
+                                                ; voices keep playing.
+                Call    Music_SilenceSampleVoices
 
                 Mov     BX, AX
                 Add     BX, BX
@@ -6612,6 +6620,58 @@ Music_StopChannelsNoMIDI:
                 Ret
 
 EndP            Music_StopChannels
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
+; Silence slave channels currently mixing the given sample slot, without
+; touching pattern playback, host channels, MIDI, tempo, or PlayMode.
+; Used to make sample reload (LoadSample / Music_ReleaseSample) safe
+; against the mixer holding cached pointers into the slot's EMS pages,
+; without the brute "stop the whole song" hammer that Music_Stop is.
+;
+; AX = sample number, 1-based (1..99). MIDI slaves are tagged 100 in
+; [SI+36h] so the equality test below naturally skips them.
+;
+; Preserves all general-purpose registers and flags.
+
+Proc            Music_SilenceSampleVoices Far
+
+                PushA
+                PushF
+                Push    DS
+
+                ClI
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+
+                Mov     BL, AL                  ; BL = target sample slot
+
+                Mov     CX, MAXSLAVECHANNELS
+                Mov     SI, Offset SlaveChannelInformationTable
+
+Music_SilenceSampleVoices1:
+                Test    Byte Ptr [SI], 1        ; slave currently active?
+                JZ      Music_SilenceSampleVoices2
+                Cmp     Byte Ptr [SI+36h], BL   ; same sample slot?
+                JNE     Music_SilenceSampleVoices2
+
+                Mov     Word Ptr [SI], 200h     ; mark stopped (matches the
+                                                ;  bit pattern Music_StopChannels
+                                                ;  and Music_Stop use)
+
+Music_SilenceSampleVoices2:
+                Add     SI, SLAVECHANNELSIZE
+                Loop    Music_SilenceSampleVoices1
+
+                Pop     DS
+                PopF
+                PopA
+                Ret
+                        Assume DS:Nothing
+
+EndP            Music_SilenceSampleVoices
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
