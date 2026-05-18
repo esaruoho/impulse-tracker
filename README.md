@@ -5,7 +5,7 @@
 > merged other than issues preventing build"). New features land here on
 > [esaruoho/impulse-tracker](https://github.com/esaruoho/impulse-tracker).
 > Current version: **2.354** — `(C) 1995-2000 Jeffrey Lim, (C) 2026 Esa Juhani Ruoho`.
-> See [Fork Changes](#fork-changes-v2354) below for what's new.
+> See [Changelog](#changelog) for week-by-week history and [Fork Changes](#fork-changes-v2354) for the v2.354 feature set.
 
 Full source code for Impulse Tracker, including sound drivers, network drivers,
 and some supporting documentation
@@ -22,6 +22,79 @@ repositories, and so this is now made available on GitHub.
 Note that this repository is purely sharing what used to be -- there is no
 active development, and changes/fixes will not be merged other than issues
 preventing build.
+
+## Changelog
+
+Newest first. Five weeks of active development since the fork resumed on 2026-04-22. Commit hashes link to the fork's `main` branch.
+
+### 2026-05-18 — Playback-safe sample reload, dual MIDI toggles, envelope dataloss fix
+
+- **`f10e961`** — Envelope preset save accepts Shift-1..Shift-9 (the original Alt-1..Alt-0 still works). Load with 0..9 in the envelope edit screen. Presets persist in `IT.CFG` automatically. The feature was already wired up in upstream (`ENABLEPRESETENVELOPES=1`); only the modifier was widened.
+- **`4e4eb9a`** — Sample→Instrument mode-switch prompt ("Initialise instruments?") now defaults focus to **No**, so accidental Enter no longer wipes envelopes via `Music_ClearAllInstruments`. OK is still one Tab away if you actually want to re-init.
+- **`731e168`** — **MIDI Transport (FA/FB/FC)** toggle added on Shift-F1 alongside the existing **MIDI Sync (F8 Clock)** toggle. Independent gates: turn off transport response while keeping tempo sync, or vice versa. Solves Logic 5.5.1's clock jitter making IT fluctuate 121-136 BPM around a 125 BPM target.
+- **`a44c41b`** — New `Music_SilenceSampleVoices Far` proc in `IT_MUSIC.ASM`. Loading a sample (Enter on the sample list, or keyjazz preview inside the F9 file browser) no longer brute-stops the whole song — it silences only the slave channels currently reading the target slot. Mixer's `Word Ptr [SI] = 200h` sentinel is documented and reused; the same primitive is folded into `Music_ReleaseSample` for safety.
+- **`16d89da`**, **`e3e6940`** — `CLAUDE.md` gains a User-Facing Keyboard Reference table grounded in `IT.TXT` line numbers, and a Mixer & Slave Channel Layout section drawn from `SoundDrivers/MIX.INC` and `IT_MUSIC.ASM`. Future contributors stop guessing offsets and key bindings.
+
+### 2026-05-13 — Release workflow
+
+GitHub Actions release pipeline that produces a DOS-installable ZIP on dispatch.
+
+- **`2eb6088`** default version 2.354 + overwrite-existing-release behaviour.
+- **`e4fafa6`** simplify dispatch UI to a single version input.
+- **`400ea5b`** fix `.DRV.DRV` double-extension when source extension was uppercase.
+- **`c599007`** swap in TLINK 3.01 at runtime (the GitHub-runner toolchain ships TLINK 7.1).
+- **`fe1df01`** dump diagnostics + upload logs on driver-build failure.
+- **`141893b`** handle lowercase `.drv` / `.net` artifacts from DOSBox-X on Linux.
+- **`62e6991`** replace heredoc with echo block to fix YAML indent.
+- **`8d80eff`** initial `release.yml` — DOS-installable zip workflow.
+
+### 2026-05-12 — Alt-R Replicate at Cursor (Paketti port), F3 loader hang fix
+
+- **`0afd402`** — `SKILL.md`: architectural reference companion to `CLAUDE.md`, lives at `~/.claude/skills/impulse-tracker/`.
+- **`aaada5e`** — Alt-R row-0 boundary: when cursor is at row 0, tile row 0 down the whole pattern instead of no-op. **Shift-Alt-R** now hosts the original Alt-R "Clear all track views" behaviour via runtime modifier disambiguation through `K_IsKeyDown`.
+- **`d506486`** — **Alt-R = Replicate at Cursor** in the pattern editor. Port of the Paketti / zTrackerPrime feature: takes rows `0..cursor-1` as the source chunk and tiles them down to `MaxRow`. Mirror semantics (empty events copy verbatim). Undo slot 23. Networked to peers via `NetworkPatternBlock`.
+- **`64fa1ce`** — F3 loader keyjazz hard hang fixed. `MIDISend`'s FA/FB/FC callbacks are suppressed during `LoadSample → Music_PlaySample` via the new `MIDISyncLoaderSuppress` flag, set/cleared by Far helpers from `IT_DISK.ASM`. Closes the race where an external clock's MIDI Start, buffered during `Music_Stop`'s Cli window, would re-enter playback mid-sample-load and trash EMS pointers.
+- **`ec91331`** — Loader keyjazz path instrumented with VRAM markers (`D_DebugMark` cols 30-39) before the targeted fix. Markers stay in tree.
+
+### 2026-05-04 — MIDI sync hardening, monitor, driver fixes
+
+- **`3537c0d`** — Ctrl-O WAV leave/import paths instrumented with VRAM markers (`WAV_DebugMark` cols 1-28). Establishes the standard hard-hang triage primitive.
+- **`78fb72d`**, **`4ebf849`** — All 16 sound drivers with MIDI-in (`GUSMIXDR`, `IWDRV`, `SB16*`, `AWE32*`, `ES1868`, etc.) stop filtering MIDI System Real-Time bytes (`F8-FF`). The pre-fork filter dropped every byte ≥ `0xF0` intending to skip SysEx, but caught Start/Stop/Continue/Clock too. The pure `MIDIDRV.ASM` was always clean.
+- **`95f628a`** — Shift-F1 MIDI screen now shows live RT-byte counters (Start / Continue / Stop / Clock + last-RT-byte and DOS-tick of last RT message). Diagnostic for "are bytes even arriving."
+- **`7163709`** — MIDI Sync toggle moved from Alt-F12 to a Shift-F1 button. Alt-F12 collided with the F5 spectrum analyzer.
+- **`8ca7078`** — F12 Module Directory field's Enter now opens F9 as a directory picker (sets a transient flag so the save handler returns the picked dir instead of loading the highlighted file).
+- **`8f11aa6`** — F12 directory inputs translate `/` to `\` so muscle-memory Unix slashes don't break.
+- **`ad5d840`** — MIDI Sync now default ON. Alt-F12 hotkey added (later moved to Shift-F1 button).
+- **`2051b90`** — README documents the v2.354 feature set (MIDI sync, P3 render, quicksave, build infra).
+- **`7df9edf`** — Tracker version bumped to **2354h**. Esa Juhani Ruoho 2026 copyright line added.
+- **`34b725d`** — `.gitignore` covers `CACHE.ITS` and rendered `004_*.001` sample dumps so working trees stay clean.
+
+### 2026-05-01 — Pattern-to-Sample (P3), quicksave, F4↔F3, MIDI clock tempo sync
+
+The bulk of the feature work. P3 in particular went through ~20 iterations in a single day.
+
+- **`7fd1abc`** — F12 config screen: Quicksave directory input row.
+- **`6464e15`** — Quicksave folder: **Alt-W** saves there, **Shift-Alt-W** memorizes target.
+- **`0c02662`**, **`d13a849`**, **`81c78aa`**, **`9bd18d1`**, **`64b853b`**, **`bb5e5ea`**, **`09d7e7d`**, **`f136a7b`**, **`e3f5815`**, **`b0690a4`**, **`ce3fb79`**, **`3a626b4`**, **`4d5e9da`**, **`9ed42ed`**, **`1d7910e`** — P3 ("Pattern-to-Sample") hardening pass: 1 MB safety cap, configurable loop-on-render, IMPS filename field, cwd reentrancy gate, WAV validation, unique `REN<NNN>.<PPP>` filenames, target-slot calculation, alloc-fail cleanup, granular failure messages, page-counter / off-by-one fixes, auto-select imported sample, status-message timing.
+- **`af03f96`** — Ctrl-O auto-imports the rendered pattern as a new sample.
+- **`089119a`** — Ctrl-O toggles the active driver to `ITWAV.DRV` to do the render (P2a).
+- **`35732c3`** — Ctrl-O renders current pattern, phase 1 (no auto-import yet).
+- **`e4c9b4a`** — P2/P3 deep-dive findings document.
+- **`fc92c77`** — `.gitattributes` locks `*.ASM` / `*.INC` to ISO-8859-1 + CRLF so modern editors don't UTF-8-mangle the CP437 box-drawing characters.
+- **`0a82cb3`**, **`03b0a6d`** — MIDI Clock 0xF8 external tempo sync (24 PPQ → DOS-tick-delta → BPM). Default off; sanity-filtered against absurd deltas.
+- **`9d626b0`**, **`672273b`** — F4 → F3 cursor translation. Pressing F3 from the instrument list jumps the sample cursor to the sample bound to the currently-highlighted instrument (note 60 first, then scan all notes), with bounds checks.
+- **`1b2bcf1`** — Skip-stubs for 13 sound-driver build batches that need TASM32 or have missing sources.
+
+### 2026-04-30 — TLINK 3.01 unlock + first Ctrl-O render
+
+- **`be79b3c`** — TLINK 3.01 unlock. The `zajo/TASM` mirror ships TLINK 7.1, which rejects every sound driver with `Fatal: No program entry point`. Dropping in TLINK 3.01 (1990) builds all 42 drivers + `IT.EXE` + `ITIPX.NET` in ~57 seconds inside DOSBox-X.
+- **`5bd73ed`** — `CLAUDE.md`, `BUILDALL.BAT`, and `buildall.conf.sample` for one-shot full rebuilds on a modern Mac.
+
+### 2026-04-22 / 04-23 — CI + the original MIDI Start/Stop intercept
+
+- **`1fa031c`** — GitHub Actions workflow: build `IT.EXE` and all drivers via DOSBox-X under xvfb on every push/PR, with TASM/TLINK/MAKE reassembled from 13 base64 secrets.
+- **`ec42bd1`** — Seed commit. `IT_K.ASM` `MIDISend` intercepts `0xFA` (Start) and `0xFC` (Stop) System Real-Time bytes, routing them to `Music_PlaySong` / `Music_Stop`. Every sound driver with a MIDI-in hook gains transport sync at the single host-side intercept point. Everything else in this changelog grew from this one proc.
+- **`aa311f5`** — `.gitignore` for macOS `.DS_Store` files.
 
 ## Pre-Requisite Software
 
