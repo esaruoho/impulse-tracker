@@ -23,6 +23,40 @@ Note that this repository is purely sharing what used to be -- there is no
 active development, and changes/fixes will not be merged other than issues
 preventing build.
 
+## What This Fork Lets You Do
+
+A musician-facing tour of the additions, written for people who make tracks rather than read assembly. Engineering details and commit hashes are in the [Changelog](#changelog) below and in [Fork Changes (v2.354)](#fork-changes-v2354) further down.
+
+**Logic (or any DAW) can now drive Impulse Tracker.** Hit Play in Logic, IT starts. Hit Stop, IT stops. Press the transport on a hardware drum machine or a Beatstep, same deal. Before this you had to manually press F6 in IT and pray you'd hit it on the downbeat. Now the DAW is the master clock for your whole rig, IT included, and IT joins the bar like every other device in the chain.
+
+**External tempo follow.** If your DAW is at 92 BPM, IT plays at 92 BPM. Change Logic to 124, IT slides over to 124 with it. You no longer have to manually keep the IT tempo field in sync with whatever you're working on outside. Useful when you're using IT alongside a DAW for resampling chops, or when you're jamming IT against a drum machine and the drum machine swings around.
+
+**Two independent toggles for when sync goes wrong.** Real talk: some DAWs and old gear send filthy MIDI clock. Logic 5.5.1 sending 125 BPM makes IT bounce between 121 and 136 BPM because the clock ticks aren't perfectly even. So we split it into two switches on the Shift-F1 screen: one for transport (Start/Stop), one for clock (tempo follow). Now you can have Logic start IT on the downbeat while IT keeps its own rock-solid tempo, or have IT inherit Logic's tempo while ignoring its Play button. Mix and match per session.
+
+**Shift-F1 MIDI watcher.** A little dashboard that counts the MIDI Start, Stop, Continue and Clock messages as they come in, plus the last one received. When sync isn't working, this tells you instantly whether the cable is the problem, the driver is the problem, or the toggle is off. No more "is anything actually arriving?" guessing.
+
+**Real-time MIDI works on every sound card in the fork.** Before this, even with the MIDI sync code in place, half the sound cards silently dropped Start/Stop/Clock bytes — they were getting filtered out before IT ever saw them. We fixed that across all sixteen cards that have MIDI input (SB16, AWE32, GUS PnP, the ES1868 family, the Pro Audio Spectrums, etc.). Sync now works on whatever hardware you're actually using, not just the pure MPU-401 driver.
+
+**Ctrl-O turns the current pattern into a sample, one keystroke.** You're working on a pattern, you like it, you want to chop it / pitch it / play it on another channel / use it as a drum hit. Ctrl-O renders the pattern to WAV in your sample directory, loads it as the next free sample slot, and parks the cursor on it ready to play. Vanilla IT could only render the whole song through the WAV driver via a three-screen detour and a sound-card switch; this is one key. The slot it picks is always free (it scans past your highest sample AND highest instrument), the filename is always unique (`REN001.001`, `REN002.001`, etc., never overwrites), and there's a 1 MB safety cap so you don't accidentally render a 90-second sustain into oblivion.
+
+**Quicksave with Alt-W.** Iteration killer in vanilla IT: every save asks you for a path. So you save less than you should, and one day you lose work. Shift-Alt-W memorizes the folder you're in as your Quicksave folder, then forever after Alt-W writes your tune there using its existing filename, no prompt. Hammer Alt-W every minute. The folder is shown and editable on the F12 config screen and persists across launches.
+
+**F12 directory picker.** Pressing Enter on the Module Directory or Quicksave Directory field in F12 opens the F9 file browser as a folder picker. Navigate, hit Enter, the path drops in. DOS path typing minimized.
+
+**F3 / F4 cursor stays where you put it.** In vanilla IT, jumping from the instrument list (F4) back to the sample list (F3) resets the sample cursor to slot 1 every time. Annoying when you're working on instrument 17 which points at sample 23 — you have to scroll back. Now F3 from F4 lands on the sample bound to your current instrument (note 60 first, then any other note that has a sample). Round-trip preserves context.
+
+**Alt-R Replicate at Cursor.** Stolen from Paketti / zTrackerPrime. You've got a 4-row groove at the top of a pattern, cursor at row 4. Hit Alt-R, IT tiles rows 0-3 down the rest of the pattern. Single channel, mirror-fills empties. Faster than copy-paste-paste-paste for any repeating motif. The original Alt-R ("clear all track views") moved to Shift-Alt-R so muscle memory still works.
+
+**Keyjazz-preview samples without stopping the song.** This is the big one for sound-design flow. You're playing a tune. You open the F9 file browser, navigate to a folder of kicks (or hi-hats, or stabs — anything). You keyjazz a sample to audition it. In vanilla IT, the song stops dead, you lose your context, you have to restart it just to compare the next kick. In this fork, the song keeps going. Keyjazz mutes only the one preview voice and plays the new sample over the running pattern. You can A/B kicks against a live drum loop, find one that sits right, drop it in. Closest thing to a modern sampler-browser workflow we can get out of a 1995 DOS tracker.
+
+**Loading a sample into a slot doesn't stop the song either.** Same fix, different keystroke. Pressing Enter on a sample file in the F9 loader replaces the current sample slot's contents. In vanilla IT this brute-stopped playback. Now only the voices currently mixing that specific slot fall silent for the duration of the file read; everything else keeps playing. Next pattern hit on the replaced slot triggers the new sample cleanly.
+
+**Stop wiping envelopes by accident.** Drawing an envelope while you're in Sample mode, then switching to Instrument mode, used to silently nuke every envelope you'd drawn — the "Initialise instruments?" prompt defaulted to Yes and accidentally pressing Enter wiped them. Default is now No. Your envelopes survive the mode switch unless you explicitly Tab to OK.
+
+**Shift-1..9 saves envelope presets.** The 0-9 load-envelope-preset feature was already in upstream IT, but undocumented and not visible — most people don't know it exists. Saves were on Alt-1..0 which clashed with muscle memory elsewhere. Now Shift-1..9 saves the current envelope shape to one of nine slots, 0-9 loads, and the slots persist in `IT.CFG` across sessions automatically. Build up a library of go-to ADSR shapes, reuse them across instruments and across songs.
+
+**Saved `.IT` files identify themselves as fork-built.** The tracker version field embedded in saved Impulse Tracker files is now `2354h` instead of upstream's `0215h`. Means a fork file is distinguishable from an original-IT2.15 file by any tool that reads the header (Schism, OpenMPT inspectors, your own scripts). Useful if you ever wonder which version of IT a given `.IT` came out of.
+
 ## Changelog
 
 Newest first. Five weeks of active development since the fork resumed on 2026-04-22. Commit hashes link to the fork's `main` branch.
