@@ -8,6 +8,83 @@ This file is a development guide for both human contributors and AI coding assis
 
 Full Impulse Tracker 2.15 source, BSD-3-Clause. Originally released 2014 on Bitbucket alongside Jeffrey Lim's "20 Years of Impulse Tracker" blog series. TASM 4.1 / TLINK 3.01 / Borland MAKE 4.0 + DOS target. 16-bit real-mode segmented assembly with 386 extensions (`.386P`). Builds `IT.EXE` plus a set of `.DRV` sound drivers loaded at runtime.
 
+## User-Facing Keyboard Reference (from IT.TXT — DO NOT GUESS)
+
+**Source of truth:** `ReleaseDocumentation/IT.TXT` and the IRQ-level handler in `IT_K.ASM`. If a key isn't listed here and isn't in `IT.TXT`, look it up before mentioning it to the user. Hallucinated key bindings (e.g. claiming "Space" is the play key, or calling Ctrl-O "module load" when it's WAV render) waste the user's time and erode trust. This has happened more than once. **Do not guess.**
+
+### Transport (global)
+
+| Key | What it does | Source |
+|-----|--------------|--------|
+| **F5** | Play song from start | `IT.TXT:395`; `IT_K.ASM:1902` comment "F5 equivalent" |
+| **F6** | Play song from current order | User-confirmed; pairs with F5 per tracker convention |
+| **F7** | Play from playback mark | `IT.TXT:1074` ("subsequent playback will occur when you press F7") |
+| **F8** | Stop playback | `IT.TXT:395`; `IT_K.ASM:725` — IRQ-level, scancode `42h` → `Music_Stop` |
+| **Ctrl-F6** | Play pattern from current row | `IT.TXT:1072` |
+| **Ctrl-F7** | Set / clear playback mark | `IT.TXT:1073-1076` |
+| **Right-Ctrl** | Play song from DOS Shell | `IT.TXT:265` (opt-in via config option "C") |
+| **Right-Alt** | Stop playback from DOS Shell | `IT.TXT:264` |
+
+### Screen navigation (global)
+
+| Key | What it does | Source |
+|-----|--------------|--------|
+| **F1** | Help screen | `IT.TXT:1747` |
+| **F2** | Pattern editor (second press inside = Pattern Edit Config) | `IT.TXT:426, 437` |
+| **F3** | Sample list (Ctrl-F3 accesses Sample library from anywhere) | `IT.TXT:1816` |
+| **F4** | Instrument list (Ctrl-F4 accesses Instrument library from anywhere) | `IT.TXT:1817` |
+| **F9** | Load module file picker | `IT.TXT:387` |
+| **F10** | Save module (Save As). Fork: Alt-W = Quicksave to memorized folder, Shift-Alt-W = memorize folder. | code (IT_DISK.ASM Glbl_F10) |
+| **F11** | Order list / channel panning & volume | `IT.TXT:1221, 1747` |
+| **F12** | Song variables / configuration. Fork: Quicksave directory row added. | `IT.TXT:659, 1748` |
+| **Shift-F1** | (fork) MIDI Monitor; also hosts the MIDI Sync toggle since commit `7163709` | fork |
+| **Ctrl-F2** | Bulk pattern length editor for consecutive patterns | `IT.TXT:438` |
+| **Alt-F10** | Solo current channel | `IT.TXT:1803` |
+
+### Pattern editor
+
+| Key | What it does | Source |
+|-----|--------------|--------|
+| **4** | Play note under cursor | `IT.TXT:1070` |
+| **8** | Play entire row | `IT.TXT:1071` |
+| **Space** | Enter previous data for current column. **NOT a play key.** | `IT.TXT:1069, 1800` |
+| **`.`** | Erase data at cursor | `IT.TXT:1068` |
+| **Grey +/-** | Next / previous pattern | `IT.TXT:1058-1059` |
+| **Shift-Grey +/-** | ±4 patterns | `IT.TXT:1060-1061` |
+| **Ctrl-Grey +/-** | Next / previous pattern by order list | `IT.TXT:1062-1063, 1825` |
+| **Alt-R** | (fork) Replicate at Cursor (Paketti port) | commit `aaada5e` |
+| **Shift-Alt-R** | Original Alt-R = "Clear all track views" | commit `aaada5e` |
+| **Alt-Q / Alt-A** | Transpose semitone up / down | `IT.TXT:1134, 1105` |
+| **Alt-P** | Block Paste at cursor | `IT_PE.ASM:632` (key word `1900h`) |
+| **Alt-C** | Block Copy | `IT_PE.ASM:636` |
+| **Ctrl-C** | Toggle centralise cursor | `IT_PE.ASM:640` |
+| **Ctrl-O** | (fork) Render Pattern to WAV + auto-import as next sample. **NOT module load.** Module load is on F9. | `IT_PE.ASM:629` → `PEFunction_RenderPattern` in `IT_MUSIC.ASM` |
+| **Ctrl-Backspace** | 10-stage Undo | `IT.TXT:1054` |
+| **Alt-Enter** | Store current pattern | `IT.TXT:1092` |
+| **Alt-Backspace** | Restore stored pattern | `IT.TXT:1093` |
+| **Alt-Delete / Insert** | Remove / insert an entire row | `IT.TXT:1065-1066` |
+| **Alt-B / Alt-E** | Mark top-left / bottom-right of block | `IT.TXT:1096-1097` |
+
+### Loader screens (after F9)
+
+| Action | Path | Status as of `a44c41b` |
+|--------|------|------------------------|
+| **Enter** on a folder | enter sample-loader file browser (`D_PostLoadSampleWindow`) | unchanged |
+| **Keyjazz inside file browser** | → `LoadSample(99)` for preview | **No longer kills song playback** (was: brute `Music_Stop`; now: `Music_SilenceSampleVoices(99)` — only the preview voice falls silent) |
+| **Enter** on a sample file | `LSWindow_EnterSample` → `LoadSample(currentSlot)` | **No longer kills song playback** (was: two `Music_Stop` calls; now: target-slot voices silenced only) |
+| **Enter** on a module file | `D_PostFileLoadWindowLink` → `D_LoadModuleHeader` (IT_DISK.ASM:4172) | Still calls `Music_Stop` — intentional (loading a new song stops the current one) |
+| **Enter** on an instrument file (bulk) | `LIWindow_Enter5` (IT_DISK.ASM:10160) | Still calls `Music_Stop` — intentional (reshuffles many sample slots at once) |
+
+### Honesty protocol for keybindings
+
+If asked about a key that isn't in this table:
+
+1. `grep -an "Ctrl.*X\|Alt.*X\|F\b" ReleaseDocumentation/IT.TXT` (substitute the key)
+2. If not in IT.TXT: search keyword tables in `IT_PE.ASM` / `IT_K.ASM` / `IT_M.ASM`. The Alt/Ctrl modifier codes are documented in the skill's "Keymap Dispatch & Modifier Disambiguation" section.
+3. If still not found, say so plainly: *"Key word `XXXXh` isn't bound in any dispatcher I can find. Can you confirm the exact key?"*
+
+**Never invent a key.** Every fabricated binding undermines the rest of the response.
+
 ## Toolchain (from README + MAKEFILE.MAK)
 
 - Turbo Assembler v4.1 (`TASM /m /uT310 /jSMART`)
