@@ -44,6 +44,7 @@ EndS
 
                 Extrn   K_UnInitKeyBoard:Far
                 Extrn   K_IsAnyKeyDown:Far
+                Extrn   K_IsKeyDown:Far
                 Extrn   K_ClearKeyBoardQueue:Far
                 Extrn   K_GetKey:Far
 
@@ -450,6 +451,13 @@ SamplesInModule         DB      0
 InstrumentsInModule     DB      0
 FileColours             DB      1
 
+;-------------------------------------------------------------------------------
+; Shift-Enter bulk-load-from-module state (LSWindow_ShiftEnter).
+LSBulkDstSlot           DW      0       ; running destination slot
+LSBulkLoadedCount       DW      0       ; samples actually written (for info msg)
+LSBulkInstMode          DB      0       ; 1 = instrument mode at start of bulk
+;-------------------------------------------------------------------------------
+
 NoteData                DB      0FFh, 0, 0FFh, 0, 0
 
 CheckDataArea           DB      96 Dup(0)
@@ -633,6 +641,9 @@ ENDIF
 SampleErrorMsg          DB      "Error: Sample ", 0FDh, "D NOT saved! (No Filename?)", 0
 InitInstrumentMsg       DB      "Sample assigned to Instrument ", 0FDh, "D", 0
 InitInstrumentErrorMsg  DB      "Error: No available Instruments!", 0
+
+BulkLoadDoneMsg         DB      "Loaded ", 0FDh, "D", " sample(s) from module", 0
+BulkLoadEmptyMsg        DB      "Module contains no samples.", 0
 
 TooManyPatternsMsg      DB      "Warning: Only 100 patterns supported in S3M format", 0
 ChannelVolumeErrorMsg   DB      "Warning: Channel volumes unsupported in S3M format", 0
@@ -944,6 +955,10 @@ LSWindowKeys            Label
                         DB      0
                         DW      11Ch            ; Enter
                         DW      LSWindow_Enter
+
+                        DB      4               ; Shift-Enter on module row =
+                        DW      11Ch            ; bulk-load all samples from
+                        DW      LSWindow_ShiftEnter ; module into consecutive slots
 
 LSViewWindowKeys        Label
                         DB      0
@@ -7565,6 +7580,227 @@ LSWindow_Enter2:
                 Ret
 
 EndP            LSWindow_Enter
+                Assume  DS:Nothing
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+; LSWindow_ShiftEnter -- Shift-Enter handler in outer sample-loader browser.
+;
+; If the cursor sits on a module file row (entry type byte at [cache+88] >=
+; 20h), bulk-load every sample in that module into consecutive sample slots
+; starting at the user's current F3/F4 cursor (PE_GetLastInstrument). In
+; instrument mode, each newly loaded sample is auto-assigned to an instrument
+; via Music_AssignSampleToInstrument.
+;
+; Cursor on a folder or plain sample row: delegate to LSWindow_Enter so
+; Shift-Enter does no harm where it has no special meaning.
+;
+; MIDI sync safety: MIDI_SetLoaderSuppress is held for the whole loop. Each
+; LoadSample call goes through Music_SilenceSampleVoices, which holds a brief
+; Cli window during which the sound card UART can buffer FA/FB/FC bytes;
+; suppressing the RT-branch callback prevents Music_KBPlaySong/Music_Stop
+; from re-entering playback into a half-loaded slot. Same shape as the
+; F3 keyjazz fix documented in CLAUDE.md (MIDISyncLoaderSuppress).
+;
+; Stops early without error when the destination slot would reach 99 (slot
+; 99 is reserved for keyjazz preview).
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
+Proc            LSWindow_ShiftEnter Far
+
+                Assume  DS:Disk
+
+                Cmp     NumSamples, 0
+                JE      LSWS_FallThroughPlain
+
+                Mov     AX, 96
+                Mul     CurrentSample
+                Mov     SI, AX
+                        Assume DS:Nothing
+
+                Mov     DS, DiskDataArea
+                Mov     DX, [DS:SI+88]          ; DH=channels, DL=row type
+                Cmp     DL, 20h
+                JB      LSWS_FallThroughPlain   ; not a module row
+
+                                                ; --- Module row. Bulk-load. ---
+
+                                                ; Stage 1: copy module's DOS
+                                                ; filename into InSampleFileName
+                                                ; (per-cache-entry filename is
+                                                ; at [SI+4]). Mirrors the prep
+                                                ; in LSViewWindow_Enter2.
+
+                Sub     DL, 20h
+                Mov     Word Ptr CS:InSampleFormat, DX
+                Mov     EAX, [SI+54h]
+                Mov     CS:InSampleDateTime, EAX
+
+                Add     SI, 4                   ; SI -> filename in cache entry
+                Push    CS
+                Pop     ES
+                Mov     DI, Offset InSampleFileName
+                Mov     CX, 13
+                Rep     MovsB
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Disk
+
+                                                ; Stage 2: open module, run the
+                                                ; per-format LoadSamplesInModule
+                                                ; loader to populate the sample
+                                                ; cache in DiskDataArea, close.
+
+                Mov     DX, Offset InSampleFileName
+                Mov     AX, 3D00h
+                Int     21h
+                JC      LSWS_OpenFail
+
+                Mov     BX, AX                  ; BX = module file handle
+
+                Mov     SI, Word Ptr InSampleFormat
+                And     SI, 0FFh
+                Add     SI, SI                  ; word index into table
+
+                Mov     NumSamples, 1           ; format loaders write entries
+                                                ; starting at index 1; index 0
+                                                ; is the exit-directory slot.
+
+                Mov     DS, DiskDataArea
+                        Assume DS:Nothing
+                Push    DS
+                Pop     ES
+
+                Call    [CS:LoadSamplesInModuleTable+SI]
+
+                Mov     AH, 3Eh                 ; close module
+                Int     21h
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Disk
+
+                Cmp     NumSamples, 2           ; need at least one real sample
+                JB      LSWS_NoneLoaded
+
+                                                ; Stage 3: starting dst slot.
+                Call    PE_GetLastInstrument    ; BX = current slot index
+                Mov     [LSBulkDstSlot], BX
+                Mov     Word Ptr [LSBulkLoadedCount], 0
+
+                                                ; Stage 4: latch instrument mode
+                                                ; once, BEFORE the loop. Doing
+                                                ; it per-iteration would re-poll
+                                                ; (cheap, but the mode can't
+                                                ; meaningfully change mid-bulk).
+                Call    Music_GetInstrumentMode ; ZF=1 -> sample mode
+                Mov     AL, 0
+                JZ      LSWS_LatchMode
+                Mov     AL, 1
+LSWS_LatchMode:
+                Mov     [LSBulkInstMode], AL
+
+                                                ; Stage 5: arm MIDI-sync loader
+                                                ; suppress for the whole loop.
+                Call    MIDI_SetLoaderSuppress
+
+                                                ; Stage 6: iterate cache rows
+                                                ; 1..NumSamples-1.
+                Mov     CX, 1
+
+LSWS_Loop:
+                Push    CS
+                Pop     DS
+                        Assume DS:Disk
+                Cmp     CX, NumSamples
+                JAE     LSWS_LoopEnd
+
+                Mov     AX, [LSBulkDstSlot]
+                Cmp     AX, 99
+                JAE     LSWS_LoopEnd            ; reserved keyjazz slot, stop
+
+                                                ; DS:SI = cache entry [CX].
+                Mov     DS, DiskDataArea
+                        Assume DS:Nothing
+                Mov     AX, CX
+                Mov     BX, 96
+                Mul     BX
+                Mov     SI, AX
+
+                                                ; Skip empty entries (flag bit 0
+                                                ; clear or zero-length sample).
+                Test    Byte Ptr [DS:SI+12h], 1
+                JZ      LSWS_LoopAdvance
+                Mov     EAX, [DS:SI+30h]
+                And     EAX, EAX
+                JZ      LSWS_LoopAdvance
+
+                                                ; Load sample at LSBulkDstSlot
+                                                ; from DS:SI. LoadSample opens
+                                                ; the module file (filename at
+                                                ; [SI+4]) and seeks to the
+                                                ; per-sample offset at [SI+48h].
+                Mov     AX, CS:[LSBulkDstSlot]
+                Push    CX
+                Call    LoadSample
+                Pop     CX
+                JC      LSWS_LoopAdvance        ; load failed -> don't bump dst
+
+                                                ; Instrument mode: assign the
+                                                ; sample to an instrument slot
+                                                ; (auto-creates if needed).
+                Cmp     Byte Ptr CS:[LSBulkInstMode], 0
+                JE      LSWS_LoopBump
+                Push    CX
+                Mov     BX, CS:[LSBulkDstSlot]
+                Call    Music_AssignSampleToInstrument
+                Pop     CX
+
+LSWS_LoopBump:
+                Inc     Word Ptr CS:[LSBulkDstSlot]
+                Inc     Word Ptr CS:[LSBulkLoadedCount]
+
+LSWS_LoopAdvance:
+                Inc     CX
+                Jmp     LSWS_Loop
+
+LSWS_LoopEnd:
+                Call    MIDI_ClearLoaderSuppress
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Disk
+                Mov     AX, [LSBulkLoadedCount]
+                Mov     SI, Offset BulkLoadDoneMsg
+                Call    SetInfoLine
+
+                Jmp     Glbl_F3
+
+LSWS_NoneLoaded:
+                Push    CS
+                Pop     DS
+                        Assume DS:Disk
+                Mov     SI, Offset BulkLoadEmptyMsg
+                Call    SetInfoLine
+                Mov     AX, 1
+                Ret
+
+LSWS_OpenFail:
+                Push    CS
+                Pop     DS
+                        Assume DS:Disk
+                Mov     SI, Offset OpenErrorMsg
+                Call    SetInfoLine
+                Mov     AX, 1
+                Ret
+
+LSWS_FallThroughPlain:
+                Push    CS
+                Pop     DS
+                        Assume DS:Disk
+                Jmp     LSWindow_Enter
+
+EndP            LSWindow_ShiftEnter
                 Assume  DS:Nothing
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
