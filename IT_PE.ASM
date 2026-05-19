@@ -159,6 +159,9 @@ ENDIF
                 Global  PE_F7:Far
 
                 Global  PE_GetPatternConfigOffset:Far
+                Global  PE_GetForkExtConfigOffset:Far
+                Global  DefaultNewPatternLength:Word
+                Global  ClonePatternMuteWipe:Byte
 
                 Global  PE_SwapInstruments:Far
                 Global  PE_GetMaxOrder:Far
@@ -244,7 +247,10 @@ NumberOfRows            DW      64
 ; channel currently muted (per Music_GetMuteChannelTable). Produces a
 ; "what-you-heard" snapshot. Default ON. Toggle with Shift-M in F11; info
 ; line reports the new state.
-ClonePatternMuteWipe    DB      1
+; ClonePatternMuteWipe is the live value; it now also lives at offset 2 of
+; the PE_ForkExtConfig block below so the IT.CFG persistence pipeline can
+; read/write it in one block alongside DefaultNewPatternLength. Label-only
+; reference -- code refs resolve to whatever address the block places it.
 ; Workspace for clone / extend ops -- avoids tangled stack discipline by
 ; latching source / target / saved-editor pattern numbers into static vars
 ; while the proc juggles editor state through NewPattern + StorePattern.
@@ -255,6 +261,23 @@ PE_CloneWipeMode        DB      0       ; latched wipe mode for the body;
                                         ; survives across the intermediate
                                         ; SaveCurrentPattern / NewPattern
                                         ; calls (which trash caller regs)
+
+; --- Fork extension config (persisted in IT.CFG, 16-byte block) -------------
+; Sits at the end of IT.CFG after the existing Quicksave Directory block.
+; Older IT.CFG files (built before this commit) simply don't have these 16
+; bytes -- the read at boot falls short, the static defaults below are used,
+; and the next D_SaveDirectoryConfiguration appends the block. Forward-
+; compatible by design.
+;
+; Layout (offsets from PE_ForkExtConfig):
+;   +0 (W) DefaultNewPatternLength   new-empty-pattern row count, 32..200
+;   +2 (B) ClonePatternMuteWipe      Alt-D clone M-toggle (0=verbatim, 1=wipe)
+;   +3..+15  reserved for future fork extensions
+PE_ForkExtConfig        Label
+DefaultNewPatternLength DW      64
+ClonePatternMuteWipe    DB      1
+PE_ForkExtConfigPad     DB      13 Dup (0)
+PE_FORKEXTCONFIG_SIZE   EQU     16
 CloneOnMsg              DB      "Clone respects channel mutes: ON", 0
 CloneOffMsg             DB      "Clone respects channel mutes: OFF", 0
 CloneDoneMsg            DB      "Pattern cloned to slot ", 0FDh, "D", 0
@@ -9173,6 +9196,19 @@ ENDIF
                 Call    Music_GetPattern
                 Call    DecodePattern
 
+                                                ; Fork: when entering an
+                                                ; empty pattern slot, the
+                                                ; DecodePattern above pulled
+                                                ; in EmptyPattern's hardcoded
+                                                ; 64-row default. Override
+                                                ; MaxRow / NumberOfRows from
+                                                ; DefaultNewPatternLength so
+                                                ; new patterns inherit the
+                                                ; user's last-chosen length
+                                                ; (set via F2-double-press,
+                                                ; persisted in IT.CFG).
+                Call    NewPattern_ApplyDefaultLength
+
                 Mov     CS:PatternModified, 0
                 Mov     AH, CS:Byte Ptr PatternNumber
                 Mov     AL, 22
@@ -9183,6 +9219,64 @@ ENDIF
                 Ret
 
 EndP            NewPattern
+
+;-------------------------------------------------------------------------------
+; NewPattern_ApplyDefaultLength -- if the pattern slot we just entered was
+; empty (type byte 0 in the pattern entry table at SongData+63912), the
+; decode above set MaxRow=63 from EmptyPattern. Override it to use the
+; user-configured default instead.
+;
+; Caller responsibility: PatternNumber must already be set (NewPattern does
+; this before calling Music_GetPattern, which uses AX = PatternNumber).
+;
+; Bounds: DefaultNewPatternLength clamped to 32..200 (IT's pattern length
+; range). If somehow the persisted value is bogus (e.g. 0 from a fresh
+; install with no IT.CFG read), the 64 fallback preserves the prior
+; behaviour.
+;-------------------------------------------------------------------------------
+Proc            NewPattern_ApplyDefaultLength Near
+                Push    AX
+                Push    BX
+                Push    ES
+
+                                                ; Look up the pattern slot's
+                                                ; type byte. 0 means empty
+                                                ; (the decode pulled in
+                                                ; EmptyPattern, so we're
+                                                ; safe to overwrite the
+                                                ; row count).
+                Call    Music_GetSongSegment
+                Mov     ES, AX
+
+                Mov     BX, CS:PatternNumber
+                ShL     BX, 2
+                Add     BX, 63912               ; pattern entry table
+
+                Cmp     Byte Ptr [ES:BX], 0
+                JNE     NewPatternALDone        ; slot wasn't empty, leave
+                                                ; the decoded MaxRow alone
+
+                Mov     AX, CS:DefaultNewPatternLength
+                Cmp     AX, 32                  ; clamp low
+                JAE     NewPatternALCheckHigh
+                Mov     AX, 64                  ; bogus value -> safe default
+
+NewPatternALCheckHigh:
+                Cmp     AX, 200                 ; clamp high (IT limit)
+                JBE     NewPatternALApply
+                Mov     AX, 200
+
+NewPatternALApply:
+                Mov     CS:NumberOfRows, AX
+                Dec     AX
+                Mov     CS:MaxRow, AX
+
+NewPatternALDone:
+                Pop     ES
+                Pop     BX
+                Pop     AX
+                Ret
+EndP            NewPattern_ApplyDefaultLength
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
@@ -12307,6 +12401,27 @@ Proc            PE_GetPatternConfigOffset Far
                 Ret
 
 EndP            PE_GetPatternConfigOffset
+
+;-------------------------------------------------------------------------------
+; PE_GetForkExtConfigOffset -- returns DS:DX -> the PE_ForkExtConfig block
+; (16 bytes; persisted in IT.CFG after the existing Quicksave Directory).
+; Block layout:
+;     +0 (W)  DefaultNewPatternLength    32..200
+;     +2 (B)  ClonePatternMuteWipe       0 / 1
+;     +3..+15 reserved
+;-------------------------------------------------------------------------------
+Proc            PE_GetForkExtConfigOffset Far
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Pattern
+
+                Mov     DX, Offset PE_ForkExtConfig
+
+                Ret
+                        Assume DS:Nothing
+
+EndP            PE_GetForkExtConfigOffset
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 

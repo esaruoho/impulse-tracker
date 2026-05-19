@@ -121,6 +121,7 @@ ENDIF
                 Extrn   PE_ConvAX2Num:Far
                 Extrn   PE_GetLastInstrument:Far
                 Extrn   PE_GetPatternConfigOffset:Far
+                Extrn   PE_GetForkExtConfigOffset:Far
                 Extrn   PE_SaveCurrentPattern:Far
                 Extrn   PE_RestoreCurrentPattern:Far
 
@@ -1310,6 +1311,17 @@ D_InitDisk13:
                 Mov     DX, Offset QuickSaveDirectory
                 Mov     AH, 3Fh
                 Mov     CX, 70
+                Int     21h
+
+                ; Fork: 16-byte PE_ForkExtConfig block appended after the
+                ; Quicksave directory. Older IT.CFG files don't have these
+                ; bytes -- the read returns 0 bytes and the static defaults
+                ; in IT_PE.ASM (DefaultNewPatternLength=64, ClonePatternMute-
+                ; Wipe=1) stay in effect. The next D_SaveDirectoryConfig-
+                ; uration call rewrites IT.CFG with the block appended.
+                Call    PE_GetForkExtConfigOffset       ; DS:DX -> block
+                Mov     AH, 3Fh
+                Mov     CX, 16
                 Int     21h
 
                 Mov     AH, 3Eh         ; Close file.
@@ -6560,6 +6572,12 @@ Proc            D_SaveDirectoryConfiguration Far
                         Assume DS:Disk
                 Mov     DX, Offset QuickSaveDirectory
                 Mov     CX, 70
+                Call    D_SaveBlock
+
+                ; Fork: PE_ForkExtConfig block (16 bytes, persisted across
+                ; sessions; see paired read in D_InitDisk).
+                Call    PE_GetForkExtConfigOffset       ; DS:DX -> block
+                Mov     CX, 16
                 Call    D_SaveBlock
 
                 Mov     AH, 3Eh
