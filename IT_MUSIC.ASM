@@ -3909,6 +3909,13 @@ EndP            WAV_DebugMark
 ; so the loop is wrap-safe across the once-per-day midnight rollover.
 ;-------------------------------------------------------------------------------
 Proc            WAV_HoldForMarkers Near
+                ; Block up to 15 s but bail out as soon as the user presses
+                ; any key. Without the key-poll the previous implementation
+                ; looked exactly like a hang, which defeated the point --
+                ; the operator couldn't tell whether IT had crashed or was
+                ; just showing them the markers. The key drain at the end
+                ; eats the keystroke so it doesn't leak into the next
+                ; screen.
                 Push    AX
                 Push    BX
                 Push    CX
@@ -3921,6 +3928,10 @@ Proc            WAV_HoldForMarkers Near
                 Mov     BP, DX                  ; save start lo
 
 WAV_HoldLoop:
+                Mov     AH, 01h                 ; peek keyboard
+                Int     16h
+                JNZ     WAV_HoldKeyPressed      ; ZF=0 -> key waiting
+
                 Push    BX
                 Push    BP
                 Mov     AH, 00h
@@ -3934,6 +3945,11 @@ WAV_HoldLoop:
                 JNZ     WAV_HoldDone            ; >65k ticks (>1 hr), bail
                 Cmp     DX, 273                 ; 15 s budget reached?
                 JB      WAV_HoldLoop
+                Jmp     WAV_HoldDone
+
+WAV_HoldKeyPressed:
+                Mov     AH, 00h                 ; eat the keystroke
+                Int     16h
 
 WAV_HoldDone:
                 Pop     BP
@@ -4101,6 +4117,20 @@ WAV_SkipCwdSave:
                 ; Ctrl-O, the original intent is honoured.
                 Mov     AL, [CS:WAV_NoImport]
                 Mov     [CS:WAV_SessionNoImport], AL
+
+                ; Tell the user IT is actively rendering, so a multi-second
+                ; pattern doesn't look like a freeze. The info line stays up
+                ; for ~25 seconds (BX = delay ticks) to cover long renders;
+                ; the eventual "Pattern imported" / "Render aborted" / etc.
+                ; message overrides it when render finishes.
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+                Mov     SI, Offset WAV_RenderingMsg
+                Xor     AX, AX
+                Mov     BX, 500
+                Call    SetInfoLine2
+                        Assume DS:Nothing
 
                 Mov     AX, [CS:WAV_PendingPattern]
                 Xor     CX, CX
@@ -4271,6 +4301,8 @@ WAV_FailAlloc           DB      "Import failed: out of memory for sample", 0
 WAV_TruncatedMsg        DB      "Pattern truncated to 1MB; sample ", 0FDh, "D", 0
 WAV_BadRenderDirMsg     DB      "Render aborted: Quicksave folder invalid (check F12)", 0
 WAV_RenderedNoImportMsg DB      "Pattern rendered to Quicksave folder (no import)", 0
+WAV_RenderDirCdFailMsg  DB      "Import failed: lost render folder (cd before open)", 0
+WAV_RenderingMsg        DB      "Rendering pattern to WAV ...", 0
 
 Proc            Music_ImportRenderedPattern Far
 
@@ -4348,6 +4380,22 @@ WAVI_HaveMax:
                 ; runs in a stale cwd and reports "cannot open .NNN file" even
                 ; though the file is sitting safely in the render folder.
                 Call    D_GotoRenderDirectory
+                PushF
+                Mov     AL, 25
+                Mov     AH, 'd'                 ; render-dir cd attempted
+                Call    WAV_DebugMark
+                PopF
+                JC      WAVI_RenderDirFailed    ; cd failed -- file is in
+                                                ; an unknown cwd, the open
+                                                ; below will likely return
+                                                ; stale data. Skip to a
+                                                ; specific marker so the
+                                                ; user knows cd was the
+                                                ; culprit, not the header.
+
+                Mov     AL, 26
+                Mov     AH, 'e'                 ; render-dir cd succeeded
+                Call    WAV_DebugMark
 
                 Push    CS
                 Pop     DS
@@ -4368,15 +4416,41 @@ WAVI_HaveMax:
                 Mov     DX, Offset WAVHeader
                 Int     21h
 
-                ; Validate RIFF/WAVE
+                ; Validate RIFF/WAVE -- each check stamps a marker letter
+                ; at col 27 BEFORE the conditional jump, so whichever letter
+                ; is the last visible one identifies which check rejected
+                ; the header:
+                ;   R = RIFF magic at offset 0 wrong
+                ;   W = WAVE magic at offset 8 wrong
+                ;   P = PCM format code at offset 20 wrong (not 1)
+                ;   F = fmt chunk size at offset 16 wrong (not 16)
+                Mov     AL, 27
+                Mov     AH, 'R'
+                Call    WAV_DebugMark
                 Cmp     DWord Ptr [CS:WAVHeader], 'FFIR'
                 JNE     WAVI_CloseHeaderFail
+
+                Mov     AL, 27
+                Mov     AH, 'W'
+                Call    WAV_DebugMark
                 Cmp     DWord Ptr [CS:WAVHeader+8], 'EVAW'
                 JNE     WAVI_CloseHeaderFail
+
+                Mov     AL, 27
+                Mov     AH, 'P'
+                Call    WAV_DebugMark
                 Cmp     Word Ptr [CS:WAVHeader+20], 1   ; PCM format code
                 JNE     WAVI_CloseHeaderFail
+
+                Mov     AL, 27
+                Mov     AH, 'F'
+                Call    WAV_DebugMark
                 Cmp     DWord Ptr [CS:WAVHeader+16], 16 ; fmt chunk size
                 JNE     WAVI_CloseHeaderFail
+
+                Mov     AL, 27
+                Mov     AH, '+'                 ; all 4 checks passed
+                Call    WAV_DebugMark
 
                 ; Extract format params
                 Movzx   EAX, Word Ptr [CS:WAVHeader+22]
@@ -4701,6 +4775,16 @@ WAVI_FailOpen:
                 Push    CS
                 Pop     DS
                 Mov     SI, Offset WAV_FailOpen
+                Jmp     WAVI_FailedTail
+
+WAVI_RenderDirFailed:
+                ; D_GotoRenderDirectory returned CF=1 -- we couldn't cd back
+                ; to the render destination before opening the file. Use a
+                ; distinct error message so the user knows cd, not the WAV
+                ; itself, is the problem.
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_RenderDirCdFailMsg
                 Jmp     WAVI_FailedTail
 
 WAVI_Failed:

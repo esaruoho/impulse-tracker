@@ -3905,6 +3905,32 @@ EndP            PEFunction_PickUp
 ;
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
+; PE_RenderDebugMark -- VRAM marker at row 0 col=AL, char=AH, attr=bright
+; white on red. Used by the Ctrl-O / Shift-Ctrl-O dispatcher to confirm
+; which path actually fired. Same shape as IT_MUSIC.ASM's WAV_DebugMark
+; but lives in the Pattern segment because IT_PE.ASM can't call across
+; segment boundaries to a Near proc.
+Proc            PE_RenderDebugMark Near
+                Push    AX
+                Push    BX
+                Push    ES
+
+                Movzx   BX, AL
+                ShL     BX, 1
+                Mov     AL, AH
+                Push    AX
+                Mov     AX, 0B800h
+                Mov     ES, AX
+                Pop     AX
+                Mov     AH, 4Fh
+                Mov     [ES:BX], AX
+
+                Pop     ES
+                Pop     BX
+                Pop     AX
+                Ret
+EndP            PE_RenderDebugMark
+
 Proc            PEFunction_RenderPattern Far
 
                 ; Dispatcher: Ctrl-O / Shift-Ctrl-O share the ASCII byte 0Fh,
@@ -3920,21 +3946,65 @@ Proc            PEFunction_RenderPattern Far
                 ;                        sample slot consumed. Use this when
                 ;                        you just want a WAV for the other
                 ;                        machine (Logic / Bitwig / Mac).
+                ;
+                ; Diagnostic markers (row 0 col 40..43):
+                ;   col 40 'X' = dispatcher entered (so we know Ctrl-O reached
+                ;                this handler at all)
+                ;   col 41 'p' = plain branch taken (no shift detected)
+                ;   col 41 's' = shift branch taken (Shift-Ctrl-O)
+                ;   col 42 'L' = Left Shift was down at the K_IsKeyDown check
+                ;   col 42 'R' = Right Shift was down at the K_IsKeyDown check
+                ;   col 42 '-' = neither shift down at the check
+
+                Push    AX
+                Mov     AL, 40
+                Mov     AH, 'X'
+                Call    PE_RenderDebugMark
+                Pop     AX
 
                 Push    BX
 
                 Mov     BX, 02Ah                ; Left Shift scancode
                 Call    K_IsKeyDown
-                JNE     PEFunction_Render_Shift ; ZF=0 -> key is down
+                JNE     PEFunction_Render_LeftShift
 
                 Mov     BX, 036h                ; Right Shift scancode
                 Call    K_IsKeyDown
-                JNE     PEFunction_Render_Shift
+                JNE     PEFunction_Render_RightShift
 
+                ; Neither shift down -> plain Ctrl-O
+                Push    AX
+                Mov     AL, 42
+                Mov     AH, '-'
+                Call    PE_RenderDebugMark
+                Mov     AL, 41
+                Mov     AH, 'p'
+                Call    PE_RenderDebugMark
+                Pop     AX
                 Call    Music_ClearRenderNoImport
                 Jmp     PEFunction_Render_Common
 
+PEFunction_Render_LeftShift:
+                Push    AX
+                Mov     AL, 42
+                Mov     AH, 'L'
+                Call    PE_RenderDebugMark
+                Pop     AX
+                Jmp     PEFunction_Render_Shift
+
+PEFunction_Render_RightShift:
+                Push    AX
+                Mov     AL, 42
+                Mov     AH, 'R'
+                Call    PE_RenderDebugMark
+                Pop     AX
+
 PEFunction_Render_Shift:
+                Push    AX
+                Mov     AL, 41
+                Mov     AH, 's'
+                Call    PE_RenderDebugMark
+                Pop     AX
                 Call    Music_ArmRenderNoImport
 
 PEFunction_Render_Common:
