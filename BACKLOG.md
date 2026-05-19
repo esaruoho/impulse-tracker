@@ -45,31 +45,7 @@ looks like a crash.
 
 ## ⏳ Confirmed deferrals (planned, scoped, not yet implemented)
 
-### Default new-pattern row count config
-
-**Want:** new patterns default to 128 or 192 rows instead of the hardcoded 64.
-
-**Where:** F2-double-press (Pattern Edit Config dialog). The existing
-`Glbl_F2` second-press already pops `O1_PEConfigList` which exposes the
-current pattern's `NumberOfRows`. We add a SECOND field — "Default Pattern
-Length" — that governs the size used when a new pattern is allocated for
-the first time.
-
-**Implementation sketch:**
-- Extend `O1_PEConfigList` to add a numeric input row backed by a new
-  `DefaultNewPatternLength DW 64` in IT_PE data.
-- Persist this byte/word in IT.CFG (same row plumbing as Quicksave folder).
-- Hook into the empty-pattern decode path (somewhere in `Music_GetPattern`
-  / `DecodePattern`): when decoding the static `EmptyPattern` template,
-  override `MaxRow` and `NumberOfRows` from the config value.
-
-**Estimated effort:** ~150 lines (dialog field + CFG row + decode hook).
-
-### Persist Clone-Mute-Wipe toggle (M flag) in IT.CFG
-
-`ClonePatternMuteWipe` currently lives only in RAM — resets to ON every
-launch. Trivial once the default-pattern-length IT.CFG row plumbing is
-wired; just one more byte.
+_(Currently empty — both items shipped in `068648f`. See Implemented.)_
 
 ---
 
@@ -82,10 +58,15 @@ it gets refined later._
 
 ---
 
-## ✅ Implemented (current build: `90cfd04`)
+## ✅ Implemented (current build: `068648f`)
 
 Newest first. Each line cites the commit SHA that landed it.
 
+- `068648f` — Default new-pattern row count is configurable via
+  F2-double-press dialog; user's last choice persists across launches.
+  Clone-Mute-Wipe (`M` toggle) also persists in IT.CFG. Both stored in a
+  new 16-byte PE_ForkExtConfig block appended after the Quicksave
+  directory; backward-compatible with older IT.CFG files.
 - `90cfd04` — F11 cursor-key edge gestures: Left at col 0 = clone verbatim;
   Shift-Left at col 0 = clone with mute-wipe; Right at col 2 = render +
   auto-import; Shift-Right at col 2 = render to Quicksave. Plain wrap
