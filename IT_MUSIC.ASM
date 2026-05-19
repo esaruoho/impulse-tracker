@@ -82,6 +82,8 @@ include network.inc
         Global  Music_GetDisplayVariables:Far
         Global  Music_AutoDetectSoundCard:Far
         Global  Music_ToggleWAVRender:Far
+        Global  Music_ArmRenderNoImport:Far
+        Global  Music_ClearRenderNoImport:Far
         Global  Music_SetTempoFromClocks:Far
         Global  Music_ImportRenderedPattern:Far
         Global  WAV_LoopRender:Byte
@@ -3856,6 +3858,16 @@ WAV_DriverName          DB      "ITWAV.DRV", 0
 WAV_RenderMode          DB      0
 WAV_AutoFinalize        DB      0       ; 1 = single-press flow armed
 WAV_FinalizeDelay       DB      0       ; frame counter after PlayMode=0
+
+; Shift-Ctrl-O variant: skip the auto-import after the render so the file
+; lands in the Quicksave folder without consuming a sample slot. The
+; dispatcher in IT_PE.ASM arms WAV_NoImport via Music_ArmRenderNoImport
+; on Shift-Ctrl-O, clears it on plain Ctrl-O. The actual session-state
+; copy is WAV_SessionNoImport, latched at enter-mode and consumed at
+; leave-mode -- this way pressing plain Ctrl-O to STOP a shift-armed
+; render still honours the no-import intent set at the original press.
+WAV_NoImport            DB      0       ; armed by dispatcher (next intent)
+WAV_SessionNoImport     DB      0       ; latched at enter, read at leave
 WAV_PendingPattern      DW      0
 WAV_SavedDriverName     DD      0
 
@@ -3885,6 +3897,86 @@ Proc            WAV_DebugMark Near
                 Ret
 EndP            WAV_DebugMark
 
+;-------------------------------------------------------------------------------
+; WAV_HoldForMarkers -- busy-wait ~15 seconds via Int 1Ah BIOS ticks so the
+; VRAM debug markers stamped on row 0 by WAV_DebugMark / D_DebugMark survive
+; long enough for a human to read them. Called from the Music_Import-
+; RenderedPattern error tail when an import fails -- without this hold the
+; F3/F4 redraw after Music_ToggleWAVRender returns wipes row 0 within a
+; couple of frames and the operator never sees which stage actually wedged.
+;
+; 15 s * 18.2 Hz ~= 273 BIOS ticks. Uses CX:DX as a 32-bit elapsed counter
+; so the loop is wrap-safe across the once-per-day midnight rollover.
+;-------------------------------------------------------------------------------
+Proc            WAV_HoldForMarkers Near
+                Push    AX
+                Push    BX
+                Push    CX
+                Push    DX
+                Push    BP
+
+                Mov     AH, 00h
+                Int     1Ah                     ; CX:DX = current ticks
+                Mov     BX, CX                  ; save start hi
+                Mov     BP, DX                  ; save start lo
+
+WAV_HoldLoop:
+                Push    BX
+                Push    BP
+                Mov     AH, 00h
+                Int     1Ah
+                Pop     BP
+                Pop     BX
+
+                Sub     DX, BP                  ; DX = elapsed lo
+                SbB     CX, BX                  ; CX = elapsed hi (uses CF)
+                Test    CX, CX
+                JNZ     WAV_HoldDone            ; >65k ticks (>1 hr), bail
+                Cmp     DX, 273                 ; 15 s budget reached?
+                JB      WAV_HoldLoop
+
+WAV_HoldDone:
+                Pop     BP
+                Pop     DX
+                Pop     CX
+                Pop     BX
+                Pop     AX
+                Ret
+EndP            WAV_HoldForMarkers
+
+;-------------------------------------------------------------------------------
+; Music_ArmRenderNoImport / Music_ClearRenderNoImport
+;
+; Cross-segment setters for the Shift-Ctrl-O no-import flag. Called by the
+; Ctrl-O dispatcher in IT_PE.ASM (which lives in the Pattern segment and
+; can't reach Music-segment data directly). Plain Ctrl-O clears the flag
+; before invoking Music_ToggleWAVRender; Shift-Ctrl-O sets it. The enter
+; branch of Music_ToggleWAVRender latches the value into
+; WAV_SessionNoImport, so the import-skip decision is fixed at the moment
+; render mode is entered.
+;-------------------------------------------------------------------------------
+Proc            Music_ArmRenderNoImport Far
+                Push    DS
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+                Mov     Byte Ptr [WAV_NoImport], 1
+                Pop     DS
+                Ret
+EndP            Music_ArmRenderNoImport
+                Assume  DS:Nothing
+
+Proc            Music_ClearRenderNoImport Far
+                Push    DS
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+                Mov     Byte Ptr [WAV_NoImport], 0
+                Pop     DS
+                Ret
+EndP            Music_ClearRenderNoImport
+                Assume  DS:Nothing
+
 Proc            Music_ToggleWAVRender Far       ; AX = pattern (on enter)
 
                 Push    BX
@@ -3904,6 +3996,24 @@ Proc            Music_ToggleWAVRender Far       ; AX = pattern (on enter)
                 ; us with AX=0 to swap back, and the import code still needs
                 ; the pattern that was captured when we entered.
                 Mov     [CS:WAV_PendingPattern], AX
+
+                ; Pre-flight: validate the render destination BEFORE touching
+                ; audio state. If the configured Quicksave / Sample directory
+                ; doesn't exist (chdir would fail), bail out now and show an
+                ; error. Without this, a bad Quicksave path silently writes
+                ; the file into whatever cwd happened to be active, the user
+                ; "loses" the render, and the operator chases a non-bug.
+                ; Try-and-revert pattern: stash cwd, attempt the chdir, then
+                ; revert regardless so audio state stays untouched in the
+                ; failure case.
+                Push    AX
+                Call    D_SaveCwd
+                Call    D_GotoRenderDirectory
+                PushF
+                Call    D_RestoreCwd
+                PopF
+                JC      WAV_PreflightBadPath
+                Pop     AX
 
                 Mov     EAX, DWord Ptr [CS:DriverName]
                 Mov     DWord Ptr [CS:WAV_SavedDriverName], EAX
@@ -3976,6 +4086,21 @@ Proc            Music_ToggleWAVRender Far       ; AX = pattern (on enter)
                 Mov     Byte Ptr [CS:WAV_CwdSaved], 1
 WAV_SkipCwdSave:
                 Call    D_GotoRenderDirectory
+                                                ; Pre-flight above already
+                                                ; verified the path; we don't
+                                                ; expect this call to fail.
+                                                ; If it does anyway the WAV
+                                                ; will land in cwd and the
+                                                ; import will catch it.
+
+                ; Latch the dispatcher-armed no-import flag into the per-
+                ; session copy. Shift-Ctrl-O sets WAV_NoImport before this
+                ; call; plain Ctrl-O clears it. Consuming the latch at
+                ; leave-mode (not the dispatcher flag) means even if the
+                ; user toggles render mode off with the OTHER variant of
+                ; Ctrl-O, the original intent is honoured.
+                Mov     AL, [CS:WAV_NoImport]
+                Mov     [CS:WAV_SessionNoImport], AL
 
                 Mov     AX, [CS:WAV_PendingPattern]
                 Xor     CX, CX
@@ -4033,7 +4158,33 @@ WAV_LeaveMode:
                 Mov     AH, '6'
                 Call    WAV_DebugMark
 
+                ; Gate the auto-import. Shift-Ctrl-O sets WAV_SessionNoImport
+                ; (via the dispatcher in IT_PE.ASM + the latch at enter-mode)
+                ; so the rendered file lands in the Quicksave folder without
+                ; consuming an IT sample slot -- the user picks it up from
+                ; the other machine and imports it into Logic / wherever.
+                ; Plain Ctrl-O clears the flag and falls through to the
+                ; existing auto-import.
+                Cmp     Byte Ptr [CS:WAV_SessionNoImport], 0
+                JNE     WAV_LeaveSkipImport
+
                 Call    Music_ImportRenderedPattern
+                Jmp     WAV_LeavePostImport
+
+WAV_LeaveSkipImport:
+                ; Tell the user where the file went, since no sample-slot
+                ; arrival will confirm it.
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+                Mov     SI, Offset WAV_RenderedNoImportMsg
+                Xor     AX, AX
+                Mov     BX, 500
+                Call    SetInfoLine2
+                        Assume DS:Nothing
+
+WAV_LeavePostImport:
+                Mov     Byte Ptr [CS:WAV_SessionNoImport], 0
 
                 Mov     AL, 8
                 Mov     AH, '7'
@@ -4057,6 +4208,24 @@ WAV_ToggleDone:
                 Pop     CX
                 Pop     BX
                 Ret
+
+WAV_PreflightBadPath:
+                ; Reached via JC from the pre-flight chdir attempt at enter-
+                ; mode. Audio state is UNTOUCHED (Music_Stop / driver swap
+                ; haven't fired yet) -- we just tell the user the configured
+                ; render destination is invalid and return.
+                Pop     AX                      ; discard saved pattern num
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+                Mov     SI, Offset WAV_BadRenderDirMsg
+                Xor     AX, AX
+                Mov     BX, 500
+                Call    SetInfoLine2
+                        Assume DS:Nothing
+
+                Jmp     WAV_ToggleDone
 
 EndP            Music_ToggleWAVRender
 
@@ -4100,6 +4269,8 @@ WAV_FailOpen            DB      "Import failed: cannot open .NNN file", 0
 WAV_FailHeader          DB      "Import failed: bad WAV header", 0
 WAV_FailAlloc           DB      "Import failed: out of memory for sample", 0
 WAV_TruncatedMsg        DB      "Pattern truncated to 1MB; sample ", 0FDh, "D", 0
+WAV_BadRenderDirMsg     DB      "Render aborted: Quicksave folder invalid (check F12)", 0
+WAV_RenderedNoImportMsg DB      "Pattern rendered to Quicksave folder (no import)", 0
 
 Proc            Music_ImportRenderedPattern Far
 
@@ -4537,6 +4708,23 @@ WAVI_Failed:
                 Pop     DS
                 Mov     SI, Offset WAV_ImportFailedMsg
 WAVI_FailedTail:
+                ; Hold ~15 seconds BEFORE the error message takes the info
+                ; line, so the VRAM debug markers on row 0 (WAV_DebugMark /
+                ; D_DebugMark) survive long enough for a human to read which
+                ; stage actually wedged. Without this hold, the post-Ctrl-O
+                ; screen redraw wipes row 0 within a couple of frames and
+                ; the marker letters are gone before anyone can see them.
+                ; Remove or shorten once the underlying failure is fixed.
+                Push    AX
+                Push    BX
+                Push    DS
+                Push    SI
+                Call    WAV_HoldForMarkers
+                Pop     SI
+                Pop     DS
+                Pop     BX
+                Pop     AX
+
                 Xor     AX, AX
                 Mov     BX, 500
                 Call    SetInfoLine2

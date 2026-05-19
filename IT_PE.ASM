@@ -63,6 +63,8 @@ EndS
                 Extrn   Music_GetPlayMode:Far
                 Extrn   Music_PlayPattern:Far
                 Extrn   Music_ToggleWAVRender:Far
+                Extrn   Music_ArmRenderNoImport:Far
+                Extrn   Music_ClearRenderNoImport:Far
                 Extrn   Music_GetLastChannel:Far
                 Extrn   Music_SetNextOrder:Far
                 Extrn   Music_NextOrder:Far
@@ -3904,6 +3906,39 @@ EndP            PEFunction_PickUp
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 Proc            PEFunction_RenderPattern Far
+
+                ; Dispatcher: Ctrl-O / Shift-Ctrl-O share the ASCII byte 0Fh,
+                ; so the keymap dispatch can't distinguish them. We check
+                ; the live shift state via K_IsKeyDown(2Ah/36h) at handler
+                ; entry, the same pattern Alt-R / Shift-Alt-R uses.
+                ;
+                ;   Plain Ctrl-O      -> WAV_NoImport cleared. Render lands
+                ;                        in Quicksave folder AND auto-imports
+                ;                        as the next free sample slot.
+                ;   Shift-Ctrl-O      -> WAV_NoImport set. Render lands in
+                ;                        Quicksave folder ONLY -- no IT
+                ;                        sample slot consumed. Use this when
+                ;                        you just want a WAV for the other
+                ;                        machine (Logic / Bitwig / Mac).
+
+                Push    BX
+
+                Mov     BX, 02Ah                ; Left Shift scancode
+                Call    K_IsKeyDown
+                JNE     PEFunction_Render_Shift ; ZF=0 -> key is down
+
+                Mov     BX, 036h                ; Right Shift scancode
+                Call    K_IsKeyDown
+                JNE     PEFunction_Render_Shift
+
+                Call    Music_ClearRenderNoImport
+                Jmp     PEFunction_Render_Common
+
+PEFunction_Render_Shift:
+                Call    Music_ArmRenderNoImport
+
+PEFunction_Render_Common:
+                Pop     BX
 
                 Call    PE_GetCurrentPattern    ; AX = pattern number
                 Call    Music_ToggleWAVRender

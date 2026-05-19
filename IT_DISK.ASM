@@ -10945,6 +10945,22 @@ EndP            D_GotoSampleDirectory
 
 Proc            D_GotoRenderDirectory Far
 
+                ; Returns:
+                ;   CF = 0  success (cwd is now the render dir, or no render
+                ;           dir is configured so cwd was left alone)
+                ;   CF = 1  a render dir was configured but chdir failed
+                ;           (drive letter invalid, path doesn't exist, etc.)
+                ;
+                ; Bypasses D_SetDriveDirectory because that proc swallows the
+                ; Int 21h chdir result via subsequent D_GetDriveDirectory
+                ; calls, so the caller can't tell whether the chdir actually
+                ; landed. We need a clear yes/no so Music_ToggleWAVRender
+                ; can abort cleanly on a bad Quicksave path instead of
+                ; writing the render file into an unrelated cwd.
+
+                Push    AX
+                Push    BX
+                Push    DX
                 Push    DS
                 Push    SI
 
@@ -10953,18 +10969,58 @@ Proc            D_GotoRenderDirectory Far
 
                 Mov     SI, Offset QuickSaveDirectory
                 Cmp     Byte Ptr [SI], 0
-                JNE     D_GotoRenderDirectory_Cd
+                JNE     D_GotoRenderDirectory_HavePath
 
                 Mov     SI, Offset SampleDirectory
                 Cmp     Byte Ptr [SI], 0
-                JE      D_GotoRenderDirectory_Done
+                JE      D_GotoRenderDirectory_Empty
 
-D_GotoRenderDirectory_Cd:
-                Call    D_SetDriveDirectory
+D_GotoRenderDirectory_HavePath:
+                ; Parse optional drive letter "X:" prefix
+                Cmp     Byte Ptr [SI+1], ':'
+                JNE     D_GotoRenderDirectory_NoDrive
+
+                Mov     DL, [SI]
+                Cmp     DL, 'a'
+                JB      D_GotoRenderDirectory_DriveUpper
+                Cmp     DL, 'z'
+                JA      D_GotoRenderDirectory_DriveUpper
+                Sub     DL, 'a' - 'A'
+
+D_GotoRenderDirectory_DriveUpper:
+                Sub     DL, 'A'
+                Cmp     DL, 25                  ; > 'Z' ?
+                JA      D_GotoRenderDirectory_Fail
+
+                Mov     AH, 0Eh                 ; select drive
+                Int     21h
+                                                ; (AH=0Eh has no error
+                                                ;  return; if drive is
+                                                ;  invalid, the chdir
+                                                ;  below will fail and
+                                                ;  we'll catch it there)
+
+                Add     SI, 2                   ; skip "X:" for chdir
+
+D_GotoRenderDirectory_NoDrive:
+                Mov     DX, SI
+                Mov     AH, 3Bh                 ; chdir
+                Int     21h
+                JC      D_GotoRenderDirectory_Fail
+
+D_GotoRenderDirectory_Empty:
+                ClC
+                Jmp     D_GotoRenderDirectory_Done
+
+D_GotoRenderDirectory_Fail:
+                StC
 
 D_GotoRenderDirectory_Done:
-                Pop     SI
-                Pop     DS
+                Pop     SI                      ; POP r16 preserves CF, so
+                Pop     DS                      ;  the success/fail bit set
+                Pop     DX                      ;  above survives back to
+                Pop     BX                      ;  the caller.
+                Pop     AX
                 Ret
 
 EndP            D_GotoRenderDirectory
