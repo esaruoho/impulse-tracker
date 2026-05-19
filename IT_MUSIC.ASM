@@ -86,6 +86,8 @@ include network.inc
         Global  Music_ClearRenderNoImport:Far
         Global  Music_GetMuteChannelTable:Far
         Global  Music_FindFreePattern:Far
+        Global  PE_AppendCloneLog:Far
+        Global  PE_AppendExtendLog:Far
         Global  Music_SetTempoFromClocks:Far
         Global  Music_ImportRenderedPattern:Far
         Global  WAV_LoopRender:Byte
@@ -4151,6 +4153,185 @@ WAV_WHAX_Dec:
 EndP            WAV_WriteHexAX
 
 WAV_HexBuf              DB      4 Dup (0)
+
+;-------------------------------------------------------------------------------
+; PATLOG.TXT writers for F11 order-list operations.
+;
+; Format per line:
+;   CLONE  src=NNNN dst=NNNN wipe=N
+;   EXTEND pat=NNNN rows=NNNN
+;
+; Lives in the active render directory (Quicksave folder if configured,
+; else SampleDirectory). Audit trail for live-performance pattern ops.
+;
+; Open/append/close idiom mirrors WAV_AppendErrorLog but with PATLOG.TXT
+; as the filename and different field layouts.
+;-------------------------------------------------------------------------------
+WAV_PatLogName          DB      "PATLOG.TXT", 0
+WAV_PatLogPrefix_Clone  DB      "CLONE  src=", 0
+WAV_PatLogPrefix_Extend DB      "EXTEND pat=", 0
+WAV_PatLogMid_Dst       DB      " dst=", 0
+WAV_PatLogMid_Wipe      DB      " wipe=", 0
+WAV_PatLogMid_Rows      DB      " rows=", 0
+
+;-------------------------------------------------------------------------------
+; PE_AppendCloneLog -- log an F11 Alt-D / Left / Shift-Left clone op.
+;
+; In:
+;     AX = source pattern number (will be logged as 4-hex)
+;     BX = target pattern number
+;     CL = wipe mode (0 = verbatim, 1 = mute-wipe)
+;
+; All registers preserved. Silently no-ops on any DOS error.
+;-------------------------------------------------------------------------------
+Proc            PE_AppendCloneLog Far
+                PushF
+                PushAD
+                Push    DS
+                Push    ES
+
+                                                ; Stash inputs so they
+                                                ; survive the file ops.
+                Mov     CS:[PE_PatLogScratchAX], AX
+                Mov     CS:[PE_PatLogScratchBX], BX
+                Mov     CS:[PE_PatLogScratchCX], CX
+
+                ; Open PATLOG.TXT (or create)
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+                Mov     DX, Offset WAV_PatLogName
+                Mov     AX, 3D02h               ; open r/w
+                Int     21h
+                JNC     PEACL_Opened
+
+                Mov     AH, 3Ch
+                Xor     CX, CX
+                Int     21h
+                JC      PEACL_Done              ; can't even create -> give up
+                Jmp     PEACL_Append            ; created, BX already = handle
+
+PEACL_Opened:
+                Mov     BX, AX
+                Mov     AX, 4202h               ; seek to end
+                Xor     CX, CX
+                Xor     DX, DX
+                Int     21h
+
+PEACL_Append:
+                ; "CLONE  src="
+                Mov     SI, Offset WAV_PatLogPrefix_Clone
+                Call    WAV_WriteStringDSSI
+
+                ; <src hex>
+                Mov     AX, CS:[PE_PatLogScratchAX]
+                Call    WAV_WriteHexAX
+
+                ; " dst="
+                Mov     SI, Offset WAV_PatLogMid_Dst
+                Call    WAV_WriteStringDSSI
+
+                ; <dst hex>
+                Mov     AX, CS:[PE_PatLogScratchBX]
+                Call    WAV_WriteHexAX
+
+                ; " wipe="
+                Mov     SI, Offset WAV_PatLogMid_Wipe
+                Call    WAV_WriteStringDSSI
+
+                ; <wipe hex> -- only low nibble matters, but write all 4 for
+                ; consistency with the other fields.
+                Mov     AX, CS:[PE_PatLogScratchCX]
+                And     AX, 0FFh                ; CL only
+                Call    WAV_WriteHexAX
+
+                ; CRLF
+                Mov     SI, Offset WAV_LogCRLF
+                Call    WAV_WriteStringDSSI
+
+                ; Close
+                Mov     AH, 3Eh
+                Int     21h
+
+PEACL_Done:
+                Pop     ES
+                Pop     DS
+                PopAD
+                PopF
+                Ret
+                        Assume DS:Nothing
+EndP            PE_AppendCloneLog
+
+;-------------------------------------------------------------------------------
+; PE_AppendExtendLog -- log an F11 Alt-E extend op.
+;
+; In:
+;     AX = pattern number that was extended
+;     BX = new row count
+;
+; All registers preserved.
+;-------------------------------------------------------------------------------
+Proc            PE_AppendExtendLog Far
+                PushF
+                PushAD
+                Push    DS
+                Push    ES
+
+                Mov     CS:[PE_PatLogScratchAX], AX
+                Mov     CS:[PE_PatLogScratchBX], BX
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+                Mov     DX, Offset WAV_PatLogName
+                Mov     AX, 3D02h
+                Int     21h
+                JNC     PEAXL_Opened
+
+                Mov     AH, 3Ch
+                Xor     CX, CX
+                Int     21h
+                JC      PEAXL_Done
+                Jmp     PEAXL_Append
+
+PEAXL_Opened:
+                Mov     BX, AX
+                Mov     AX, 4202h
+                Xor     CX, CX
+                Xor     DX, DX
+                Int     21h
+
+PEAXL_Append:
+                Mov     SI, Offset WAV_PatLogPrefix_Extend
+                Call    WAV_WriteStringDSSI
+
+                Mov     AX, CS:[PE_PatLogScratchAX]
+                Call    WAV_WriteHexAX
+
+                Mov     SI, Offset WAV_PatLogMid_Rows
+                Call    WAV_WriteStringDSSI
+
+                Mov     AX, CS:[PE_PatLogScratchBX]
+                Call    WAV_WriteHexAX
+
+                Mov     SI, Offset WAV_LogCRLF
+                Call    WAV_WriteStringDSSI
+
+                Mov     AH, 3Eh
+                Int     21h
+
+PEAXL_Done:
+                Pop     ES
+                Pop     DS
+                PopAD
+                PopF
+                Ret
+                        Assume DS:Nothing
+EndP            PE_AppendExtendLog
+
+PE_PatLogScratchAX      DW      0
+PE_PatLogScratchBX      DW      0
+PE_PatLogScratchCX      DW      0
 
 ;-------------------------------------------------------------------------------
 ; WAV_HoldForMarkers -- busy-wait ~15 seconds via Int 1Ah BIOS ticks so the

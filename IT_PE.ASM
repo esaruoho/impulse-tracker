@@ -67,6 +67,8 @@ EndS
                 Extrn   Music_ClearRenderNoImport:Far
                 Extrn   Music_GetMuteChannelTable:Far
                 Extrn   Music_FindFreePattern:Far
+                Extrn   PE_AppendCloneLog:Far
+                Extrn   PE_AppendExtendLog:Far
                 Extrn   Music_AllocatePattern:Far
                 Extrn   Music_ReleasePattern:Far
                 Extrn   Music_GetPattern:Far
@@ -2644,6 +2646,17 @@ PE_OrdC_NoWipe:
 
                                                 ; 5) info line: report which
                                                 ;    slot received the clone.
+                                                ;    Also log to PATLOG.TXT
+                                                ;    so the operator has a
+                                                ;    persistent audit trail
+                                                ;    of every Alt-D / Left /
+                                                ;    Shift-Left across the
+                                                ;    session.
+                Mov     AX, [PE_CloneSourcePat]
+                Mov     BX, [PE_CloneTargetPat]
+                MovZX   CX, Byte Ptr [PE_CloneWipeMode]
+                Call    PE_AppendCloneLog
+
                 Mov     AX, [PE_CloneTargetPat]
                 Mov     SI, Offset CloneDoneMsg
                 Call    SetInfoLine
@@ -2775,6 +2788,13 @@ Proc            PE_OrderList_ExtendPattern Far
                                                 ; safely extended live.
                 Mov     PatternModified, 1
                 Call    PEFunction_StorePattern
+
+                                                ; Audit log: PATLOG.TXT
+                                                ; entry for the operator's
+                                                ; session history.
+                Mov     AX, [PE_CloneSourcePat]
+                Mov     BX, NumberOfRows
+                Call    PE_AppendExtendLog
 
                                                 ; Info line: report new size.
                 Mov     AX, NumberOfRows

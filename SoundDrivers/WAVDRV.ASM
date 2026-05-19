@@ -34,6 +34,8 @@ WAVOutputMsg    DB      "Writing to disk", 13
                 DB      "Output frequency ", 0FDh, "D", 0
 WAVFileErrorMsg DB      "Unable to create output file!                              ", 0
 HeaderWriteFailMsg DB   "WAV header write failed -- file will be empty!             ", 0
+CloseSeekFailMsg DB     "WAV close: seek to start failed                            ", 0
+CloseWriteFailMsg DB    "WAV close: header re-write failed -- size fields broken    ", 0
 WAVMemErrorMsg  DB      "Unable to allocate memory!", 0
 NoReinitMsg     DB      "File output routines should NOT require reinitialisation   ", 0
 WriteError      DB      "Error writing to output file. Output file closed           ", 0
@@ -683,7 +685,25 @@ PollCloseFile:
                 Xor     CX, CX
                 Xor     DX, DX
                 Int     21h             ; Start of file
+                                        ; Fork: surface seek failure.
+                                        ; If we can't seek back to offset
+                                        ; 0, the header re-write below
+                                        ; appends instead of overwriting,
+                                        ; corrupting the file. Better to
+                                        ; tell the user than to silently
+                                        ; produce a broken WAV.
+                JNC     PCF_SeekOK
+                Push    CS
+                Pop     DS
+                        Assume DS:Driver
+                Mov     SI, Offset CloseSeekFailMsg
+                Mov     BX, 200
+                Call    SetInfoLine
+                                        ; Don't try to write the header --
+                                        ; just close and bail.
+                Jmp     PCF_Close
 
+PCF_SeekOK:
                 Mov     EAX, WAVEDataSize
                 Add     EAX, 24h
                 Mov     WAVEFileSize, EAX
@@ -692,7 +712,36 @@ PollCloseFile:
                 Mov     DX, Offset WAVEFileHeader
                 Mov     CX, 2Ch
                 Int     21h
+                                        ; Fork: header re-write carry /
+                                        ; partial-write check. If this
+                                        ; fails the file's RIFF size +
+                                        ; data size headers stay at the
+                                        ; initial-write values (data
+                                        ; size 0) -- player apps see a
+                                        ; valid RIFF/WAVE/fmt header but
+                                        ; "no data" and silently play
+                                        ; nothing. Surface the failure.
+                Pushf
+                Push    AX
+                Push    SI
+                Push    BX
+                JC      PCF_WriteFail
+                Cmp     AX, 2Ch
+                JE      PCF_WriteOK
+PCF_WriteFail:
+                Push    CS
+                Pop     DS
+                        Assume DS:Driver
+                Mov     SI, Offset CloseWriteFailMsg
+                Mov     BX, 200
+                Call    SetInfoLine
+PCF_WriteOK:
+                Pop     BX
+                Pop     SI
+                Pop     AX
+                Popf
 
+PCF_Close:
                 Mov     AH, 3Eh         ; Close file
                 Int     21h
 

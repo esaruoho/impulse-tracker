@@ -2197,3 +2197,141 @@ EMail account:
     TRACKER IN WHICH MONEY IS INVOLVED (SPECIFICALLY THE CREATION OF ANY
     MUSIC WHERE PAYMENT IS INVOLVED). THIS PROGRAM IS ONLY FREEWARE FOR
     NON-COMMERCIAL USE.
+
+
+ 7. Fork additions (esaruoho/impulse-tracker v2.354+)
+
+    The esaruoho fork adds substantial workflow features on top of the
+    original 2.15 source. This section documents the new key bindings
+    and behaviours. Upstream behaviour is unchanged for any key not
+    listed below.
+
+ 7.1 MIDI sync from an external DAW / sequencer
+
+    Shift-F1               MIDI Monitor + sync toggles. Two independent
+                           switches:
+                              MIDI Sync (F8 Clock) -- gates external tempo
+                              MIDI Transport (FA/FB/FC) -- gates Start/Stop
+                           Live counters show incoming MIDI Start /
+                           Continue / Stop / Clock byte counts plus the
+                           most recent RT byte received. Diagnose "is
+                           anything actually arriving" instantly.
+
+ 7.2 Pattern editor (F2)
+
+    Alt-R                  Replicate at Cursor (Paketti port). Tiles rows
+                           0..cursor-1 down to MaxRow on the current
+                           channel. Mirror semantics: empty events copy
+                           verbatim.
+    Shift-Alt-R            Clear all track views (original Alt-R).
+    Ctrl-O                 Render current pattern to WAV + auto-import as
+                           next free sample slot. File lands in the
+                           Quicksave folder (F12 -> Quicksave Directory)
+                           for cross-machine handoff.
+    Shift-Ctrl-O           Render to Quicksave folder WITHOUT auto-import.
+                           Use when you just want a WAV for another
+                           machine and don't want a new sample slot in IT.
+
+    F2 (second press)      Pattern Edit Config dialog. The "Number of rows
+                           in pattern" value is now persisted in IT.CFG
+                           as the default for future EMPTY patterns. Set
+                           it to 128 or 192 once; every new pattern from
+                           then on opens at that length.
+
+ 7.3 Order list (F11)
+
+    The 3-digit pattern cell has a cursor at digit position 0, 1, or 2.
+    Edge gestures (cursor at 0 + Left, cursor at 2 + Right) trigger one-
+    key actions:
+
+    Left at column 0       Clone the currently-playing-or-cursor pattern
+                           to the next free slot, VERBATIM.
+    Shift-Left at column 0 Clone with mute-wipe (^^^ note-cut at row 0 of
+                           every muted channel, NONOTE elsewhere). Use
+                           after muting channels to capture a "what you
+                           hear" snapshot.
+    Right at column 2      Render currently-playing-or-cursor pattern +
+                           auto-import (same as Ctrl-O).
+    Shift-Right at column 2  Render to Quicksave only (same as Shift-Ctrl-O).
+    Cursor at 1, or non-edge nav: original wrap behaviour preserved.
+
+    Plus the following keys anywhere in F11:
+
+    Ctrl-O                 Render active pattern, auto-import.
+    Shift-Ctrl-O           Render active pattern, no auto-import.
+    Ctrl-G                 Same as Shift-Ctrl-O (Quicksave only).
+    Shift-G                Same as Ctrl-O (auto-import). Plain G still
+                           goes to the pattern.
+    Alt-D                  Clone the active pattern into the next free
+                           slot. Respects the M-toggle for mute-wipe.
+    Alt-E                  Extend (double) the active pattern in place.
+                           Rows 0..N-1 are tiled into rows N..2N-1. Safe
+                           mid-playback -- mixer is paused under
+                           interrupts-masked during the buffer swap.
+    M                      Toggle Clone-Mute-Wipe (default ON). Affects
+                           Alt-D. Persists in IT.CFG.
+
+ 7.4 Sample loader (F9)
+
+    Keyjazz a sample       Does NOT stop the song. Only the preview voice
+                           is silenced. A/B kicks against a running drum
+                           loop.
+    Enter on a sample      Loads sample into current slot. Does NOT stop
+                           the song -- only voices on the replaced slot
+                           fall silent.
+    Shift-Enter on module  Bulk-load ALL samples from the module into
+                           consecutive slots from the cursor. Works on
+                           .IT / .S3M / .XM / .MOD / .MTM / .669 / .PTM /
+                           .FAR. In Instrument mode, each sample gets a
+                           new instrument header too.
+
+ 7.5 Save / Quicksave
+
+    Alt-W                  Save module to memorized Quicksave folder, no
+                           prompt.
+    Shift-Alt-W            Memorize current folder as the Quicksave folder.
+    F12 -> Quicksave Directory  Editable folder path. Pressing Enter on
+                           this field opens F9 as a folder picker.
+    F12 -> Module Directory     Same picker behaviour.
+
+ 7.6 Mode switching (F12)
+
+    Samples -> Instruments  Picking "Initialise Instruments = YES" no
+                           longer wipes any hand-drawn Vol / Pan / Pitch /
+                           Filter envelopes. Slots with custom envelope
+                           data are preserved entirely; only default-
+                           blank slots get the sample-name + keymap
+                           initialisation.
+
+ 7.7 Envelope presets (instrument editor)
+
+    0..9                   Load envelope preset N (existing in upstream
+                           but undocumented).
+    Shift-1..Shift-9       Save current envelope shape into preset N.
+                           (Original Alt-1..Alt-0 still works.) Presets
+                           persist in IT.CFG across sessions.
+
+ 7.8 Ctrl-O diagnostic logging
+
+    Every Ctrl-O outcome (success or failure) appends a one-line record
+    to CTRLOLOG.TXT in the active render directory. To diagnose any
+    failed render, TYPE CTRLOLOG.TXT in your Quicksave folder.
+
+    Line format:
+        START   file=RND0001.000 bytes=0000 size=0000
+        OK      file=RND0001.000 bytes=002C size=0006A8
+        RIFF fail file=RND0002.000 bytes=0000 size=0000
+        CLEANUP 0-byte file=RND0002.000 bytes=0000 size=0000
+
+    F11 clone / extend ops similarly log to PATLOG.TXT:
+        CLONE  src=0005 dst=0042 wipe=0001
+        EXTEND pat=0003 rows=0080
+
+    Logs rotate to *.OLD at 32 KB so they don't bloat across sessions.
+
+ 7.9 Source + bug reports
+
+    Fork repository: https://github.com/esaruoho/impulse-tracker
+    Upstream (read-only): https://github.com/jthlim/impulse-tracker
+
+    Fork features are BSD-3-Clause licensed (same as upstream).
