@@ -3953,12 +3953,61 @@ Proc            WAV_AppendErrorLog Near
 WAV_LogOpened:
                 Mov     BX, AX                  ; BX = file handle
 
-                ; Seek to end so we APPEND.
+                ; Seek to end so we APPEND. Capture the file size too --
+                ; rotate the log if it has grown past 32 KB, so the file
+                ; doesn't bloat forever across hundreds of sessions.
                 Mov     AX, 4202h
                 Xor     CX, CX
                 Xor     DX, DX
                 Int     21h
+                                                ; DX:AX = current file size
+                                                ; (= new write position).
+                                                ; We only check the low word
+                                                ; (DX != 0 means >= 64 KB,
+                                                ; definitely past threshold).
+                Test    DX, DX
+                JNZ     WAV_LogRotate
+                Cmp     AX, WAV_LogRotateThreshold
+                JAE     WAV_LogRotate
+                Jmp     WAV_LogAppendNow
 
+WAV_LogRotate:
+                ; Close handle, rename CTRLOLOG.TXT -> CTRLOLOG.OLD
+                ; (deleting any existing .OLD first), then re-open empty
+                ; CTRLOLOG.TXT to append to. Silently no-ops on any rename
+                ; failure so a borked rotation can't break logging.
+                Mov     AH, 3Eh
+                Int     21h
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+                                                ; Delete CTRLOLOG.OLD if it
+                                                ; exists (ignore failure).
+                Mov     DX, Offset WAV_LogOldName
+                Mov     AH, 41h
+                Int     21h
+                                                ; Rename CTRLOLOG.TXT to
+                                                ; CTRLOLOG.OLD via Int 21h
+                                                ; AH=56h (DS:DX = old name,
+                                                ; ES:DI = new name).
+                Push    CS
+                Pop     ES
+                Mov     DX, Offset WAV_ErrorLogName
+                Mov     DI, Offset WAV_LogOldName
+                Mov     AH, 56h
+                Int     21h
+                                                ; Now create a fresh
+                                                ; CTRLOLOG.TXT.
+                Mov     DX, Offset WAV_ErrorLogName
+                Mov     AH, 3Ch
+                Xor     CX, CX
+                Int     21h
+                JC      WAV_LogGiveUp           ; can't even create the
+                                                ; fresh log -- give up
+                Mov     BX, AX                  ; BX = new handle
+
+WAV_LogAppendNow:
                 ; --- Write prefix string ------------------------------------
                 ; Restore caller's DS:SI -> prefix string.
                 Pop     SI
@@ -3976,6 +4025,17 @@ WAV_LogOpened:
                 Call    WAV_WriteStringDSSI
 
                 Mov     AX, CS:[WAV_LastReadBytes]
+                Call    WAV_WriteHexAX
+
+                ; --- " size=" + 4-hex (the rendered file's actual size in
+                ; bytes -- captured by LSEEK-to-end after the import Open).
+                ; size=0000 with RIFF fail = WAVDRV never wrote anything.
+                ; size=002C = only the header (no audio data).
+                ; size=larger = at least some audio data was written.
+                Mov     SI, Offset WAV_LogMidSize
+                Call    WAV_WriteStringDSSI
+
+                Mov     AX, CS:[WAV_LastFileSize]
                 Call    WAV_WriteHexAX
 
                 ; --- CRLF ---------------------------------------------------
@@ -4285,6 +4345,49 @@ Proc            Music_ToggleWAVRender Far       ; AX = pattern (on enter)
                 Pop     ES
                 Pop     DS
 
+                ; Build RenderedFilename (RND<NNNN>.<PPP>) now too so we
+                ; can log a START line before any audio teardown. Same code
+                ; as Music_ImportRenderedPattern's filename builder; OK to
+                ; duplicate -- both write the same bytes from the same
+                ; inputs, idempotent.
+                Push    DS
+                Push    ES
+                Push    CS
+                Pop     DS
+                Push    CS
+                Pop     ES
+                Mov     SI, Offset WAV_RenderBasename
+                Mov     DI, Offset RenderedFilename
+                Mov     CX, 7
+                Rep     MovsB
+                Mov     AL, '.'
+                StosB
+                Mov     AX, [CS:WAV_PendingPattern]
+                Mov     BX, 100
+                Xor     DX, DX
+                Div     BX
+                Add     AL, '0'
+                StosB
+                Mov     AX, DX
+                Mov     BX, 10
+                Xor     DX, DX
+                Div     BX
+                Add     AL, '0'
+                StosB
+                Mov     AL, DL
+                Add     AL, '0'
+                StosB
+                Xor     AL, AL
+                StosB
+                Pop     ES
+                Pop     DS
+
+                ; Reset the bytes/size scratch words so the START log line
+                ; (written below, after the cwd shift) records 0000/0000
+                ; rather than leftover values from a previous render.
+                Mov     Word Ptr [CS:WAV_LastReadBytes], 0
+                Mov     Word Ptr [CS:WAV_LastFileSize], 0
+
                 ; Save cwd + cd to the render destination (Quicksave folder
                 ; if configured, else SampleDirectory). Quicksave is the
                 ; preferred target because it's the user-configurable folder
@@ -4303,6 +4406,16 @@ WAV_SkipCwdSave:
                                                 ; If it does anyway the WAV
                                                 ; will land in cwd and the
                                                 ; import will catch it.
+
+                ; START log entry. cwd is now the render directory, so
+                ; CTRLOLOG.TXT lands there alongside the eventual outcome
+                ; line. If IT crashes between here and the OK/fail line
+                ; further on, the surviving START record proves how far
+                ; the render got.
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_LogPrefix_START
+                Call    WAV_AppendErrorLog
 
                 ; Latch the dispatcher-armed no-import flag into the per-
                 ; session copy. Shift-Ctrl-O sets WAV_NoImport before this
@@ -4513,9 +4626,19 @@ WAV_LogPrefix_Open      DB      "OPEN fail file=", 0
 WAV_LogPrefix_CdFail    DB      "CHDIR fail file=", 0
 WAV_LogPrefix_NoSlot    DB      "NOSLOT file=", 0
 WAV_LogPrefix_Alloc     DB      "ALLOC fail file=", 0
-WAV_LogPrefix_OK        DB      "OK file=", 0
+WAV_LogPrefix_OK        DB      "OK   file=", 0
+WAV_LogPrefix_START     DB      "START file=", 0
+WAV_LogPrefix_CLEANUP   DB      "CLEANUP 0-byte file=", 0
+WAV_LogPrefix_LENMIS    DB      "LEN_MISMATCH file=", 0
 WAV_LogMidBytes         DB      " bytes=", 0
+WAV_LogMidSize          DB      " size=", 0
+WAV_LogMidWav           DB      " wav=", 0
+WAV_LogMidSample        DB      " sample=", 0
 WAV_LogCRLF             DB      13, 10, 0
+WAV_LogOldName          DB      "CTRLOLOG.OLD", 0
+WAV_LogRotateThreshold  EQU     32768           ; rotate when log >= 32 KB
+WAV_LastFileSize        DW      0               ; LSEEK-to-end result (low 16)
+                                                ; logged as " size=<HHHH>"
 WAV_FailAlloc           DB      "Import failed: out of memory for sample", 0
 WAV_TruncatedMsg        DB      "Pattern truncated to 1MB; sample ", 0FDh, "D", 0
 WAV_BadRenderDirMsg     DB      "Render aborted: Quicksave folder invalid (check F12)", 0
@@ -4627,6 +4750,34 @@ WAVI_HaveMax:
                 Mov     AL, 21
                 Mov     AH, 'b'                 ; file opened
                 Call    WAV_DebugMark
+
+                ; --- LSEEK to end to capture the actual file size before
+                ; consuming any bytes via Read. Logged as " size=<HHHH>"
+                ; in every CTRLOLOG line so size=0000 vs size=002C vs
+                ; size=larger is unambiguous on failure analysis.
+                Mov     BX, AX                  ; handle
+                Push    AX                      ; save handle
+                Mov     AX, 4202h
+                Xor     CX, CX
+                Xor     DX, DX
+                Int     21h
+                                                ; DX:AX = end-of-file (= size).
+                                                ; Only the low word matters for
+                                                ; logging; renders larger than
+                                                ; 64 KB will show truncated
+                                                ; hex but the success/failure
+                                                ; signal is still readable.
+                Mov     [CS:WAV_LastFileSize], AX
+
+                                                ; Seek back to start so the
+                                                ; subsequent Read pulls the
+                                                ; header from offset 0.
+                Mov     AX, 4200h
+                Xor     CX, CX
+                Xor     DX, DX
+                Int     21h
+
+                Pop     AX                      ; restore for downstream use
 
                 ; --- Read 44-byte WAV header ---------------------------------
                 Mov     BX, AX
@@ -5015,6 +5166,28 @@ WAVI_CloseHeaderFailRIFF:
                 Mov     BX, [CS:WAV_FileHandle]
                 Mov     AH, 3Eh
                 Int     21h
+
+                ; If the file is genuinely 0 bytes, delete it -- otherwise
+                ; the Quicksave folder accumulates stale 0-byte RND*.NNN
+                ; files that confuse the operator when they sift through
+                ; renders later. Also log the CLEANUP so the audit trail
+                ; shows the file was reaped intentionally, not lost.
+                Push    CS
+                Pop     DS
+                Cmp     Word Ptr [WAV_LastFileSize], 0
+                JNE     WAVI_RIFF_NoCleanup
+
+                Mov     DX, Offset RenderedFilename
+                Mov     AH, 41h
+                Int     21h                     ; delete file; ignore CF
+                                                ; (log will note the
+                                                ; failure post-hoc)
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_LogPrefix_CLEANUP
+                Call    WAV_AppendErrorLog
+
+WAVI_RIFF_NoCleanup:
                 Push    CS
                 Pop     DS
                 Mov     SI, Offset WAV_LogPrefix_RIFF

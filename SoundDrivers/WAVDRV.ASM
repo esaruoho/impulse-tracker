@@ -33,6 +33,7 @@ NumClipped      DD      0
 WAVOutputMsg    DB      "Writing to disk", 13
                 DB      "Output frequency ", 0FDh, "D", 0
 WAVFileErrorMsg DB      "Unable to create output file!                              ", 0
+HeaderWriteFailMsg DB   "WAV header write failed -- file will be empty!             ", 0
 WAVMemErrorMsg  DB      "Unable to allocate memory!", 0
 NoReinitMsg     DB      "File output routines should NOT require reinitialisation   ", 0
 WriteError      DB      "Error writing to output file. Output file closed           ", 0
@@ -848,6 +849,39 @@ ENDIF
                 Mov     DX, Offset WAVEFileHeader
                 Mov     AH, 40h
                 Int     21h
+                                                ; Fork: check carry / bytes-
+                                                ; written. If the write failed
+                                                ; (CF=1) or partially wrote
+                                                ; (AX < 2Ch), the file ends
+                                                ; up with no valid header --
+                                                ; surface this as a distinct
+                                                ; info-line message so the
+                                                ; operator sees it directly
+                                                ; instead of the eventual
+                                                ; "RIFF magic missing"
+                                                ; downstream of an empty
+                                                ; file. SetInfoLine doesn't
+                                                ; preserve the value of AX
+                                                ; so we have to copy first.
+                Pushf
+                Push    AX
+                Push    SI
+                Push    BX
+                JC      Poll10_HeaderWriteFail
+                Cmp     AX, 2Ch
+                JE      Poll10_HeaderWriteOK
+Poll10_HeaderWriteFail:
+                Push    CS
+                Pop     DS
+                        Assume DS:Driver
+                Mov     SI, Offset HeaderWriteFailMsg
+                Mov     BX, 200
+                Call    SetInfoLine
+Poll10_HeaderWriteOK:
+                Pop     BX
+                Pop     SI
+                Pop     AX
+                Popf
 
                 Mov     BX, 100
                 Call    SetInfoLine
