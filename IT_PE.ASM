@@ -2588,28 +2588,33 @@ PE_OrdClonePat_Body:
 
                 Mov     CS:PE_CloneTargetPat, AX        ; latch T
 
-                                                ; 1) save editor's current
-                                                ;    pattern back to its slot
-                                                ;    so it isn't lost.
+                                                ; 1) Save editor's current
+                                                ;    pattern back to its slot.
+                                                ;    PE_SaveCurrentPattern
+                                                ;    stashes the original
+                                                ;    PatternNumber into
+                                                ;    TempNumbers and writes
+                                                ;    0FFFFh into PatternNumber.
+                                                ;    PE_RestoreCurrentPattern
+                                                ;    at the end of this proc
+                                                ;    reads TempNumbers back
+                                                ;    and re-decodes -- the
+                                                ;    canonical save/restore
+                                                ;    pair, no manual latch
+                                                ;    required.
                 Call    PE_SaveCurrentPattern
 
                 Push    CS
                 Pop     DS
                         Assume DS:Pattern
 
-                                                ; 2) stash editor's
-                                                ;    PatternNumber for the
-                                                ;    end-of-proc restore.
-                Mov     AX, PatternNumber
-                Mov     [PE_CloneOriginalPat], AX
-
-                                                ; 3) load S into the editor
+                                                ; 2) load S into the editor
                                                 ;    buffer (PatternDataArea).
                 Mov     AX, [PE_CloneSourcePat]
                 Mov     PatternNumber, AX
                 Call    NewPattern
 
-                                                ; 4) optional mute-wipe.
+                                                ; 3) optional mute-wipe.
                                                 ; The latched wipe mode
                                                 ; (set at proc entry) governs:
                                                 ;   0  = skip
@@ -2637,21 +2642,23 @@ PE_OrdC_NoWipe:
                 Mov     PatternModified, 1      ; force the store path
                 Call    PEFunction_StorePattern
 
-                                                ; 6) info line: report which
+                                                ; 5) info line: report which
                                                 ;    slot received the clone.
                 Mov     AX, [PE_CloneTargetPat]
                 Mov     SI, Offset CloneDoneMsg
                 Call    SetInfoLine
 
-                                                ; 7) restore editor's
-                                                ;    original pattern by
-                                                ;    pointing PatternNumber
-                                                ;    back at it and re-
-                                                ;    decoding into the buffer.
-                Mov     AX, [PE_CloneOriginalPat]
-                Mov     PatternNumber, AX
-                Mov     PatternModified, 0
-                Call    NewPattern
+                                                ; 6) restore editor's
+                                                ;    original pattern via
+                                                ;    the canonical
+                                                ;    PE_RestoreCurrentPattern
+                                                ;    which reads the saved
+                                                ;    PatternNumber back from
+                                                ;    TempNumbers (where
+                                                ;    PE_SaveCurrentPattern
+                                                ;    stashed it) and re-
+                                                ;    decodes into the buffer.
+                Call    PE_RestoreCurrentPattern
 
                 Mov     AX, 1
                 Ret
@@ -2689,16 +2696,18 @@ Proc            PE_OrderList_ExtendPattern Far
 
                 Mov     CS:PE_CloneSourcePat, AX
 
+                                                ; PE_SaveCurrentPattern stashes
+                                                ; the original PatternNumber
+                                                ; into TempNumbers and writes
+                                                ; 0FFFFh into PatternNumber.
+                                                ; PE_RestoreCurrentPattern at
+                                                ; the bottom reads it back --
+                                                ; canonical save/restore pair.
                 Call    PE_SaveCurrentPattern
 
                 Push    CS
                 Pop     DS
                         Assume DS:Pattern
-
-                                                ; Stash editor's current
-                                                ; PatternNumber.
-                Mov     AX, PatternNumber
-                Mov     [PE_CloneOriginalPat], AX
 
                                                 ; Load source S into editor
                                                 ; buffer.
@@ -2773,15 +2782,14 @@ Proc            PE_OrderList_ExtendPattern Far
                 Call    SetInfoLine
 
                                                 ; Restore editor's original
-                                                ; pattern (NewPattern will
-                                                ; reload its decoded form
-                                                ; into PatternDataArea and
-                                                ; reset MaxRow / NumberOfRows
-                                                ; for the editor view).
-                Mov     AX, [PE_CloneOriginalPat]
-                Mov     PatternNumber, AX
-                Mov     PatternModified, 0
-                Call    NewPattern
+                                                ; pattern via the canonical
+                                                ; save/restore pair --
+                                                ; PE_RestoreCurrentPattern
+                                                ; pulls the original
+                                                ; PatternNumber from
+                                                ; TempNumbers and re-decodes
+                                                ; into the editor buffer.
+                Call    PE_RestoreCurrentPattern
 
                 Mov     AX, 1
                 Ret
@@ -2789,15 +2797,10 @@ Proc            PE_OrderList_ExtendPattern Far
 
 PE_OrdX_TooLong:
                                                 ; Source was already loaded
-                                                ; into the editor buffer;
-                                                ; reload the original
-                                                ; pattern before bailing so
-                                                ; the editor state isn't
-                                                ; left on the wrong pattern.
-                Mov     AX, [PE_CloneOriginalPat]
-                Mov     PatternNumber, AX
-                Mov     PatternModified, 0
-                Call    NewPattern
+                                                ; into the editor buffer.
+                                                ; Reload the original via
+                                                ; the save/restore pair.
+                Call    PE_RestoreCurrentPattern
 
                 Mov     SI, Offset ExtendTooLongMsg
                 Xor     AX, AX
