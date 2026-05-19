@@ -84,6 +84,8 @@ include network.inc
         Global  Music_ToggleWAVRender:Far
         Global  Music_ArmRenderNoImport:Far
         Global  Music_ClearRenderNoImport:Far
+        Global  Music_GetMuteChannelTable:Far
+        Global  Music_FindFreePattern:Far
         Global  Music_SetTempoFromClocks:Far
         Global  Music_ImportRenderedPattern:Far
         Global  WAV_LoopRender:Byte
@@ -7702,6 +7704,65 @@ Proc            Music_InitMuteTable Far
                 Ret
 
 EndP            Music_InitMuteTable
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+; Music_GetMuteChannelTable -- Cross-segment accessor for MuteChannelTable.
+; Returns ES:DI -> the 64-byte mute table (1 = muted, 0 = active per channel).
+; Used by IT_PE.ASM's clone-pattern path to optionally wipe events in muted
+; channels when producing a "what-you-heard" snapshot.
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+Proc            Music_GetMuteChannelTable Far
+                Push    CS
+                Pop     ES
+                Mov     DI, Offset MuteChannelTable
+                Ret
+EndP            Music_GetMuteChannelTable
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+; Music_FindFreePattern -- locate the lowest unallocated pattern slot in the
+; pattern table (SongData offset 63912, 4 bytes per slot, byte 0 = type
+; (0=empty)). Walks slots 0..199 and returns the first whose type byte is 0.
+;
+; Returns:
+;   CF=0, AX = free slot index (0..199)
+;   CF=1, AX = undefined   -- no free slot found
+;
+; Used by IT_PE.ASM's clone-pattern path; lets the operator clone the
+; currently-playing pattern without overwriting anything in the song.
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+Proc            Music_FindFreePattern Far
+                Push    CX
+                Push    DS
+                Push    SI
+
+                Mov     DS, CS:SongDataArea
+                Mov     SI, 63912               ; pattern entry table base
+                Xor     AX, AX                  ; AX = candidate slot
+
+Music_FindFreePattern_Loop:
+                Cmp     AX, 200                 ; IT max patterns
+                JAE     Music_FindFreePattern_NotFound
+
+                Cmp     Byte Ptr [SI], 0        ; type byte == 0 -> free
+                JE      Music_FindFreePattern_Found
+
+                Add     SI, 4                   ; next entry
+                Inc     AX
+                Jmp     Music_FindFreePattern_Loop
+
+Music_FindFreePattern_NotFound:
+                StC
+                Jmp     Music_FindFreePattern_Done
+
+Music_FindFreePattern_Found:
+                ClC
+
+Music_FindFreePattern_Done:
+                Pop     SI
+                Pop     DS
+                Pop     CX
+                Ret
+EndP            Music_FindFreePattern
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 

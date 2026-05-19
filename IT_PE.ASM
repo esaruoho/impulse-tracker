@@ -65,6 +65,11 @@ EndS
                 Extrn   Music_ToggleWAVRender:Far
                 Extrn   Music_ArmRenderNoImport:Far
                 Extrn   Music_ClearRenderNoImport:Far
+                Extrn   Music_GetMuteChannelTable:Far
+                Extrn   Music_FindFreePattern:Far
+                Extrn   Music_AllocatePattern:Far
+                Extrn   Music_ReleasePattern:Far
+                Extrn   Music_GetPattern:Far
                 Extrn   Music_GetLastChannel:Far
                 Extrn   Music_SetNextOrder:Far
                 Extrn   Music_NextOrder:Far
@@ -233,6 +238,29 @@ TopRow                  DW      0
 Row                     DW      0
 MaxRow                  DW      63
 NumberOfRows            DW      64
+
+; --- Fork: F11 order-list clone + extend support -----------------------------
+; ClonePatternMuteWipe: when 1, the Alt-D clone op wipes events on any
+; channel currently muted (per Music_GetMuteChannelTable). Produces a
+; "what-you-heard" snapshot. Default ON. Toggle with Shift-M in F11; info
+; line reports the new state.
+ClonePatternMuteWipe    DB      1
+; Workspace for clone / extend ops -- avoids tangled stack discipline by
+; latching source / target / saved-editor pattern numbers into static vars
+; while the proc juggles editor state through NewPattern + StorePattern.
+PE_CloneSourcePat       DW      0
+PE_CloneTargetPat       DW      0
+PE_CloneOriginalPat     DW      0
+CloneOnMsg              DB      "Clone respects channel mutes: ON", 0
+CloneOffMsg             DB      "Clone respects channel mutes: OFF", 0
+CloneDoneMsg            DB      "Pattern cloned to slot ", 0FDh, "D", 0
+CloneNoFreeMsg          DB      "Clone failed: no free pattern slot", 0
+CloneAllocFailMsg       DB      "Clone failed: out of memory", 0
+ExtendDoneMsg           DB      "Pattern extended to ", 0FDh, "D", " rows", 0
+ExtendTooLongMsg        DB      "Extend failed: would exceed 200 rows", 0
+ExtendAllocFailMsg      DB      "Extend failed: out of memory", 0
+OrderRenderNoPatMsg     DB      "Nothing to render at this order slot", 0
+;------------------------------------------------------------------------------
 
 LeftChannel             DW      0
 Channel                 DW      0
@@ -1014,7 +1042,30 @@ ENDIF
 
         DB      5
         DW      'G'
-        DW      Offset PE_PostOrderList24
+        DW      Offset PE_OrderList_GDispatch   ; shift-aware: plain = goto,
+                                                ; shift = render + auto-import
+
+        DB      1                               ; Ctrl-O / Shift-Ctrl-O on F11
+        DW      0Fh                             ; render currently-playing
+        DW      Offset PE_OrderList_RenderDispatch ; pattern (or order-cursor's
+                                                ; pattern if stopped); shift
+                                                ; toggles auto-import skip
+
+        DB      1                               ; Ctrl-G on F11
+        DW      7h                              ; render to Quicksave WITHOUT
+        DW      Offset PE_OrderList_RenderQuicksave ; auto-import
+
+        DB      1                               ; Alt-D on F11
+        DW      2000h                           ; clone currently-playing
+        DW      Offset PE_OrderList_ClonePattern ; pattern to next free slot
+
+        DB      1                               ; Alt-E on F11
+        DW      1200h                           ; extend (double rows) the
+        DW      Offset PE_OrderList_ExtendPattern ; currently-playing pattern
+
+        DB      5                               ; 'M' on F11
+        DW      'M'                             ; toggle Clone-mute-wipe
+        DW      Offset PE_OrderList_ToggleMuteWipe
 
         DB      1
         DW      '-'
@@ -2039,6 +2090,557 @@ PE_PostOrderList24:                             ; 'G'
 
 EndP            PE_PostOrderList
                 Assume DS:Nothing
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+; F11 order-list operations: render / clone / extend / mute-wipe toggle.
+;
+; Dispatch sequence on entry (per PE_PostOrderList's `Jmp [SI]` at line 1778):
+;   AX = Order (cursor row in order list)
+;   ES = SongDataArea  (Music_GetSongSegment result, set at line 1771)
+;   DS = Pattern       (Push CS / Pop DS at line 1764)
+;
+; Each handler returns AX=1 (key handled) and Ret.
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
+; PE_OrderList_ResolvePattern -- decide which pattern is the active subject for
+; render / clone / extend ops. Priority:
+;   1. PlayMode != 0  -> the currently-playing pattern (Music_GetPlayMode's
+;                        CX register).
+;   2. PlayMode == 0  -> the pattern byte at the F11 cursor row in the order
+;                        list (SongData offset 256 + Order, byte = pattern num).
+;
+; Returns:
+;   CF=0, AX = pattern number (0..199)
+;   CF=1, AX = undefined   -- no valid pattern (cursor on end-of-list marker
+;                             or skip slot, and not playing)
+;
+; Trashes only flags (caller preserves rest).
+;-------------------------------------------------------------------------------
+Proc            PE_OrderList_ResolvePattern Near
+                Push    BX
+                Push    CX
+                Push    DX
+                Push    SI
+                Push    DS
+                Push    ES
+
+                Call    Music_GetPlayMode       ; AX=PlayMode, CX=CurrentPattern
+                Test    AX, AX
+                JZ      PE_OrdRP_FromCursor
+
+                ; PlayMode != 0 -> use CurrentPattern from the engine.
+                Mov     AX, CX
+                Cmp     AX, 200
+                JAE     PE_OrdRP_Fail
+                Jmp     PE_OrdRP_OK
+
+PE_OrdRP_FromCursor:
+                Call    Music_GetSongSegment
+                Mov     DS, AX
+                Mov     BX, CS:Order            ; F11 cursor row
+                MovZX   AX, Byte Ptr [DS:BX+100h]
+                Cmp     AL, 200
+                JAE     PE_OrdRP_Fail           ; FE = skip, FF = end-of-list
+
+PE_OrdRP_OK:
+                Pop     ES
+                Pop     DS
+                Pop     SI
+                Pop     DX
+                Pop     CX
+                Pop     BX
+                ClC
+                Ret
+
+PE_OrdRP_Fail:
+                Pop     ES
+                Pop     DS
+                Pop     SI
+                Pop     DX
+                Pop     CX
+                Pop     BX
+                StC
+                Ret
+EndP            PE_OrderList_ResolvePattern
+
+;-------------------------------------------------------------------------------
+; PE_OrderList_ShowNoPatternMsg -- shared error tail when ResolvePattern
+; couldn't find a target. Caller must already have AX=1 desired on return.
+;-------------------------------------------------------------------------------
+Proc            PE_OrderList_ShowNoPatternMsg Near
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset OrderRenderNoPatMsg
+                Xor     AX, AX
+                Call    SetInfoLine
+                Ret
+EndP            PE_OrderList_ShowNoPatternMsg
+
+;-------------------------------------------------------------------------------
+; PE_OrderList_RenderDispatch -- Ctrl-O / Shift-Ctrl-O on F11.
+; Shift held = render without auto-import (file lands in Quicksave only);
+; no shift = render + auto-import as next sample slot.
+;-------------------------------------------------------------------------------
+Proc            PE_OrderList_RenderDispatch Far
+                Push    BX
+
+                Mov     BX, 02Ah                ; Left Shift
+                Call    K_IsKeyDown
+                JNE     PE_OrdRD_Shift
+                Mov     BX, 036h                ; Right Shift
+                Call    K_IsKeyDown
+                JNE     PE_OrdRD_Shift
+
+                Call    Music_ClearRenderNoImport
+                Jmp     PE_OrdRD_Common
+
+PE_OrdRD_Shift:
+                Call    Music_ArmRenderNoImport
+
+PE_OrdRD_Common:
+                Pop     BX
+
+                Call    PE_OrderList_ResolvePattern
+                JC      PE_OrdRD_NoPat
+
+                Call    Music_ToggleWAVRender
+                Mov     AX, 1
+                Ret
+
+PE_OrdRD_NoPat:
+                Call    PE_OrderList_ShowNoPatternMsg
+                Mov     AX, 1
+                Ret
+EndP            PE_OrderList_RenderDispatch
+
+;-------------------------------------------------------------------------------
+; PE_OrderList_RenderQuicksave -- Ctrl-G on F11. Always sets WAV_NoImport so
+; the rendered file just lands in the Quicksave folder.
+;-------------------------------------------------------------------------------
+Proc            PE_OrderList_RenderQuicksave Far
+                Call    Music_ArmRenderNoImport
+
+                Call    PE_OrderList_ResolvePattern
+                JC      PE_OrdRQ_NoPat
+
+                Call    Music_ToggleWAVRender
+                Mov     AX, 1
+                Ret
+
+PE_OrdRQ_NoPat:
+                Call    PE_OrderList_ShowNoPatternMsg
+                Mov     AX, 1
+                Ret
+EndP            PE_OrderList_RenderQuicksave
+
+;-------------------------------------------------------------------------------
+; PE_OrderList_GDispatch -- 'G' / Shift-G on F11.
+; Plain G keeps the original "Goto pattern" behaviour (delegates to the
+; pre-existing PE_PostOrderList24 handler). Shift-G renders the currently-
+; playing-or-cursor pattern with auto-import (same as plain Ctrl-O).
+;-------------------------------------------------------------------------------
+Proc            PE_OrderList_GDispatch Far
+                Push    BX
+
+                Mov     BX, 02Ah
+                Call    K_IsKeyDown
+                JNE     PE_OrdG_Shift
+                Mov     BX, 036h
+                Call    K_IsKeyDown
+                JNE     PE_OrdG_Shift
+
+                Pop     BX
+                Jmp     PE_PostOrderList24      ; plain G = goto pattern
+                                                ; (tail-jump preserves caller
+                                                ;  state -- PE_PostOrderList24
+                                                ;  expects ES=SongData,
+                                                ;  DS=Pattern, AX=Order,
+                                                ;  exactly what we have.)
+
+PE_OrdG_Shift:
+                Pop     BX
+                Call    Music_ClearRenderNoImport
+                Call    PE_OrderList_ResolvePattern
+                JC      PE_OrdG_NoPat
+
+                Call    Music_ToggleWAVRender
+                Mov     AX, 1
+                Ret
+
+PE_OrdG_NoPat:
+                Call    PE_OrderList_ShowNoPatternMsg
+                Mov     AX, 1
+                Ret
+EndP            PE_OrderList_GDispatch
+
+;-------------------------------------------------------------------------------
+; PE_OrderList_ToggleMuteWipe -- 'M' on F11. Flips ClonePatternMuteWipe and
+; surfaces the new state on the info line.
+;-------------------------------------------------------------------------------
+Proc            PE_OrderList_ToggleMuteWipe Far
+                Push    CS
+                Pop     DS
+                        Assume DS:Pattern
+
+                Xor     Byte Ptr [ClonePatternMuteWipe], 1
+                Cmp     Byte Ptr [ClonePatternMuteWipe], 0
+                JE      PE_OrdM_Off
+
+                Mov     SI, Offset CloneOnMsg
+                Jmp     PE_OrdM_Show
+
+PE_OrdM_Off:
+                Mov     SI, Offset CloneOffMsg
+
+PE_OrdM_Show:
+                Xor     AX, AX
+                Call    SetInfoLine
+                Mov     AX, 1
+                Ret
+                        Assume DS:Nothing
+EndP            PE_OrderList_ToggleMuteWipe
+
+;-------------------------------------------------------------------------------
+; PE_OrderList_ApplyMuteWipe -- iterate MuteChannelTable, and for each channel
+; flagged muted (table byte != 0), overwrite that channel's 5-byte event on
+; every row of the in-editor PatternDataArea with the canonical empty event
+; (NONOTE, 0, 0FFh, 0, 0). Result: the pattern, when later played from this
+; clone, contains only the audio that would have been audible under the
+; current mute state.
+;
+; Preconditions:
+;   - PatternDataArea holds the decoded source pattern (320 bytes / row).
+;   - MaxRow holds the row count - 1.
+;-------------------------------------------------------------------------------
+Proc            PE_OrderList_ApplyMuteWipe Near
+                Push    AX
+                Push    BX
+                Push    CX
+                Push    DX
+                Push    SI
+                Push    DI
+                Push    DS
+                Push    ES
+
+                Call    Music_GetMuteChannelTable   ; ES:DI -> 64-byte table
+                Push    ES
+                Push    DI
+                                                ; preserve mute-table pointer
+                                                ; in stack while we walk it
+                Mov     AX, CS:PatternDataArea
+                Mov     ES, AX
+                Push    CS
+                Pop     DS
+                        Assume DS:Pattern
+                                                ; ES = PatternDataArea, DS = PE
+                Pop     SI                      ; SI = mute table offset
+                Pop     BX                      ; BX = mute table segment
+                Push    DS
+                Mov     DS, BX
+                        Assume DS:Nothing
+                                                ; DS:SI -> mute table
+
+                Mov     CX, 64                  ; 64 channels
+                Xor     BX, BX                  ; BX = channel index
+
+PE_OrdWipe_ChannelLoop:
+                Cmp     Byte Ptr [SI+BX], 0
+                JE      PE_OrdWipe_NextChan     ; channel not muted
+
+                                                ; Wipe this channel's column
+                                                ; on every row in the editor
+                                                ; buffer.
+                Push    CX
+                Push    BX
+
+                                                ; Compute base offset = BX*5
+                Mov     AX, BX
+                Mov     DX, 5
+                Mul     DX
+                Mov     DI, AX                  ; DI = column 0 offset
+                                                ; for channel BX
+
+                Mov     CX, CS:MaxRow
+                Inc     CX                      ; number of rows
+
+PE_OrdWipe_RowLoop:
+                Mov     Byte Ptr [ES:DI+0], NONOTE
+                Mov     Byte Ptr [ES:DI+1], 0
+                Mov     Byte Ptr [ES:DI+2], 0FFh
+                Mov     Byte Ptr [ES:DI+3], 0
+                Mov     Byte Ptr [ES:DI+4], 0
+                Add     DI, 320                 ; next row
+                Loop    PE_OrdWipe_RowLoop
+
+                Pop     BX
+                Pop     CX
+
+PE_OrdWipe_NextChan:
+                Inc     BX
+                Loop    PE_OrdWipe_ChannelLoop
+
+                Pop     DS
+
+                Pop     ES
+                Pop     DI
+                Pop     SI
+                Pop     DX
+                Pop     CX
+                Pop     BX
+                Pop     AX
+                Ret
+EndP            PE_OrderList_ApplyMuteWipe
+                Assume  DS:Nothing
+
+;-------------------------------------------------------------------------------
+; PE_OrderList_ClonePattern -- Alt-D on F11.
+;
+; Find a free pattern slot T, copy the currently-playing-or-cursor pattern S
+; into T, optionally wiping events on currently-muted channels (per
+; ClonePatternMuteWipe). T is created but NOT inserted into the order list;
+; the operator manually wires it via F11 once they're happy with it.
+;
+; Implementation uses IT's pattern editor decode/encode pipeline:
+;   1. Save the editor's current pattern back to its slot (PE_SaveCurrentPattern)
+;   2. Stash the editor's PatternNumber
+;   3. Load S into PatternDataArea via NewPattern(S)
+;   4. Optionally apply mute-wipe to the editor buffer
+;   5. Save (encode) PatternDataArea to slot T via PEFunction_StorePattern
+;      with PatternNumber temporarily = T
+;   6. Restore the editor's original pattern (NewPattern with stashed number)
+;
+; All under-the-hood pattern alloc / release sits inside PEFunction_StorePattern
+; which does ClI/StI bracketing -- safe to call mid-playback because the mixer
+; is paused during the swap.
+;-------------------------------------------------------------------------------
+Proc            PE_OrderList_ClonePattern Far
+                Call    PE_OrderList_ResolvePattern
+                JC      PE_OrdC_NoPat
+
+                Mov     CS:PE_CloneSourcePat, AX        ; latch S
+
+                Call    Music_FindFreePattern           ; AX = T
+                JC      PE_OrdC_NoFreeSlot
+
+                Mov     CS:PE_CloneTargetPat, AX        ; latch T
+
+                                                ; 1) save editor's current
+                                                ;    pattern back to its slot
+                                                ;    so it isn't lost.
+                Call    PE_SaveCurrentPattern
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Pattern
+
+                                                ; 2) stash editor's
+                                                ;    PatternNumber for the
+                                                ;    end-of-proc restore.
+                Mov     AX, PatternNumber
+                Mov     [PE_CloneOriginalPat], AX
+
+                                                ; 3) load S into the editor
+                                                ;    buffer (PatternDataArea).
+                Mov     AX, [PE_CloneSourcePat]
+                Mov     PatternNumber, AX
+                Call    NewPattern
+
+                                                ; 4) optional mute-wipe.
+                Cmp     Byte Ptr [ClonePatternMuteWipe], 0
+                JE      PE_OrdC_NoWipe
+                Call    PE_OrderList_ApplyMuteWipe
+PE_OrdC_NoWipe:
+
+                                                ; 5) flip editor's pattern
+                                                ;    pointer to T so that
+                                                ;    PEFunction_StorePattern
+                                                ;    encodes the (possibly
+                                                ;    wiped) buffer into T.
+                                                ;    Music_ReleasePattern
+                                                ;    inside StorePattern only
+                                                ;    targets T -- which is a
+                                                ;    free slot anyway -- so
+                                                ;    we can't accidentally
+                                                ;    wipe the source.
+                Mov     AX, [PE_CloneTargetPat]
+                Mov     PatternNumber, AX
+                Mov     PatternModified, 1      ; force the store path
+                Call    PEFunction_StorePattern
+
+                                                ; 6) info line: report which
+                                                ;    slot received the clone.
+                Mov     AX, [PE_CloneTargetPat]
+                Mov     SI, Offset CloneDoneMsg
+                Call    SetInfoLine
+
+                                                ; 7) restore editor's
+                                                ;    original pattern by
+                                                ;    pointing PatternNumber
+                                                ;    back at it and re-
+                                                ;    decoding into the buffer.
+                Mov     AX, [PE_CloneOriginalPat]
+                Mov     PatternNumber, AX
+                Mov     PatternModified, 0
+                Call    NewPattern
+
+                Mov     AX, 1
+                Ret
+                        Assume DS:Nothing
+
+PE_OrdC_NoFreeSlot:
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset CloneNoFreeMsg
+                Xor     AX, AX
+                Call    SetInfoLine
+                Mov     AX, 1
+                Ret
+
+PE_OrdC_NoPat:
+                Call    PE_OrderList_ShowNoPatternMsg
+                Mov     AX, 1
+                Ret
+EndP            PE_OrderList_ClonePattern
+
+;-------------------------------------------------------------------------------
+; PE_OrderList_ExtendPattern -- Alt-E on F11.
+;
+; Take the currently-playing-or-cursor pattern S and double its row count by
+; tiling: rows 0..N-1 are kept, rows N..2N-1 are a verbatim copy of 0..N-1.
+; Bails out cleanly if 2*N would exceed IT's 200-row pattern maximum.
+;
+; In-place: S itself is reallocated with a larger storage buffer. The mixer
+; is paused via ClI inside PEFunction_StorePattern, so the live playback
+; resumes against the new buffer at the next mixer tick.
+;-------------------------------------------------------------------------------
+Proc            PE_OrderList_ExtendPattern Far
+                Call    PE_OrderList_ResolvePattern
+                JC      PE_OrdX_NoPat
+
+                Mov     CS:PE_CloneSourcePat, AX
+
+                Call    PE_SaveCurrentPattern
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Pattern
+
+                                                ; Stash editor's current
+                                                ; PatternNumber.
+                Mov     AX, PatternNumber
+                Mov     [PE_CloneOriginalPat], AX
+
+                                                ; Load source S into editor
+                                                ; buffer.
+                Mov     AX, [PE_CloneSourcePat]
+                Mov     PatternNumber, AX
+                Call    NewPattern
+
+                                                ; Bounds check: 2*(MaxRow+1)
+                                                ; must be <= 200 -> MaxRow
+                                                ; must be < 100.
+                Mov     AX, MaxRow
+                Cmp     AX, 99
+                JA      PE_OrdX_TooLong
+
+                                                ; Tile rows 0..MaxRow into
+                                                ; rows MaxRow+1..2*MaxRow+1
+                                                ; inside PatternDataArea via
+                                                ; word-copy.
+                Push    DS
+                Push    ES
+
+                Mov     AX, CS:PatternDataArea
+                Mov     ES, AX
+                Mov     DS, AX
+
+                Mov     AX, CS:MaxRow
+                Inc     AX
+                Mov     CX, 320 / 2             ; words per row
+                Mul     CX                      ; AX = words for the source
+                                                ; half (rows 0..MaxRow)
+                Mov     CX, AX
+
+                Xor     SI, SI                  ; source = row 0 offset
+                Mov     AX, CS:MaxRow
+                Inc     AX
+                Mov     DX, 320
+                Mul     DX                      ; AX = (MaxRow+1) * 320 =
+                                                ; byte offset of first new row
+                Mov     DI, AX
+
+                ClD
+                Rep     MovsW
+
+                Pop     ES
+                Pop     DS
+                        Assume DS:Pattern
+
+                                                ; Update row metadata.
+                Mov     AX, MaxRow
+                ShL     AX, 1
+                Inc     AX                      ; new MaxRow = 2*old + 1
+                Mov     MaxRow, AX
+                Inc     AX
+                Mov     NumberOfRows, AX
+
+                                                ; Save the extended pattern
+                                                ; back into slot S. The
+                                                ; ClI bracket inside
+                                                ; PEFunction_StorePattern
+                                                ; pauses the mixer while the
+                                                ; old storage is freed and
+                                                ; the new (larger) buffer is
+                                                ; allocated, so a currently-
+                                                ; playing pattern can be
+                                                ; safely extended live.
+                Mov     PatternModified, 1
+                Call    PEFunction_StorePattern
+
+                                                ; Info line: report new size.
+                Mov     AX, NumberOfRows
+                Mov     SI, Offset ExtendDoneMsg
+                Call    SetInfoLine
+
+                                                ; Restore editor's original
+                                                ; pattern (NewPattern will
+                                                ; reload its decoded form
+                                                ; into PatternDataArea and
+                                                ; reset MaxRow / NumberOfRows
+                                                ; for the editor view).
+                Mov     AX, [PE_CloneOriginalPat]
+                Mov     PatternNumber, AX
+                Mov     PatternModified, 0
+                Call    NewPattern
+
+                Mov     AX, 1
+                Ret
+                        Assume DS:Nothing
+
+PE_OrdX_TooLong:
+                                                ; Source was already loaded
+                                                ; into the editor buffer;
+                                                ; reload the original
+                                                ; pattern before bailing so
+                                                ; the editor state isn't
+                                                ; left on the wrong pattern.
+                Mov     AX, [PE_CloneOriginalPat]
+                Mov     PatternNumber, AX
+                Mov     PatternModified, 0
+                Call    NewPattern
+
+                Mov     SI, Offset ExtendTooLongMsg
+                Xor     AX, AX
+                Call    SetInfoLine
+                Mov     AX, 1
+                Ret
+                        Assume DS:Nothing
+
+PE_OrdX_NoPat:
+                Call    PE_OrderList_ShowNoPatternMsg
+                Mov     AX, 1
+                Ret
+EndP            PE_OrderList_ExtendPattern
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
