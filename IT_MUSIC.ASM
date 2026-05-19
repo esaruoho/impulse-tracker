@@ -129,6 +129,7 @@ include network.inc
         Global  Music_GetNumberOfInstruments:Far
         Global  Music_ClearInstrument:Far
         Global  Music_ClearAllInstruments:Far
+        Global  Music_InstrumentHasEnvelopes:Far
         Global  Music_GetHostChannelInformationTable:Far
         Global  Music_GetSlaveChannelInformationTable:Far
         Global  Music_SetGlobalVolume:Far
@@ -3393,6 +3394,63 @@ Proc            Music_ClearInstrument Far               ; AX = Instrument number
                 Ret
 
 EndP            Music_ClearInstrument
+                Assume DS:Nothing
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+; Music_InstrumentHasEnvelopes -- AX = instrument number (0-based).
+;
+; Compares the envelope section of the live instrument header against the
+; default InstrumentHeader template. Bytes 130h..554 cover the Volume,
+; Pan, and Pitch/Filter envelope structs plus trailing padding (250 bytes
+; total). If any byte differs, the user has drawn (or otherwise edited)
+; envelope data on this instrument and it must NOT be wiped.
+;
+; Returns:
+;   ZF = 1 (Equal)   if envelope bytes match template (default-blank)
+;   ZF = 0 (NotEq)   if any envelope byte differs (custom data present)
+;
+; Used by F_SetControlInstrument to gate the per-instrument auto-init
+; during the F12 Samples -> Instruments mode flip, so envelopes drawn
+; while in Sample mode are preserved across the transition.
+;-------------------------------------------------------------------------------
+
+Proc            Music_InstrumentHasEnvelopes Far    ; AX = instrument number
+
+                Push    AX
+                Push    CX
+                Push    DS
+                Push    SI
+                Push    ES
+                Push    DI
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+
+                Mov     DI, AX
+                Add     DI, DI
+                Mov     ES, SongDataArea
+                Mov     DI, [ES:DI+64712]   ; ES:DI -> live instrument header
+
+                Add     DI, 130h            ; advance to envelope section
+                Mov     SI, Offset InstrumentHeader
+                Add     SI, 130h            ; matching offset in template
+                Mov     CX, 250             ; vol+pan+pitch envelopes + padding
+
+                ClD
+                RepE    CmpsB               ; ZF=1 if all 250 bytes match,
+                                            ; ZF=0 on first mismatch.
+                                            ; Pops below preserve flags.
+
+                Pop     DI
+                Pop     ES
+                Pop     SI
+                Pop     DS
+                Pop     CX
+                Pop     AX
+                Ret
+
+EndP            Music_InstrumentHasEnvelopes
                 Assume DS:Nothing
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
