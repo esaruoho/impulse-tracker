@@ -251,6 +251,10 @@ ClonePatternMuteWipe    DB      1
 PE_CloneSourcePat       DW      0
 PE_CloneTargetPat       DW      0
 PE_CloneOriginalPat     DW      0
+PE_CloneWipeMode        DB      0       ; latched wipe mode for the body;
+                                        ; survives across the intermediate
+                                        ; SaveCurrentPattern / NewPattern
+                                        ; calls (which trash caller regs)
 CloneOnMsg              DB      "Clone respects channel mutes: ON", 0
 CloneOffMsg             DB      "Clone respects channel mutes: OFF", 0
 CloneDoneMsg            DB      "Pattern cloned to slot ", 0FDh, "D", 0
@@ -1033,12 +1037,22 @@ ENDIF
         DW      Offset PE_PostOrderList6
 
         DB      0
-        DW      1CBh            ; Left
-        DW      Offset PE_PostOrderList7
+        DW      1CBh            ; Left -- replaced with edge-aware dispatcher
+        DW      Offset PE_OrderList_LeftDispatch ;   OrderCursor==0 + plain
+                                                 ;     -> clone verbatim
+                                                 ;   OrderCursor==0 + shift
+                                                 ;     -> clone with mute-wipe
+                                                 ;   OrderCursor!=0
+                                                 ;     -> normal cursor wrap
 
         DB      0
-        DW      1CDh            ; Right
-        DW      Offset PE_PostOrderList9
+        DW      1CDh            ; Right -- replaced with edge-aware dispatcher
+        DW      Offset PE_OrderList_RightDispatch ;  OrderCursor==2 + plain
+                                                 ;     -> render + auto-import
+                                                 ;   OrderCursor==2 + shift
+                                                 ;     -> render to Quicksave
+                                                 ;   OrderCursor!=2
+                                                 ;     -> normal cursor wrap
 
         DB      5
         DW      'G'
@@ -2177,6 +2191,71 @@ Proc            PE_OrderList_ShowNoPatternMsg Near
 EndP            PE_OrderList_ShowNoPatternMsg
 
 ;-------------------------------------------------------------------------------
+; PE_OrderList_LeftDispatch -- Left cursor key on F11.
+;
+; If OrderCursor is not 0 (we're at the middle or right digit of the 3-digit
+; pattern cell), tail-jump to the original PE_PostOrderList7 which decrements
+; OrderCursor with wrap. If OrderCursor IS 0 (already at leftmost digit), the
+; gesture is repurposed: instead of wrapping to digit 2, the user gets to
+; clone the active pattern.
+;
+;   plain Left at edge   -> clone verbatim (no mute-wipe, ignores the M flag)
+;   Shift-Left at edge   -> clone with mute-wipe (^^^ at row 0 of muted
+;                           channels). Also ignores the M flag.
+;
+; Cloning uses PE_OrderList_ClonePatternModal with BL explicitly set, so the
+; cursor-key path is decoupled from the global M-toggle that governs Alt-D.
+;-------------------------------------------------------------------------------
+Proc            PE_OrderList_LeftDispatch Far
+                Cmp     CS:[OrderCursor], 0
+                JE      PE_OrdL_AtEdge
+                Jmp     PE_PostOrderList7       ; normal cursor wrap
+
+PE_OrdL_AtEdge:
+                Push    BX
+
+                Mov     BX, 02Ah                ; Left Shift
+                Call    K_IsKeyDown
+                JNE     PE_OrdL_AtEdge_Shift
+
+                Mov     BX, 036h                ; Right Shift
+                Call    K_IsKeyDown
+                JNE     PE_OrdL_AtEdge_Shift
+
+                Pop     BX
+                Xor     BL, BL                  ; verbatim
+                Jmp     PE_OrderList_ClonePatternModal
+
+PE_OrdL_AtEdge_Shift:
+                Pop     BX
+                Mov     BL, 1                   ; mute-wipe + ^^^ at row 0
+                Jmp     PE_OrderList_ClonePatternModal
+EndP            PE_OrderList_LeftDispatch
+
+;-------------------------------------------------------------------------------
+; PE_OrderList_RightDispatch -- Right cursor key on F11.
+;
+; If OrderCursor is not 2 (we're at the left or middle digit), tail-jump to
+; the original PE_PostOrderList9. At OrderCursor == 2 (rightmost digit), the
+; gesture is repurposed:
+;
+;   plain Right at edge  -> render active pattern + auto-import as next slot
+;   Shift-Right at edge  -> render active pattern to Quicksave folder only
+;
+; Both cases tail-jump to PE_OrderList_RenderDispatch which already implements
+; the shift-aware import/no-import decision -- so the right-edge handler is
+; really just "promote this cursor key into a Ctrl-O event".
+;-------------------------------------------------------------------------------
+Proc            PE_OrderList_RightDispatch Far
+                Cmp     CS:[OrderCursor], 2
+                JE      PE_OrdR_AtEdge
+                Jmp     PE_PostOrderList9       ; normal cursor wrap
+
+PE_OrdR_AtEdge:
+                Jmp     PE_OrderList_RenderDispatch
+EndP            PE_OrderList_RightDispatch
+
+;-------------------------------------------------------------------------------
 ; PE_OrderList_RenderDispatch -- Ctrl-O / Shift-Ctrl-O on F11.
 ; Shift held = render without auto-import (file lands in Quicksave only);
 ; no shift = render + auto-import as next sample slot.
@@ -2348,8 +2427,19 @@ PE_OrdWipe_ChannelLoop:
                 JE      PE_OrdWipe_NextChan     ; channel not muted
 
                                                 ; Wipe this channel's column
-                                                ; on every row in the editor
-                                                ; buffer.
+                                                ; across every row, but place
+                                                ; a note-cut (^^^, note value
+                                                ; 0FEh) at row 0 so any sample
+                                                ; that was still ringing from
+                                                ; the previous pattern is
+                                                ; silenced cleanly when the
+                                                ; clone starts playing.
+                                                ; (Just zeroing all the rows
+                                                ; to NONOTE would leave any
+                                                ; lingering voice playing
+                                                ; from before -- a sustained
+                                                ; sample would bleed across
+                                                ; the pattern boundary.)
                 Push    CX
                 Push    BX
 
@@ -2360,8 +2450,18 @@ PE_OrdWipe_ChannelLoop:
                 Mov     DI, AX                  ; DI = column 0 offset
                                                 ; for channel BX
 
-                Mov     CX, CS:MaxRow
-                Inc     CX                      ; number of rows
+                                                ; Row 0: note-cut ^^^
+                Mov     Byte Ptr [ES:DI+0], 0FEh
+                Mov     Byte Ptr [ES:DI+1], 0
+                Mov     Byte Ptr [ES:DI+2], 0FFh
+                Mov     Byte Ptr [ES:DI+3], 0
+                Mov     Byte Ptr [ES:DI+4], 0
+                Add     DI, 320
+
+                                                ; Rows 1..MaxRow: empty
+                Mov     CX, CS:MaxRow           ; CX = rows remaining
+                Test    CX, CX
+                JZ      PE_OrdWipe_OneRowOnly   ; single-row pattern
 
 PE_OrdWipe_RowLoop:
                 Mov     Byte Ptr [ES:DI+0], NONOTE
@@ -2372,6 +2472,7 @@ PE_OrdWipe_RowLoop:
                 Add     DI, 320                 ; next row
                 Loop    PE_OrdWipe_RowLoop
 
+PE_OrdWipe_OneRowOnly:
                 Pop     BX
                 Pop     CX
 
@@ -2413,7 +2514,47 @@ EndP            PE_OrderList_ApplyMuteWipe
 ; which does ClI/StI bracketing -- safe to call mid-playback because the mixer
 ; is paused during the swap.
 ;-------------------------------------------------------------------------------
+; ----------------------------------------------------------------------------
+; Two entry points to the clone pipeline:
+;   PE_OrderList_ClonePattern        -- Alt-D in F11. Wipe mode is governed
+;                                       by the global ClonePatternMuteWipe
+;                                       flag (which 'M' toggles).
+;   PE_OrderList_ClonePatternModal   -- Cursor-key edge dispatchers (Left at
+;                                       column 0 / Shift-Left at column 0).
+;                                       Caller sets BL explicitly:
+;                                          BL=0 -> verbatim, no wipe
+;                                          BL=1 -> wipe muted channels
+;                                       The global flag is bypassed entirely.
+;
+; Both entries converge at PE_OrdClonePat_Body. The BL register carries the
+; effective wipe-mode through the proc, so the body never reads
+; ClonePatternMuteWipe again -- that single derefence happens at the entry
+; point and the explicit-mode callers can leave it untouched.
+; ----------------------------------------------------------------------------
+
 Proc            PE_OrderList_ClonePattern Far
+                Mov     BL, CS:[ClonePatternMuteWipe]
+                Jmp     PE_OrdClonePat_Body
+EndP            PE_OrderList_ClonePattern
+
+Proc            PE_OrderList_ClonePatternModal Far      ; In: BL = wipe mode
+                                                ; (no fallthrough on purpose --
+                                                ; this entry is for cursor-
+                                                ; key dispatchers that decide
+                                                ; the mode themselves)
+                Jmp     PE_OrdClonePat_Body
+EndP            PE_OrderList_ClonePatternModal
+
+Proc            PE_OrderList_ClonePattern_Body Far      ; In: BL = wipe mode
+                                                ; (shared body for both entry
+                                                ; points above)
+PE_OrdClonePat_Body:
+                Mov     CS:[PE_CloneWipeMode], BL       ; latch wipe choice;
+                                                ; survives every intermediate
+                                                ; subroutine call below
+                                                ; without depending on BX
+                                                ; preservation by callees.
+
                 Call    PE_OrderList_ResolvePattern
                 JC      PE_OrdC_NoPat
 
@@ -2446,7 +2587,13 @@ Proc            PE_OrderList_ClonePattern Far
                 Call    NewPattern
 
                                                 ; 4) optional mute-wipe.
-                Cmp     Byte Ptr [ClonePatternMuteWipe], 0
+                                                ; The latched wipe mode
+                                                ; (set at proc entry) governs:
+                                                ;   0  = skip
+                                                ;   !0 = run wipe with ^^^ at
+                                                ;        row 0 of every muted
+                                                ;        channel.
+                Cmp     Byte Ptr [PE_CloneWipeMode], 0
                 JE      PE_OrdC_NoWipe
                 Call    PE_OrderList_ApplyMuteWipe
 PE_OrdC_NoWipe:
@@ -2500,7 +2647,7 @@ PE_OrdC_NoPat:
                 Call    PE_OrderList_ShowNoPatternMsg
                 Mov     AX, 1
                 Ret
-EndP            PE_OrderList_ClonePattern
+EndP            PE_OrderList_ClonePattern_Body
 
 ;-------------------------------------------------------------------------------
 ; PE_OrderList_ExtendPattern -- Alt-E on F11.
