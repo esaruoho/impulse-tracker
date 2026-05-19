@@ -3900,6 +3900,199 @@ Proc            WAV_DebugMark Near
 EndP            WAV_DebugMark
 
 ;-------------------------------------------------------------------------------
+; WAV_AppendErrorLog -- append one line to CTRLOLOG.TXT in the current cwd
+; (the active render directory at call time). Used to give the user a
+; persistent failure record they can TYPE / scroll / preserve, instead of
+; having to read VRAM marker letters off a CRT photograph.
+;
+; Line format:
+;     <prefix> <RenderedFilename> bytes=<HHHH>
+; e.g.
+;     RIFF fail file=RND0001.000 bytes=0000
+;
+; In:
+;     DS:SI = null-terminated prefix string ("RIFF fail file=", "WAVE fail
+;             file=", "OK file=", etc.)
+;     CS:[WAV_LastReadBytes] = the AX returned by Int 21h AH=3Fh Read
+;             (or 0 if logging a non-read failure).
+;
+; All registers preserved. Silently no-ops on any DOS error (open/create/
+; write failure), so a broken log file can't break the operator's render
+; pipeline.
+;-------------------------------------------------------------------------------
+Proc            WAV_AppendErrorLog Near
+                PushF
+                PushAD
+                Push    DS
+                Push    ES
+
+                Push    CS
+                Pop     ES
+                                                ; Save caller's prefix
+                                                ; pointer because we'll
+                                                ; reset DS shortly.
+                Push    DS
+                Push    SI                      ; stack: [SI] [DS]
+
+                ; --- Open or create CTRLOLOG.TXT ----------------------------
+                ; Open first (faster path); if missing, create.
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+                Mov     DX, Offset WAV_ErrorLogName
+                Mov     AX, 3D02h               ; open r/w
+                Int     21h
+                JNC     WAV_LogOpened
+
+                ; Open failed -> try create.
+                Mov     AH, 3Ch
+                Xor     CX, CX
+                Int     21h
+                JC      WAV_LogGiveUp
+
+WAV_LogOpened:
+                Mov     BX, AX                  ; BX = file handle
+
+                ; Seek to end so we APPEND.
+                Mov     AX, 4202h
+                Xor     CX, CX
+                Xor     DX, DX
+                Int     21h
+
+                ; --- Write prefix string ------------------------------------
+                ; Restore caller's DS:SI -> prefix string.
+                Pop     SI
+                Pop     DS
+                Call    WAV_WriteStringDSSI
+
+                ; --- Write the filename -------------------------------------
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset RenderedFilename
+                Call    WAV_WriteStringDSSI
+
+                ; --- " bytes=" + 4-hex ------------------------------------
+                Mov     SI, Offset WAV_LogMidBytes
+                Call    WAV_WriteStringDSSI
+
+                Mov     AX, CS:[WAV_LastReadBytes]
+                Call    WAV_WriteHexAX
+
+                ; --- CRLF ---------------------------------------------------
+                Mov     SI, Offset WAV_LogCRLF
+                Call    WAV_WriteStringDSSI
+
+                ; --- Close --------------------------------------------------
+                Mov     AH, 3Eh
+                Int     21h
+                Jmp     WAV_LogDone
+
+WAV_LogGiveUp:
+                Pop     SI                      ; drain the early-stashed SI
+                Pop     DS                      ; drain DS
+
+WAV_LogDone:
+                Pop     ES
+                Pop     DS
+                PopAD
+                PopF
+                Ret
+                        Assume DS:Nothing
+EndP            WAV_AppendErrorLog
+
+;-------------------------------------------------------------------------------
+; WAV_WriteStringDSSI -- write the null-terminated string at DS:SI to file
+; handle in BX. Strlen via scan, then one AH=40h Write. Preserves all regs
+; except: SI walks the string (still valid pointer to null on return).
+;-------------------------------------------------------------------------------
+Proc            WAV_WriteStringDSSI Near
+                Push    AX
+                Push    CX
+                Push    DX
+                Push    SI
+
+                ; Strlen
+                Mov     CX, SI                  ; remember start
+                Xor     AX, AX
+WAV_WSDSSI_Scan:
+                Cmp     Byte Ptr [SI], 0
+                JE      WAV_WSDSSI_Got
+                Inc     SI
+                Inc     AX
+                Cmp     AX, 256                 ; sanity cap
+                JB      WAV_WSDSSI_Scan
+WAV_WSDSSI_Got:
+                Mov     DX, CX                  ; DX -> string start
+                Mov     CX, AX                  ; CX = length
+                Test    CX, CX
+                JZ      WAV_WSDSSI_Done
+
+                Mov     AH, 40h
+                Int     21h
+
+WAV_WSDSSI_Done:
+                Pop     SI
+                Pop     DX
+                Pop     CX
+                Pop     AX
+                Ret
+EndP            WAV_WriteStringDSSI
+
+;-------------------------------------------------------------------------------
+; WAV_WriteHexAX -- write AX as 4 ASCII hex digits (high nibble first) to
+; file handle in BX. Uses a 4-byte scratch buffer in the Music segment.
+;-------------------------------------------------------------------------------
+Proc            WAV_WriteHexAX Near
+                Push    AX
+                Push    BX
+                Push    CX
+                Push    DX
+                Push    DS
+                Push    SI
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+
+                Mov     DX, AX                  ; DX = original AX
+                Mov     SI, Offset WAV_HexBuf
+
+                Mov     CX, 4                   ; 4 nibbles, high first
+WAV_WHAX_Loop:
+                Mov     AX, DX
+                Rol     AX, 4                   ; rotate high nibble to low
+                Mov     DX, AX                  ; save rotated for next
+                And     AL, 0Fh
+                Cmp     AL, 9
+                JBE     WAV_WHAX_Dec
+                Add     AL, 'A' - '0' - 10
+WAV_WHAX_Dec:
+                Add     AL, '0'
+                Mov     [SI], AL
+                Inc     SI
+                Loop    WAV_WHAX_Loop
+
+                ; Write 4 bytes. SI is at end of HexBuf now; doesn't matter,
+                ; the entry-push at the top of the proc has the caller's
+                ; original SI for the epilogue.
+                Mov     DX, Offset WAV_HexBuf
+                Mov     CX, 4
+                Mov     AH, 40h
+                Int     21h
+
+                Pop     SI
+                Pop     DS
+                Pop     DX
+                Pop     CX
+                Pop     BX
+                Pop     AX
+                Ret
+                        Assume DS:Nothing
+EndP            WAV_WriteHexAX
+
+WAV_HexBuf              DB      4 Dup (0)
+
+;-------------------------------------------------------------------------------
 ; WAV_HoldForMarkers -- busy-wait ~15 seconds via Int 1Ah BIOS ticks so the
 ; VRAM debug markers stamped on row 0 by WAV_DebugMark / D_DebugMark survive
 ; long enough for a human to read them. Called from the Music_Import-
@@ -4299,10 +4492,30 @@ WAV_ImportFailedMsg     DB      "Could not import rendered pattern", 0
 WAV_FailNoSlot          DB      "Import failed: no free sample slot", 0
 WAV_FailOpen            DB      "Import failed: cannot open .NNN file", 0
 WAV_FailHeader          DB      "Import failed: bad WAV header", 0
-WAV_FailHeaderRIFF      DB      "Import failed: WAV missing RIFF magic (file likely 0 bytes)", 0
-WAV_FailHeaderWAVE      DB      "Import failed: WAV missing WAVE magic", 0
-WAV_FailHeaderPCM       DB      "Import failed: WAV not PCM format", 0
-WAV_FailHeaderFmtSize   DB      "Import failed: WAV fmt chunk size wrong", 0
+WAV_FailHeaderRIFF      DB      "Import failed: WAV missing RIFF magic (see CTRLOLOG.TXT)", 0
+WAV_FailHeaderWAVE      DB      "Import failed: WAV missing WAVE magic (see CTRLOLOG.TXT)", 0
+WAV_FailHeaderPCM       DB      "Import failed: WAV not PCM format (see CTRLOLOG.TXT)", 0
+WAV_FailHeaderFmtSize   DB      "Import failed: WAV fmt chunk wrong (see CTRLOLOG.TXT)", 0
+
+; Persistent-log infrastructure. Every Ctrl-O failure appends a line to
+; CTRLOLOG.TXT in the active render directory (the Quicksave folder if
+; configured, else SampleDirectory). The user can TYPE CTRLOLOG.TXT in
+; DOS to see the full failure history -- no more reading marker letters
+; off a CRT photograph.
+WAV_ErrorLogName        DB      "CTRLOLOG.TXT", 0
+WAV_LastReadBytes       DW      0       ; stashed AX from the Int 21h AH=3Fh
+                                        ; Read; logged on every failure path
+WAV_LogPrefix_RIFF      DB      "RIFF fail file=", 0
+WAV_LogPrefix_WAVE      DB      "WAVE fail file=", 0
+WAV_LogPrefix_PCM       DB      "PCM  fail file=", 0
+WAV_LogPrefix_FmtSize   DB      "FMT  fail file=", 0
+WAV_LogPrefix_Open      DB      "OPEN fail file=", 0
+WAV_LogPrefix_CdFail    DB      "CHDIR fail file=", 0
+WAV_LogPrefix_NoSlot    DB      "NOSLOT file=", 0
+WAV_LogPrefix_Alloc     DB      "ALLOC fail file=", 0
+WAV_LogPrefix_OK        DB      "OK file=", 0
+WAV_LogMidBytes         DB      " bytes=", 0
+WAV_LogCRLF             DB      13, 10, 0
 WAV_FailAlloc           DB      "Import failed: out of memory for sample", 0
 WAV_TruncatedMsg        DB      "Pattern truncated to 1MB; sample ", 0FDh, "D", 0
 WAV_BadRenderDirMsg     DB      "Render aborted: Quicksave folder invalid (check F12)", 0
@@ -4421,6 +4634,10 @@ WAVI_HaveMax:
                 Mov     CX, 44
                 Mov     DX, Offset WAVHeader
                 Int     21h
+
+                ; Stash bytes-read for the log writer below. AX = bytes
+                ; actually read; if 0, the file is empty.
+                Mov     [CS:WAV_LastReadBytes], AX
 
                 ; Stamp the bytes-read count at col 28 as a single hex digit:
                 ; 0 = 0 bytes read (file empty -- the smoking gun for the
@@ -4750,6 +4967,13 @@ WAVI_SkipInstrument:
                 Call    WAV_DebugMark
 
                 ; --- Status message ------------------------------------------
+                ; Log success to CTRLOLOG.TXT first so the user has a
+                ; persistent record of every render attempt + outcome.
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_LogPrefix_OK
+                Call    WAV_AppendErrorLog
+
                 Push    CS
                 Pop     DS
                 Mov     SI, Offset WAV_ImportedMsg
@@ -4793,6 +5017,10 @@ WAVI_CloseHeaderFailRIFF:
                 Int     21h
                 Push    CS
                 Pop     DS
+                Mov     SI, Offset WAV_LogPrefix_RIFF
+                Call    WAV_AppendErrorLog
+                Push    CS
+                Pop     DS
                 Mov     SI, Offset WAV_FailHeaderRIFF
                 Jmp     WAVI_FailedTail
 
@@ -4800,6 +5028,10 @@ WAVI_CloseHeaderFailWAVE:
                 Mov     BX, [CS:WAV_FileHandle]
                 Mov     AH, 3Eh
                 Int     21h
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_LogPrefix_WAVE
+                Call    WAV_AppendErrorLog
                 Push    CS
                 Pop     DS
                 Mov     SI, Offset WAV_FailHeaderWAVE
@@ -4811,6 +5043,10 @@ WAVI_CloseHeaderFailPCM:
                 Int     21h
                 Push    CS
                 Pop     DS
+                Mov     SI, Offset WAV_LogPrefix_PCM
+                Call    WAV_AppendErrorLog
+                Push    CS
+                Pop     DS
                 Mov     SI, Offset WAV_FailHeaderPCM
                 Jmp     WAVI_FailedTail
 
@@ -4818,6 +5054,10 @@ WAVI_CloseHeaderFailFmtSize:
                 Mov     BX, [CS:WAV_FileHandle]
                 Mov     AH, 3Eh
                 Int     21h
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_LogPrefix_FmtSize
+                Call    WAV_AppendErrorLog
                 Push    CS
                 Pop     DS
                 Mov     SI, Offset WAV_FailHeaderFmtSize
@@ -4829,16 +5069,28 @@ WAVI_CloseAllocFail:
                 Int     21h
                 Push    CS
                 Pop     DS
+                Mov     SI, Offset WAV_LogPrefix_Alloc
+                Call    WAV_AppendErrorLog
+                Push    CS
+                Pop     DS
                 Mov     SI, Offset WAV_FailAlloc
                 Jmp     WAVI_FailedTail
 
 WAVI_FailNoSlot:
                 Push    CS
                 Pop     DS
+                Mov     SI, Offset WAV_LogPrefix_NoSlot
+                Call    WAV_AppendErrorLog
+                Push    CS
+                Pop     DS
                 Mov     SI, Offset WAV_FailNoSlot
                 Jmp     WAVI_FailedTail
 
 WAVI_FailOpen:
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_LogPrefix_Open
+                Call    WAV_AppendErrorLog
                 Push    CS
                 Pop     DS
                 Mov     SI, Offset WAV_FailOpen
@@ -4849,6 +5101,10 @@ WAVI_RenderDirFailed:
                 ; to the render destination before opening the file. Use a
                 ; distinct error message so the user knows cd, not the WAV
                 ; itself, is the problem.
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_LogPrefix_CdFail
+                Call    WAV_AppendErrorLog
                 Push    CS
                 Pop     DS
                 Mov     SI, Offset WAV_RenderDirCdFailMsg
