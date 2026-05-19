@@ -18,6 +18,7 @@ include network.inc
         Extrn   D_SaveCwd:Far
         Extrn   D_RestoreCwd:Far
         Extrn   D_GotoSampleDirectory:Far
+        Extrn   D_GotoRenderDirectory:Far
         Extrn   D_SetCurrentSample:Far
         Extrn   D_SetCurrentInstrument:Far
         Extrn   PE_SetLastInstrument:Far
@@ -3963,16 +3964,18 @@ Proc            Music_ToggleWAVRender Far       ; AX = pattern (on enter)
                 Pop     ES
                 Pop     DS
 
-                ; Save cwd + cd to user's SampleDirectory so the rendered
-                ; .NNN file lands there. Reentrancy gate: only save the
-                ; cwd on a clean entry, not if we're somehow re-entering
-                ; while still in render mode.
+                ; Save cwd + cd to the render destination (Quicksave folder
+                ; if configured, else SampleDirectory). Quicksave is the
+                ; preferred target because it's the user-configurable folder
+                ; for cross-machine handoff (e.g. a Mac running Logic mounts
+                ; the same path and picks up renders). Reentrancy gate: only
+                ; save the cwd on a clean entry.
                 Cmp     Byte Ptr [CS:WAV_CwdSaved], 0
                 JNE     WAV_SkipCwdSave
                 Call    D_SaveCwd
                 Mov     Byte Ptr [CS:WAV_CwdSaved], 1
 WAV_SkipCwdSave:
-                Call    D_GotoSampleDirectory
+                Call    D_GotoRenderDirectory
 
                 Mov     AX, [CS:WAV_PendingPattern]
                 Xor     CX, CX
@@ -4166,6 +4169,15 @@ WAVI_HaveMax:
                 Mov     [CS:WAV_TargetSlot], AX
 
                 ; --- Open file -----------------------------------------------
+                ; Re-cd to the render destination before opening. WAV_LeaveMode
+                ; calls Music_UnloadDriver / Music_AutoDetectSoundCard /
+                ; Music_SoundCardLoadAllSamples between the WAVDRV write and
+                ; this import read, any of which can shift cwd (driver-file
+                ; scan, sample-cache load). Without this re-cd, the Open below
+                ; runs in a stale cwd and reports "cannot open .NNN file" even
+                ; though the file is sitting safely in the render folder.
+                Call    D_GotoRenderDirectory
+
                 Push    CS
                 Pop     DS
                 Mov     DX, Offset RenderedFilename

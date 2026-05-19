@@ -162,6 +162,8 @@ ENDIF
                 Global  D_RestorePreShellDirectory:Far
                 Global  D_GetPreShellDirectory:Far
 
+                Global  D_GotoRenderDirectory:Far
+
                 Global  D_SaveInstrument:Far
                 Global  D_ClearFileName:Far
 
@@ -10921,6 +10923,51 @@ D_GotoSampleDirectory1:
                 Ret
 
 EndP            D_GotoSampleDirectory
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+; D_GotoRenderDirectory -- cd to the active Ctrl-O render destination.
+;
+; Priority order:
+;   1. QuickSaveDirectory if configured -- this is the deliberate target,
+;      because the Quicksave folder is where the user routes save-as / cross-
+;      machine handoffs (e.g. a network share visible to a Mac running Logic).
+;      Routing renders here gives a DOS-PC -> Mac drag-in workflow for free.
+;   2. SampleDirectory if Quicksave is empty -- preserves prior behaviour for
+;      anyone who hasn't configured Quicksave.
+;   3. Both empty -- no-op, render lands in whatever cwd was active.
+;
+; Must be safe to call multiple times during one Ctrl-O cycle: once at enter-
+; mode to set the write destination, then again from Music_ImportRenderedPattern
+; right before the read-back Open, because the driver-swap in WAV_LeaveMode
+; (AutoDetectSoundCard / SoundCardLoadAllSamples) can otherwise shift cwd
+; between write and read.
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
+Proc            D_GotoRenderDirectory Far
+
+                Push    DS
+                Push    SI
+
+                Push    CS
+                Pop     DS
+
+                Mov     SI, Offset QuickSaveDirectory
+                Cmp     Byte Ptr [SI], 0
+                JNE     D_GotoRenderDirectory_Cd
+
+                Mov     SI, Offset SampleDirectory
+                Cmp     Byte Ptr [SI], 0
+                JE      D_GotoRenderDirectory_Done
+
+D_GotoRenderDirectory_Cd:
+                Call    D_SetDriveDirectory
+
+D_GotoRenderDirectory_Done:
+                Pop     SI
+                Pop     DS
+                Ret
+
+EndP            D_GotoRenderDirectory
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
