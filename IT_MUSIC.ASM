@@ -4299,6 +4299,10 @@ WAV_ImportFailedMsg     DB      "Could not import rendered pattern", 0
 WAV_FailNoSlot          DB      "Import failed: no free sample slot", 0
 WAV_FailOpen            DB      "Import failed: cannot open .NNN file", 0
 WAV_FailHeader          DB      "Import failed: bad WAV header", 0
+WAV_FailHeaderRIFF      DB      "Import failed: WAV missing RIFF magic (file likely 0 bytes)", 0
+WAV_FailHeaderWAVE      DB      "Import failed: WAV missing WAVE magic", 0
+WAV_FailHeaderPCM       DB      "Import failed: WAV not PCM format", 0
+WAV_FailHeaderFmtSize   DB      "Import failed: WAV fmt chunk size wrong", 0
 WAV_FailAlloc           DB      "Import failed: out of memory for sample", 0
 WAV_TruncatedMsg        DB      "Pattern truncated to 1MB; sample ", 0FDh, "D", 0
 WAV_BadRenderDirMsg     DB      "Render aborted: Quicksave folder invalid (check F12)", 0
@@ -4418,6 +4422,27 @@ WAVI_HaveMax:
                 Mov     DX, Offset WAVHeader
                 Int     21h
 
+                ; Stamp the bytes-read count at col 28 as a single hex digit:
+                ; 0 = 0 bytes read (file empty -- the smoking gun for the
+                ; RIFF-validation failure when the file was actually created
+                ; with a mangled trailing-spaces filename), C = 12 bytes,
+                ; etc. 44 bytes (a full WAV header) shows as 'C' (12 hex)
+                ; -- actually 44 = 2Ch, so 'C' is the high nibble; we stamp
+                ; the LOW nibble so 0 / 4 / 8 / C cycle through. Easy to
+                ; eyeball "is this 0 (empty) or non-zero (some bytes read)"
+                ; without reading a four-digit number off a photo.
+                Push    AX
+                And     AL, 0Fh
+                Cmp     AL, 9
+                JBE     WAVI_ReadDigitDecimal
+                Add     AL, 'A' - '0' - 10
+WAVI_ReadDigitDecimal:
+                Add     AL, '0'
+                Mov     AH, AL
+                Mov     AL, 28
+                Call    WAV_DebugMark
+                Pop     AX
+
                 ; Validate RIFF/WAVE -- each check stamps a marker letter
                 ; at col 27 BEFORE the conditional jump, so whichever letter
                 ; is the last visible one identifies which check rejected
@@ -4430,25 +4455,25 @@ WAVI_HaveMax:
                 Mov     AH, 'R'
                 Call    WAV_DebugMark
                 Cmp     DWord Ptr [CS:WAVHeader], 'FFIR'
-                JNE     WAVI_CloseHeaderFail
+                JNE     WAVI_CloseHeaderFailRIFF
 
                 Mov     AL, 27
                 Mov     AH, 'W'
                 Call    WAV_DebugMark
                 Cmp     DWord Ptr [CS:WAVHeader+8], 'EVAW'
-                JNE     WAVI_CloseHeaderFail
+                JNE     WAVI_CloseHeaderFailWAVE
 
                 Mov     AL, 27
                 Mov     AH, 'P'
                 Call    WAV_DebugMark
                 Cmp     Word Ptr [CS:WAVHeader+20], 1   ; PCM format code
-                JNE     WAVI_CloseHeaderFail
+                JNE     WAVI_CloseHeaderFailPCM
 
                 Mov     AL, 27
                 Mov     AH, 'F'
                 Call    WAV_DebugMark
                 Cmp     DWord Ptr [CS:WAVHeader+16], 16 ; fmt chunk size
-                JNE     WAVI_CloseHeaderFail
+                JNE     WAVI_CloseHeaderFailFmtSize
 
                 Mov     AL, 27
                 Mov     AH, '+'                 ; all 4 checks passed
@@ -4756,6 +4781,46 @@ WAVI_CloseHeaderFail:
                 Push    CS
                 Pop     DS
                 Mov     SI, Offset WAV_FailHeader
+                Jmp     WAVI_FailedTail
+
+                ; Per-check header-fail variants â surface which validation
+                ; rejected the file via the info line, so the user can
+                ; diagnose without having to read VRAM marker letters off a
+                ; CRT photograph. Each closes the file handle before bailing.
+WAVI_CloseHeaderFailRIFF:
+                Mov     BX, [CS:WAV_FileHandle]
+                Mov     AH, 3Eh
+                Int     21h
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_FailHeaderRIFF
+                Jmp     WAVI_FailedTail
+
+WAVI_CloseHeaderFailWAVE:
+                Mov     BX, [CS:WAV_FileHandle]
+                Mov     AH, 3Eh
+                Int     21h
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_FailHeaderWAVE
+                Jmp     WAVI_FailedTail
+
+WAVI_CloseHeaderFailPCM:
+                Mov     BX, [CS:WAV_FileHandle]
+                Mov     AH, 3Eh
+                Int     21h
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_FailHeaderPCM
+                Jmp     WAVI_FailedTail
+
+WAVI_CloseHeaderFailFmtSize:
+                Mov     BX, [CS:WAV_FileHandle]
+                Mov     AH, 3Eh
+                Int     21h
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_FailHeaderFmtSize
                 Jmp     WAVI_FailedTail
 
 WAVI_CloseAllocFail:
