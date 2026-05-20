@@ -92,6 +92,18 @@ Cursor navigation at the middle digit position is unchanged.
 
 Newest first. Six weeks of active development since the fork resumed on 2026-04-22. Commit hashes link to the fork's `main` branch.
 
+### 2026-05-20 (later) — Multi-WAV / Whole-Song Export, Shift+Alt keymap condition, F12 Sample+Instrument pickers, F10 WAV/MWAV buttons
+
+- **`9fb5ac1`** — Multi-WAV state machine. `Music_StartMultiWAV` backs up `MuteChannelTable` into `WAV_MultiSavedMutes`, then chains per-channel renders via `Music_Poll`'s finalize hook: solo channel N → `Music_ToggleWAVRender` → `Music_PlayPattern` / `Music_PlaySong` → leave-mode → `WAV_MultiAdvance` → solo channel N+1. Auto-import suppressed for the whole sweep (`WAV_NoImport` re-armed per kick). Esc abort polled via `K_IsKeyDown(01h)` in `Music_Poll` (not `Int 16h` — IT's dispatcher consumes the keyboard queue first).
+- **Shift-Alt-M** in F2 = per-channel render of the current pattern. `PE_ChannelIsEmpty` only counts notes 0..119 (note-cut `0FEh`, note-off `0FFh`, NONOTE `0FDh` don't count) — channels with only `^^^` are treated as silent and skipped. Also skips channels muted in the user's saved mix.
+- **F10 "WAV" button** (SaveFormat=4) = whole song to a single WAV. **F10 "MWAV" button** (SaveFormat=5) = whole song per channel. Both honour the filename you type in F10's input: `D_CopyUserFilenameToFileName` copies `SaveFileName` into `FileName` and sets `WAV_UserFilenameSet`; `Music_ToggleWAVRender` skips its auto-rename when that flag is set. `RenderedFilename` mirrors `FileName` for the post-render status message so the displayed name matches the actual file on disk.
+- **MWAV per-channel filename suffixing.** `WAV_BuildChannelFilename` parses `WAV_UserBase` (canonical Music-side copy of the user's typed name), truncates the base to 6 chars if needed so the final 8.3 filename fits, inserts the 2-digit 1-based channel number before the `.`, defaults extension to `.WAV` if the user didn't type one. `song.wav` → `SONG01.WAV`, `SONG02.WAV`, …, `SONG<NN>.WAV`.
+- **Song-mode skip-only-on-mute.** When `WAV_MultiSongFlag` is set (= whole-song MWAV), `WAV_MultiAdvance` bypasses the `PE_ChannelIsEmpty` check entirely — that helper only sees the editor's currently-loaded pattern, and would wrongly skip channels that have notes elsewhere in the song. In song-mode, only `WAV_MultiSavedMutes[chan] != 0` decides the skip.
+- **`WAV_SongMode` flag** swaps `Music_PlayPattern` for `Music_PlaySong(0)` in the enter-mode path. Filename extension is `.WAV` (not the 3-digit pattern number) when SongMode is set.
+- **New `K_TranslateCondition11` for Shift+Alt** (`IT_K.ASM`). Upstream Conditions 0..10 cover Alt/Shift/Ctrl individually but explicitly reject Shift *combined with* Alt (Condition 5's `Test CH, Not 61h` fails when shift bits are set). Adds `Condition 11 = Shift + Alt (any Alt side)` with `Test CH, Not 67h; Test CH, 6; Test CH, 60h`. Plus a `DB 11; DW 3232h` row on the M scancode so Shift-Alt-M emits the fork-extension key word `3232h`, which the PE keymap routes to `PEFunction_StartMultiWAVKey`. **Corrects a long-standing wrong assumption** that Shift-Alt-letter worked through Condition 5 — testing on dosbox-x confirmed it didn't emit any key word at all without Condition 11.
+- **F12 Sample / Instrument / Quicksave rows now Enter-pickable** via unified `D_PickDir_Common` helper. Each `Pick*` proc sets `DirectoryPickerTarget` to its own buffer offset (`SampleDirectory` / `InstrumentDirectory` / `QuickSaveDirectory`), backs up `SongDirectory` into `QuickSaveBackup`, copies the target in so F9 opens at the right place, posts a 10s guidance info-line (`"Navigate to target folder, press Esc to commit (Enter on file = LOAD!)"`), and tail-jumps to `Glbl_F9`. `D_PickerEsc` reads `DirectoryPickerTarget` and commits the picker's working `SongDirectory` back to the target on exit. Module-directory row keeps its in-place behaviour (target = 0).
+- **F10 dispatch fixes.** Three sites needed teaching about `SaveFormat 4/5`: `D_SaveModule` (default-extension append), `D_PostFileSaveWindow3` (actual format dispatcher reached via `D_SaveModule`'s Jmp), `D_SaveSong` (Ctrl-S path). Missing any one silently routed WAV/MWAV through the IT-module save path with a `.WAV` extension — what the user actually saw the first time before this was fully wired.
+
 ### 2026-05-20 — F11 clone auto-insert + cursor advance, runtime status messages, F12 Quicksave Enter, crash hunt
 
 - **F11 Left / Shift-Left clone now auto-inserts into the order list and advances the cursor.** After the clone completes (`PEFunction_StorePattern` returns), `PE_OrderList_ClonePattern_Body` shifts orderlist bytes `[Order+1..510]` down by one (same `StD` / `Rep MovsB` pattern as the existing Ins-key handler `PE_PostOrderList19`), stamps the cloned pattern number into slot `Order+1`, then bumps `[Order]` so the F11 cursor lands on the new row. Mirrors what musicians actually want when they ask the tracker to "duplicate the current pattern": the new pattern is in the song flow ready to edit, not stranded as an orphan slot you have to manually wire in.
@@ -297,6 +309,17 @@ pattern rendering bound to **Ctrl-O** in the pattern editor:
   picker rooted at the current Quicksave path; navigate as usual and press
   **Esc** to commit. (Same mechanism the Module-directory row uses, just
   re-targeted at `QuickSaveDirectory`.)
+
+### Multi-WAV / Whole-Song Export (Shift-Alt-M + F10 WAV / MWAV)
+
+Render each channel of a pattern (or the whole song) to its own WAV file — for DAW import as stems.
+
+- **Shift-Alt-M** in F2 = per-channel render of the **current pattern**. Skips channels with no playable notes (note-cuts `^^^` don't count as triggers) and channels muted in the mix.
+- **F10 "WAV" button** = whole song to a single WAV. Honours the filename you type in the F10 input (`song.wav` → `SONG.WAV`).
+- **F10 "MWAV" button** = whole song with each unmuted channel rendered to its own WAV. `song.wav` → `SONG01.WAV`, `SONG02.WAV`, …, `SONG<NN>.WAV` — one file per channel.
+- **Esc aborts** an in-flight Multi-WAV sweep — finishes the current channel, restores the mute state, exits the chain.
+
+Implementation note: required adding **Condition 11 (Shift+Alt)** to IT's keymap dispatcher in `IT_K.ASM`. Upstream Conditions 0..10 covered Alt, Shift, Ctrl individually but explicitly rejected Shift *combined with* Alt — so Shift-Alt-letter combos didn't emit any key word at all. The new condition (and a `DB 11; DW 3232h` row on the M scancode) finally make Shift-Alt-M dispatch properly, and the same mechanism opens up the rest of the Shift-Alt-X space for future bindings.
 
 ### F11 clone with auto-insert (Left / Shift-Left at orderlist column 0)
 
