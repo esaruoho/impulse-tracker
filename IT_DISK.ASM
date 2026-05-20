@@ -137,6 +137,7 @@ ENDIF
                 Extrn   S_SetPalette:Far
 
                 Extrn   SetInfoLine:Far
+                Extrn   SetInfoLine2:Far
                 Extrn   ClearInfoLine:Far
 
                 Extrn   Glbl_SetCurrentMode:Far
@@ -243,6 +244,10 @@ ENDIF
                 Global  D_QuickSave:Far
                 Global  D_MemorizeQuickSaveDir:Far
                 Global  D_PickModuleDir:Far
+                Global  D_PickSampleDir:Far
+                Global  D_PickInstrumentDir:Far
+                Global  D_PickQuickSaveDir:Far
+                Global  D_GetActiveRenderDirPtr:Far
                 Global  D_PickerEsc:Far
                 Global  DirectoryPickerActive:Byte
 
@@ -356,6 +361,21 @@ QuickSaveDirectory      DB      0
                         DB      69 Dup (0)
 QuickSaveBackup         DB      70 Dup (0)
 DirectoryPickerActive   DB      0
+DirectoryPickerTarget   DW      0       ; offset within Disk segment of the
+                                        ; directory buffer that the picker
+                                        ; commits to on Esc. 0 = module-
+                                        ; directory mode (F9 navigates
+                                        ; SongDirectory directly so there's
+                                        ; nothing to copy back). Non-0 =
+                                        ; sample / instrument / quicksave
+                                        ; mode: SongDirectory was swapped
+                                        ; in by D_PickDir_Common and the
+                                        ; picker's working SongDirectory
+                                        ; gets copied back to this offset
+                                        ; on Esc, with the original
+                                        ; SongDirectory restored from
+                                        ; QuickSaveBackup.
+PickerGuidanceMsg       DB      "Navigate to target folder, press Esc to commit (Enter on file = LOAD!)", 0
 QuickSaveNoFolderMsg    DB      "Quick-save folder not configured.", 0
 QuickSaveMemorizedMsg   DB      "Quick-save folder memorized.", 0
 
@@ -5862,25 +5882,14 @@ EndP            D_PreLoadSampleWindow
 ; WAV_DebugMark in IT_MUSIC.ASM (commit 3537c0d). Direct B800h VRAM poke
 ; so it survives a wedged main loop. AL = col, AH = ASCII char.
 Proc            D_DebugMark Near
-                Push    AX
-                Push    BX
-                Push    ES
-
-                Movzx   BX, AL                  ; BX = col
-                ShL     BX, 1                   ; byte offset on row 0
-
-                Mov     AL, AH                  ; save char
-                Push    AX
-                Mov     AX, 0B800h
-                Mov     ES, AX
-                Pop     AX                      ; AL = char (was AH)
-
-                Mov     AH, 4Fh                 ; bright white on red
-                Mov     [ES:BX], AX
-
-                Pop     ES
-                Pop     BX
-                Pop     AX
+                                                ; VRAM marker removed for
+                                                ; the same reason as
+                                                ; WAV_DebugMark -- visual
+                                                ; noise that's no longer
+                                                ; needed now that disk logs
+                                                ; capture the trail. Kept
+                                                ; as a no-op so existing
+                                                ; call sites still link.
                 Ret
 EndP            D_DebugMark
 
@@ -8256,6 +8265,113 @@ Proc            D_PickModuleDir Far
 EndP            D_PickModuleDir
                 Assume DS:Nothing
 
+;-------------------------------------------------------------------------------
+; D_GetActiveRenderDirPtr -- return DS:SI pointing at the active render
+; directory string (null-terminated). Matches D_GotoRenderDirectory's
+; resolution: QuickSaveDirectory if non-empty, else SampleDirectory.
+; Used by the IT_MUSIC.ASM no-import message builder so it can append the
+; folder name to "Saved pat NNN as RND0001.NNN".
+;-------------------------------------------------------------------------------
+Proc            D_GetActiveRenderDirPtr Far
+                Push    CS
+                Pop     DS
+                        Assume DS:Disk
+
+                Mov     SI, Offset QuickSaveDirectory
+                Cmp     Byte Ptr [SI], 0
+                JNE     D_GARDP_Done
+
+                Mov     SI, Offset SampleDirectory
+
+D_GARDP_Done:
+                Ret
+                        Assume DS:Nothing
+EndP            D_GetActiveRenderDirPtr
+
+;-------------------------------------------------------------------------------
+; D_PickSampleDir / D_PickInstrumentDir / D_PickQuickSaveDir:
+;
+; Enter callbacks for the F12 Sample / Instrument / Quicksave directory rows.
+; Each sets DirectoryPickerTarget to its own buffer offset and tail-jumps
+; through D_PickDir_Common to the F9 file picker. On Esc, D_PickerEsc reads
+; DirectoryPickerTarget and copies the picker's working SongDirectory back
+; into the target buffer, restoring SongDirectory from the backup.
+;
+; The F9 screen still reads "Load Module" in its title â that's the existing
+; picker UI. The info-line guidance message ("Navigate to target folder,
+; press Esc to commit (Enter on file = LOAD!)") fires at picker entry so
+; the user knows to use Esc rather than Enter-on-file to commit.
+;-------------------------------------------------------------------------------
+Proc            D_PickSampleDir Far
+                Push    CS
+                Pop     DS
+                        Assume DS:Disk
+                Mov     Word Ptr [DirectoryPickerTarget], Offset SampleDirectory
+                Jmp     D_PickDir_Common
+EndP            D_PickSampleDir
+                Assume DS:Nothing
+
+Proc            D_PickInstrumentDir Far
+                Push    CS
+                Pop     DS
+                        Assume DS:Disk
+                Mov     Word Ptr [DirectoryPickerTarget], Offset InstrumentDirectory
+                Jmp     D_PickDir_Common
+EndP            D_PickInstrumentDir
+                Assume DS:Nothing
+
+Proc            D_PickQuickSaveDir Far
+                Push    CS
+                Pop     DS
+                        Assume DS:Disk
+                Mov     Word Ptr [DirectoryPickerTarget], Offset QuickSaveDirectory
+                Jmp     D_PickDir_Common
+EndP            D_PickQuickSaveDir
+                Assume DS:Nothing
+
+;-------------------------------------------------------------------------------
+; D_PickDir_Common: shared entry-side plumbing for the Sample / Instrument /
+; Quicksave pickers. Assumes DS = Disk and DirectoryPickerTarget already
+; holds the offset of the target buffer.
+;-------------------------------------------------------------------------------
+Proc            D_PickDir_Common Near
+                Push    CS
+                Pop     DS
+                Push    CS
+                Pop     ES
+                        Assume DS:Disk
+                ClD
+
+                                                ; Backup current SongDirectory
+                                                ; into QuickSaveBackup so we
+                                                ; can restore it on Esc.
+                Mov     SI, Offset SongDirectory
+                Mov     DI, Offset QuickSaveBackup
+                Mov     CX, 70
+                Rep     MovsB
+
+                                                ; Copy target dir into
+                                                ; SongDirectory so F9 opens
+                                                ; in the right place.
+                Mov     SI, [DirectoryPickerTarget]
+                Mov     DI, Offset SongDirectory
+                Mov     CX, 70
+                Rep     MovsB
+
+                Mov     DirectoryPickerActive, 1
+
+                                                ; Show the hint so the user
+                                                ; doesn't panic at the "Load
+                                                ; Module" title. ~10 s pin.
+                Mov     SI, Offset PickerGuidanceMsg
+                Xor     AX, AX
+                Mov     BX, 182                 ; ~10 s @ 18.2 Hz
+                Call    SetInfoLine2
+
+                Jmp     Glbl_F9
+EndP            D_PickDir_Common
+                Assume DS:Nothing
+
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 ; D_PickerEsc: Esc handler that replaces F_MainMenu in GlobalKeyChain.
@@ -8267,12 +8383,43 @@ Proc            D_PickerEsc Far
 
                 Push    CS
                 Pop     DS
+                Push    CS
+                Pop     ES
                         Assume DS:Disk
 
                 Cmp     DirectoryPickerActive, 0
                 JE      D_PickerEsc1
 
                 Mov     DirectoryPickerActive, 0
+
+                                                ; DirectoryPickerTarget == 0
+                                                ; means this was a Module-
+                                                ; directory pick (F9 wrote
+                                                ; SongDirectory in place;
+                                                ; no copy needed).
+                                                ; Non-0 = Sample / Instrument
+                                                ; / Quicksave -- commit
+                                                ; SongDirectory back to the
+                                                ; target buffer and restore
+                                                ; SongDirectory from the
+                                                ; backup.
+                Mov     DI, [DirectoryPickerTarget]
+                Test    DI, DI
+                JZ      D_PickerEscDone
+
+                Mov     Word Ptr [DirectoryPickerTarget], 0
+
+                ClD
+                Mov     SI, Offset SongDirectory
+                Mov     CX, 70
+                Rep     MovsB
+
+                Mov     SI, Offset QuickSaveBackup
+                Mov     DI, Offset SongDirectory
+                Mov     CX, 70
+                Rep     MovsB
+
+D_PickerEscDone:
                 Jmp     Glbl_F12
 
 D_PickerEsc1:

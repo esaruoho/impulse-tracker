@@ -69,6 +69,11 @@ EndS
                 Extrn   Music_FindFreePattern:Far
                 Extrn   PE_AppendCloneLog:Far
                 Extrn   PE_AppendExtendLog:Far
+                Extrn   PE_LogKeyEntry:Far
+                Extrn   PE_LogStage:Far
+                Extrn   PE_LogEndLine:Far
+                Extrn   PE_HoldInfoLine:Far
+                Extrn   SetInfoLine2:Far
                 Extrn   Music_AllocatePattern:Far
                 Extrn   Music_ReleasePattern:Far
                 Extrn   Music_GetPattern:Far
@@ -283,6 +288,17 @@ PE_FORKEXTCONFIG_SIZE   EQU     16
 CloneOnMsg              DB      "Clone respects channel mutes: ON", 0
 CloneOffMsg             DB      "Clone respects channel mutes: OFF", 0
 CloneDoneMsg            DB      "Pattern cloned to slot ", 0FDh, "D", 0
+                                                        ; Runtime-formatted
+                                                        ; message: "Dup pat
+                                                        ; NNN to orderlist
+                                                        ; YYY". Built in
+                                                        ; PE_BuildCloneMsg
+                                                        ; right after the
+                                                        ; clone+insert
+                                                        ; finishes. 64 bytes
+                                                        ; covers the longest
+                                                        ; reasonable text.
+PE_CloneRunMsg          DB      64 Dup (0)
 CloneNoFreeMsg          DB      "Clone failed: no free pattern slot", 0
 CloneAllocFailMsg       DB      "Clone failed: out of memory", 0
 ExtendDoneMsg           DB      "Pattern extended to ", 0FDh, "D", " rows", 0
@@ -1065,19 +1081,23 @@ ENDIF
         DW      1CBh            ; Left -- replaced with edge-aware dispatcher
         DW      Offset PE_OrderList_LeftDispatch ;   OrderCursor==0 + plain
                                                  ;     -> clone verbatim
-                                                 ;   OrderCursor==0 + shift
-                                                 ;     -> clone with mute-wipe
                                                  ;   OrderCursor!=0
                                                  ;     -> normal cursor wrap
+
+        DB      4               ; Shift-Left -- same dispatcher; handler
+        DW      1CBh            ; checks K_IsKeyDown internally and branches
+        DW      Offset PE_OrderList_LeftDispatch ; to the mute-wipe clone path
 
         DB      0
         DW      1CDh            ; Right -- replaced with edge-aware dispatcher
         DW      Offset PE_OrderList_RightDispatch ;  OrderCursor==2 + plain
                                                  ;     -> render + auto-import
-                                                 ;   OrderCursor==2 + shift
-                                                 ;     -> render to Quicksave
                                                  ;   OrderCursor!=2
                                                  ;     -> normal cursor wrap
+
+        DB      4               ; Shift-Right -- same dispatcher; handler
+        DW      1CDh            ; sees shift and routes to "render to
+        DW      Offset PE_OrderList_RightDispatch ; Quicksave only" path
 
         DB      5
         DW      'G'
@@ -2232,6 +2252,17 @@ EndP            PE_OrderList_ShowNoPatternMsg
 ; cursor-key path is decoupled from the global M-toggle that governs Alt-D.
 ;-------------------------------------------------------------------------------
 Proc            PE_OrderList_LeftDispatch Far
+                                                ; Clean dispatcher. All the
+                                                ; PE_RenderDebugMark / Pop
+                                                ; AX debris from the marker
+                                                ; era has been removed -- it
+                                                ; left an orphaned Pop AX
+                                                ; (no matching Push) which
+                                                ; consumed the return
+                                                ; address every keypress and
+                                                ; crashed IT.EXE with an
+                                                ; "Illegal Interrupt 6" the
+                                                ; moment Ret fired.
                 Cmp     CS:[OrderCursor], 0
                 JE      PE_OrdL_AtEdge
                 Jmp     PE_PostOrderList7       ; normal cursor wrap
@@ -2272,6 +2303,9 @@ EndP            PE_OrderList_LeftDispatch
 ; really just "promote this cursor key into a Ctrl-O event".
 ;-------------------------------------------------------------------------------
 Proc            PE_OrderList_RightDispatch Far
+                                                ; Marker debris removed
+                                                ; same as the Left
+                                                ; dispatcher above.
                 Cmp     CS:[OrderCursor], 2
                 JE      PE_OrdR_AtEdge
                 Jmp     PE_PostOrderList9       ; normal cursor wrap
@@ -2405,6 +2439,142 @@ PE_OrdM_Show:
 EndP            PE_OrderList_ToggleMuteWipe
 
 ;-------------------------------------------------------------------------------
+; PE_FormatU16Dec3 -- write AX as 3 decimal digits (000..999) at ES:DI.
+; Advances DI by 3. AX is consumed; other regs preserved.
+;-------------------------------------------------------------------------------
+Proc            PE_FormatU16Dec3 Near
+                Push    BX
+                Push    DX
+
+                Mov     BX, 100
+                Xor     DX, DX
+                Div     BX                      ; AX = hundreds, DX = rem
+                Add     AL, '0'
+                Mov     [ES:DI], AL
+                Inc     DI
+
+                Mov     AX, DX
+                Mov     BX, 10
+                Xor     DX, DX
+                Div     BX                      ; AX = tens, DX = units
+                Add     AL, '0'
+                Mov     [ES:DI], AL
+                Inc     DI
+
+                Add     DL, '0'
+                Mov     [ES:DI], DL
+                Inc     DI
+
+                Pop     DX
+                Pop     BX
+                Ret
+EndP            PE_FormatU16Dec3
+
+;-------------------------------------------------------------------------------
+; PE_BuildCloneMsg -- format the runtime message
+; "Dup pat NNN to orderlist YYY" into PE_CloneRunMsg.
+; In:  AX = source pattern number
+;      BX = new orderlist row index
+; All regs preserved. SetInfoLine still needs to be called by the caller.
+;-------------------------------------------------------------------------------
+PE_CloneMsgPart1        DB      "Dup pat ", 0
+PE_CloneMsgPart2        DB      " to orderlist ", 0
+PE_CloneMsgPart3a       DB      " (verbatim)", 0
+PE_CloneMsgPart3b       DB      " (muted ch wiped)", 0
+PE_CloneMsgPart1Len     EQU     8
+PE_CloneMsgPart2Len     EQU     14
+PE_CloneMsgPart3aLen    EQU     11
+PE_CloneMsgPart3bLen    EQU     17
+
+Proc            PE_BuildCloneMsg Near
+                Push    AX
+                Push    BX
+                Push    CX
+                Push    DX
+                Push    SI
+                Push    DI
+                Push    DS
+                Push    ES
+
+                ClD                             ; ensure forward direction
+                                                ; for Rep MovsB / StosB
+                                                ; below -- the orderlist
+                                                ; shift earlier uses StD
+                                                ; and could leave DF set
+                                                ; if execution diverted.
+
+                Push    AX                      ; stash src
+                Push    BX                      ; stash dst
+
+                Push    CS
+                Pop     DS
+                Push    CS
+                Pop     ES
+                        Assume DS:Pattern
+                Mov     DI, Offset PE_CloneRunMsg
+
+                                                ; "Dup pat "
+                Mov     SI, Offset PE_CloneMsgPart1
+                Mov     CX, PE_CloneMsgPart1Len
+                Rep     MovsB
+
+                                                ; <src>
+                Pop     BX                      ; (recover order: dst pushed
+                Pop     AX                      ; second, so popped first)
+                Push    AX                      ; re-save src for later if
+                Push    BX                      ; needed (we don't, but keep
+                                                ; symmetric)
+                                                ; AX = src
+                Call    PE_FormatU16Dec3
+
+                                                ; " to orderlist "
+                Mov     SI, Offset PE_CloneMsgPart2
+                Mov     CX, PE_CloneMsgPart2Len
+                Rep     MovsB
+
+                                                ; <dst>
+                Pop     BX                      ; dst
+                Pop     AX                      ; src (not needed any more)
+                Mov     AX, BX
+                Call    PE_FormatU16Dec3
+
+                                                ; " (verbatim)" or
+                                                ; " (muted ch wiped)"
+                                                ; depending on the latched
+                                                ; wipe mode at proc entry.
+                                                ; This is the difference
+                                                ; between plain Left and
+                                                ; Shift-Left -- the user
+                                                ; can confirm at a glance
+                                                ; which gesture was
+                                                ; actually applied.
+                Cmp     Byte Ptr CS:[PE_CloneWipeMode], 0
+                JE      PE_BCM_Verbatim
+                Mov     SI, Offset PE_CloneMsgPart3b
+                Mov     CX, PE_CloneMsgPart3bLen
+                Jmp     PE_BCM_CopySuffix
+PE_BCM_Verbatim:
+                Mov     SI, Offset PE_CloneMsgPart3a
+                Mov     CX, PE_CloneMsgPart3aLen
+PE_BCM_CopySuffix:
+                Rep     MovsB
+
+                                                ; NUL terminator
+                Mov     Byte Ptr [ES:DI], 0
+
+                Pop     ES
+                Pop     DS
+                Pop     DI
+                Pop     SI
+                Pop     DX
+                Pop     CX
+                Pop     BX
+                Pop     AX
+                Ret
+                        Assume DS:Nothing
+EndP            PE_BuildCloneMsg
+
+;-------------------------------------------------------------------------------
 ; PE_OrderList_ApplyMuteWipe -- iterate MuteChannelTable, and for each channel
 ; flagged muted (table byte != 0), overwrite that channel's 5-byte event on
 ; every row of the in-editor PatternDataArea with the canonical empty event
@@ -2426,7 +2596,26 @@ Proc            PE_OrderList_ApplyMuteWipe Near
                 Push    DS
                 Push    ES
 
+                                                ; Hang markers row 49 col
+                                                ; 20..29 -- finer than the
+                                                ; outer A..J trail.
+                                                ;   col 20 'a' = wipe entered
+                                                ;   col 21 'b' = mute-table got
+                                                ;   col 22 'c' = setup done
+                                                ;   col 23 'd' = chan loop start
+                                                ;   col 24 'e' = ANY chan muted
+                                                ;   col 25 'f' = chan loop end
+                Mov     AL, 20
+                Mov     AH, 'a'
+                Call    PE_RenderDebugMark
+
                 Call    Music_GetMuteChannelTable   ; ES:DI -> 64-byte table
+
+                Push    AX
+                Mov     AL, 21
+                Mov     AH, 'b'
+                Call    PE_RenderDebugMark
+                Pop     AX
                 Push    ES
                 Push    DI
                                                 ; preserve mute-table pointer
@@ -2444,12 +2633,41 @@ Proc            PE_OrderList_ApplyMuteWipe Near
                         Assume DS:Nothing
                                                 ; DS:SI -> mute table
 
+                Push    AX
+                Mov     AL, 22
+                Mov     AH, 'c'
+                Call    PE_RenderDebugMark
+                Pop     AX
+
                 Mov     CX, 64                  ; 64 channels
                 Xor     BX, BX                  ; BX = channel index
 
 PE_OrdWipe_ChannelLoop:
+                                                ; Stamp current channel index
+                                                ; at col 26 (low hex digit)
+                                                ; so a hang inside the loop
+                                                ; shows which channel was
+                                                ; being processed.
+                Push    AX
+                Mov     AL, 26
+                Mov     AH, BL
+                And     AH, 0Fh
+                Cmp     AH, 9
+                JBE     PE_OrdWipe_HexDec
+                Add     AH, 'A' - '0' - 10
+PE_OrdWipe_HexDec:
+                Add     AH, '0'
+                Call    PE_RenderDebugMark
+                Pop     AX
+
                 Cmp     Byte Ptr [SI+BX], 0
                 JE      PE_OrdWipe_NextChan     ; channel not muted
+
+                Push    AX
+                Mov     AL, 24
+                Mov     AH, 'e'                 ; at least one chan muted
+                Call    PE_RenderDebugMark
+                Pop     AX
 
                                                 ; Wipe this channel's column
                                                 ; across every row, but place
@@ -2505,15 +2723,25 @@ PE_OrdWipe_NextChan:
                 Inc     BX
                 Loop    PE_OrdWipe_ChannelLoop
 
-                Pop     DS
-
-                Pop     ES
-                Pop     DI
-                Pop     SI
-                Pop     DX
-                Pop     CX
-                Pop     BX
+                Push    AX
+                Mov     AL, 25
+                Mov     AH, 'f'                 ; channel loop completed
+                Call    PE_RenderDebugMark
                 Pop     AX
+
+                Pop     DS                      ; matches mid-proc Push DS
+                                                ; (where we swapped DS to
+                                                ; the mute-table segment)
+                Pop     ES                      ; \
+                Pop     DS                      ;  | matches prologue's
+                Pop     DI                      ;  | Push DI / DS / ES order.
+                Pop     SI                      ;  | The original epilogue
+                Pop     DX                      ;  | was missing this second
+                Pop     CX                      ;  | Pop DS -- that left every
+                Pop     BX                      ;  | subsequent Pop one slot
+                Pop     AX                      ; / off, and Ret jumped to
+                                                ;   garbage (a hard crash on
+                                                ;   plain Left at col 0).
                 Ret
 EndP            PE_OrderList_ApplyMuteWipe
                 Assume  DS:Nothing
@@ -2580,13 +2808,48 @@ PE_OrdClonePat_Body:
                                                 ; without depending on BX
                                                 ; preservation by callees.
 
+                                                ; Hang diagnostic markers at
+                                                ; row 0 cols 10..19 (clean
+                                                ; zone before IT's title text,
+                                                ; same range existing
+                                                ; WAV_DebugMark cols 1..9
+                                                ; uses). Whichever letter is
+                                                ; the last visible on a hang
+                                                ; identifies the stage that
+                                                ; wedged.
+                                                ;   col 10 'A' = body entered
+                                                ;   col 11 'B' = ResolvePat OK
+                                                ;   col 12 'C' = FindFree OK
+                                                ;   col 13 'D' = SaveCurPat OK
+                                                ;   col 14 'E' = NewPattern OK
+                                                ;   col 15 'F' = wipe done
+                                                ;   col 16 'G' = StorePat OK
+                                                ;   col 17 'H' = log done
+                                                ;   col 18 'I' = info OK
+                                                ;   col 19 'J' = restore OK
+                Mov     AL, 10
+                Mov     AH, 'A'
+                Call    PE_RenderDebugMark
+
                 Call    PE_OrderList_ResolvePattern
                 JC      PE_OrdC_NoPat
+
+                Push    AX
+                Mov     AL, 11
+                Mov     AH, 'B'
+                Call    PE_RenderDebugMark
+                Pop     AX
 
                 Mov     CS:PE_CloneSourcePat, AX        ; latch S
 
                 Call    Music_FindFreePattern           ; AX = T
                 JC      PE_OrdC_NoFreeSlot
+
+                Push    AX
+                Mov     AL, 12
+                Mov     AH, 'C'
+                Call    PE_RenderDebugMark
+                Pop     AX
 
                 Mov     CS:PE_CloneTargetPat, AX        ; latch T
 
@@ -2606,6 +2869,12 @@ PE_OrdClonePat_Body:
                                                 ;    required.
                 Call    PE_SaveCurrentPattern
 
+                Push    AX
+                Mov     AL, 13
+                Mov     AH, 'D'
+                Call    PE_RenderDebugMark
+                Pop     AX
+
                 Push    CS
                 Pop     DS
                         Assume DS:Pattern
@@ -2616,6 +2885,12 @@ PE_OrdClonePat_Body:
                 Mov     PatternNumber, AX
                 Call    NewPattern
 
+                Push    AX
+                Mov     AL, 14
+                Mov     AH, 'E'
+                Call    PE_RenderDebugMark
+                Pop     AX
+
                                                 ; 3) optional mute-wipe.
                                                 ; The latched wipe mode
                                                 ; (set at proc entry) governs:
@@ -2623,10 +2898,26 @@ PE_OrdClonePat_Body:
                                                 ;   !0 = run wipe with ^^^ at
                                                 ;        row 0 of every muted
                                                 ;        channel.
-                Cmp     Byte Ptr [PE_CloneWipeMode], 0
+                                                ; NewPattern can clobber DS,
+                                                ; so use CS: override -- the
+                                                ; wipe-mode byte lives in
+                                                ; the PE code segment and
+                                                ; we don't care what DS is.
+                                                ; Without the override, a
+                                                ; stray DS pointed at the
+                                                ; Music segment read garbage
+                                                ; and the wipe ran even on
+                                                ; plain Left (BL=0 path).
+                Cmp     Byte Ptr CS:[PE_CloneWipeMode], 0
                 JE      PE_OrdC_NoWipe
                 Call    PE_OrderList_ApplyMuteWipe
 PE_OrdC_NoWipe:
+
+                Push    AX
+                Mov     AL, 15
+                Mov     AH, 'F'
+                Call    PE_RenderDebugMark
+                Pop     AX
 
                                                 ; 5) flip editor's pattern
                                                 ;    pointer to T so that
@@ -2639,10 +2930,26 @@ PE_OrdC_NoWipe:
                                                 ;    free slot anyway -- so
                                                 ;    we can't accidentally
                                                 ;    wipe the source.
+                                                ; Re-establish DS=Pattern
+                                                ; -- ApplyMuteWipe leaves DS
+                                                ; pointed at the Music seg
+                                                ; (mute table source), so
+                                                ; reads of [PE_CloneTargetPat]
+                                                ; and writes to PatternNumber
+                                                ; would otherwise hit garbage.
+                Push    CS
+                Pop     DS
+                        Assume DS:Pattern
                 Mov     AX, [PE_CloneTargetPat]
                 Mov     PatternNumber, AX
                 Mov     PatternModified, 1      ; force the store path
                 Call    PEFunction_StorePattern
+
+                Push    AX
+                Mov     AL, 16
+                Mov     AH, 'G'
+                Call    PE_RenderDebugMark
+                Pop     AX
 
                                                 ; 5) info line: report which
                                                 ;    slot received the clone.
@@ -2652,14 +2959,159 @@ PE_OrdC_NoWipe:
                                                 ;    of every Alt-D / Left /
                                                 ;    Shift-Left across the
                                                 ;    session.
+                                                ; PEFunction_StorePattern
+                                                ; may have shuffled DS too.
+                                                ; Reset to Pattern before
+                                                ; reading the latched src/dst
+                                                ; so the audit log + the
+                                                ; orderlist insertion below
+                                                ; both get the real values
+                                                ; (not segment-mismatch
+                                                ; garbage like 0x0501).
+                Push    CS
+                Pop     DS
+                        Assume DS:Pattern
                 Mov     AX, [PE_CloneSourcePat]
                 Mov     BX, [PE_CloneTargetPat]
                 MovZX   CX, Byte Ptr [PE_CloneWipeMode]
                 Call    PE_AppendCloneLog
 
-                Mov     AX, [PE_CloneTargetPat]
-                Mov     SI, Offset CloneDoneMsg
-                Call    SetInfoLine
+                Push    AX
+                Mov     AL, 17
+                Mov     AH, 'H'
+                Call    PE_RenderDebugMark
+                Pop     AX
+
+                                                ; --- Insert the cloned pattern
+                                                ; into the orderlist at the
+                                                ; slot AFTER the current F11
+                                                ; cursor position, shifting
+                                                ; the rest of the list down
+                                                ; by 1. Mirrors what the
+                                                ; existing Ins key handler
+                                                ; (PE_PostOrderList19) does
+                                                ; at offset 256+AX, except the
+                                                ; new slot gets the clone
+                                                ; target pattern number
+                                                ; rather than 0FFh.
+                Push    AX
+                Push    BX
+                Push    CX
+                Push    DX
+                Push    SI
+                Push    DI
+                Push    DS
+                Push    ES
+
+                Call    Music_GetSongSegment
+                Mov     ES, AX
+
+                Mov     AX, CS:[Order]
+                Inc     AX                      ; insert at Order+1
+                                                ; (clamped below to avoid
+                                                ; running off the orderlist's
+                                                ; 256-byte tail)
+                Cmp     AX, 255
+                JAE     PE_OrdC_InsertSkip
+
+                Mov     CX, 255
+                Sub     CX, AX                  ; bytes to shift right
+                Mov     DI, 511
+                Mov     SI, 510
+
+                Push    ES
+                Pop     DS
+
+                StD
+                Rep     MovsB
+                ClD
+                                                ; DI now points at the new
+                                                ; (cleared) slot offset
+                                                ; (= AX+256). Stamp the
+                                                ; target pattern number there.
+                                                ; StosB writes AL to ES:DI
+                                                ; (ES still = SongData from
+                                                ; above; ES wasn't touched by
+                                                ; the StD/Rep MovsB block).
+                Mov     AL, Byte Ptr CS:[PE_CloneTargetPat]
+                StosB
+
+PE_OrdC_InsertSkip:
+                Pop     ES
+                Pop     DS
+                Pop     DI
+                Pop     SI
+                Pop     DX
+                Pop     CX
+                Pop     BX
+                Pop     AX
+
+                                                ; Build the runtime status
+                                                ; message:
+                                                ;   "Dup pat NNN to orderlist
+                                                ;    YYY"
+                                                ; where NNN is the source
+                                                ; pattern and YYY is the new
+                                                ; orderlist row index. The
+                                                ; OLD "Pattern cloned to
+                                                ; slot N" used the engine's
+                                                ; 0FDh,'D' substitution
+                                                ; mechanism which only takes
+                                                ; one arg; we want two, so
+                                                ; PE_BuildCloneMsg formats
+                                                ; them into PE_CloneRunMsg
+                                                ; ahead of time.
+                Push    CS
+                Pop     DS
+                        Assume DS:Pattern
+                Mov     AX, [PE_CloneSourcePat]
+                Mov     BX, [Order]
+                Inc     BX                      ; new orderlist row
+                Call    PE_BuildCloneMsg
+
+                                                ; SetInfoLine2 takes a
+                                                ; BIOS-tick timeout in BX
+                                                ; and is NON-BLOCKING (the
+                                                ; main loop keeps running,
+                                                ; the F11 redraw updates
+                                                ; the orderlist immediately,
+                                                ; the info line just stays
+                                                ; pinned for that many
+                                                ; ticks). 91 ticks ~= 5 s
+                                                ; @ 18.2 Hz. The previous
+                                                ; PE_HoldInfoLine busy-wait
+                                                ; blocked the redraw and
+                                                ; made the clone feel like
+                                                ; a 5-second hang.
+                Mov     SI, Offset PE_CloneRunMsg
+                Xor     AX, AX
+                Mov     BX, 91
+                Call    SetInfoLine2
+
+                                                ; Move the F11 cursor to
+                                                ; the new orderlist row so
+                                                ; the user can immediately
+                                                ; see + edit the inserted
+                                                ; entry. PE_PostOrderList3b
+                                                ; would normally redraw at
+                                                ; the old position; bumping
+                                                ; Order here makes the
+                                                ; redraw show the new slot
+                                                ; with the cursor on it.
+                Push    CS
+                Pop     DS
+                Mov     AX, [Order]
+                Inc     AX
+                Cmp     AX, 256                 ; clamp so we don't run off
+                JAE     PE_OrdC_NoCursorAdv     ; the end of the orderlist
+                Mov     [Order], AX
+PE_OrdC_NoCursorAdv:
+
+                Push    AX
+                Mov     AL, 18
+                Mov     AH, 'I'
+                Call    PE_RenderDebugMark
+                Pop     AX
 
                                                 ; 6) restore editor's
                                                 ;    original pattern via
@@ -2672,6 +3124,12 @@ PE_OrdC_NoWipe:
                                                 ;    stashed it) and re-
                                                 ;    decodes into the buffer.
                 Call    PE_RestoreCurrentPattern
+
+                Push    AX
+                Mov     AL, 19
+                Mov     AH, 'J'
+                Call    PE_RenderDebugMark
+                Pop     AX
 
                 Mov     AX, 1
                 Ret
@@ -4706,23 +5164,24 @@ EndP            PEFunction_PickUp
 ; but lives in the Pattern segment because IT_PE.ASM can't call across
 ; segment boundaries to a Near proc.
 Proc            PE_RenderDebugMark Near
-                Push    AX
-                Push    BX
-                Push    ES
-
-                Movzx   BX, AL
-                ShL     BX, 1
-                Mov     AL, AH
-                Push    AX
-                Mov     AX, 0B800h
-                Mov     ES, AX
-                Pop     AX
-                Mov     AH, 4Fh
-                Mov     [ES:BX], AX
-
-                Pop     ES
-                Pop     BX
-                Pop     AX
+                                                ; Now a true no-op. Per-
+                                                ; stage disk logging was
+                                                ; useful during the crash
+                                                ; hunt but each breadcrumb
+                                                ; did open+seek+write+close
+                                                ; on PATLOG.TXT, which under
+                                                ; DOSBox-X added ~1-2 s per
+                                                ; stage -- enough to make a
+                                                ; single clone take 30 s
+                                                ; and look indistinguishable
+                                                ; from a hard hang. The
+                                                ; summary CLONE / EXTEND
+                                                ; line written by
+                                                ; PE_AppendCloneLog at the
+                                                ; end of the op still
+                                                ; records src/dst/wipe in
+                                                ; PATLOG.TXT, which is the
+                                                ; data we actually need.
                 Ret
 EndP            PE_RenderDebugMark
 

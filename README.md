@@ -90,7 +90,16 @@ Cursor navigation at the middle digit position is unchanged.
 
 ## Changelog
 
-Newest first. Five weeks of active development since the fork resumed on 2026-04-22. Commit hashes link to the fork's `main` branch.
+Newest first. Six weeks of active development since the fork resumed on 2026-04-22. Commit hashes link to the fork's `main` branch.
+
+### 2026-05-20 — F11 clone auto-insert + cursor advance, runtime status messages, F12 Quicksave Enter, crash hunt
+
+- **F11 Left / Shift-Left clone now auto-inserts into the order list and advances the cursor.** After the clone completes (`PEFunction_StorePattern` returns), `PE_OrderList_ClonePattern_Body` shifts orderlist bytes `[Order+1..510]` down by one (same `StD` / `Rep MovsB` pattern as the existing Ins-key handler `PE_PostOrderList19`), stamps the cloned pattern number into slot `Order+1`, then bumps `[Order]` so the F11 cursor lands on the new row. Mirrors what musicians actually want when they ask the tracker to "duplicate the current pattern": the new pattern is in the song flow ready to edit, not stranded as an orphan slot you have to manually wire in.
+- **Runtime status messages** now show real data instead of static templates. The clone path builds `"Dup pat NNN to orderlist YYY"` at runtime in `PE_CloneRunMsg` via a new `PE_FormatU16Dec3` Near proc (3-digit decimal conversion). The Shift-Ctrl-O / Shift-Right no-import path builds `"Saved pat NNN as <filename>"` in `WAV_NoImportRunMsg` from `WAV_PendingPattern` + the already-built `RenderedFilename`. Both replace the previous static-text `0FDh,'D'` substitution which only supported one number per message.
+- **5-second info-line hold on success** (`PE_HoldInfoLine` Far). `Int 1Ah` BIOS-tick busy-wait with `Int 16h AH=01h` keyboard peek bail-out and `Int 16h AH=00h` keystroke eat so the held line doesn't leak into the next event. 91 ticks ≈ 5 s @ 18.2 Hz. The previous 15 s budget was too long; 5 s is enough to read a 30-character info line without feeling like a hang.
+- **F12 Quicksave directory row is now Enter-able.** New `D_PickQuickSaveDir` Far proc backs up `SongDirectory` into `QuickSaveBackup`, copies `QuickSaveDirectory` into `SongDirectory`, sets `DirectoryPickerActive` + a new `QuickSavePickerActive` flag, and tail-jumps to `Glbl_F9`. `D_PickerEsc` checks `QuickSavePickerActive` on exit: if set, copies the picker's working `SongDirectory` back into `QuickSaveDirectory` and restores `SongDirectory` from `QuickSaveBackup`. Wired into `QuickSaveDirectoryInput` in `IT_OBJ1.ASM` (was `DD 0`, now `DD DWord Ptr D_PickQuickSaveDir`). Mirrors how the existing Module-directory row works via `D_PickModuleDir`.
+- **`PATLOG.TXT` audit trail** for every F11 clone op (Alt-D / Left / Shift-Left), `EXTEND` op (Alt-E), and Ctrl-O render. One-line summary per op (`CLONE  src=NNNN dst=NNNN wipe=NNNN`, `EXTEND pat=NNNN rows=NNNN`). Lives in the active render directory (Quicksave folder if configured, else SampleDirectory, else cwd). Per-stage breadcrumb logging was tried and removed — each open+seek+write+close in DOSBox-X added ~1 s, making a single clone feel like a 30 s hang.
+- **Crash hunt:** found and fixed a register-restore order bug in `PE_OrderList_ApplyMuteWipe`'s epilogue (one missing `Pop DS` left every subsequent `Pop` shifted by a slot and `Ret` jumped to garbage — hard "Illegal Interrupt 6" crash on Shift-Left). Found and fixed a `DS`-segment-mismatch bug where `[PE_CloneTargetPat]` reads in the clone body's tail (after `NewPattern` / `StorePattern` clobbered `DS`) returned the wrong segment's bytes (`src=0501 dst=0200` style garbage in the audit log + wrong target byte written into the orderlist). Both fixed by re-establishing `DS=Pattern` at each read site (and `CS:` override for the byte read).
 
 ### 2026-05-19 — F11 order-list power tools, Ctrl-O Quicksave routing, envelope preservation final pass, persisted IT.CFG ext block
 
@@ -277,14 +286,33 @@ pattern rendering bound to **Ctrl-O** in the pattern editor:
    user warning + length adjust, alloc-fail clears the dirty slot, IMPS
    filename field (+4..+15) populated with the rendered `.NNN`.
 
-### Quick-save folder (Alt-W / Shift-Alt-W + F12 row)
+### Quick-save folder (Alt-W / Shift-Alt-W + F12 row + Enter to pick)
 
 - **Shift-Alt-W** — memorize the current load/save directory as the "Quicksave
   folder."
 - **Alt-W** — save the current module to that folder, no prompt, using the
   module's existing filename.
-- **F12 config screen** — Quicksave directory is now an editable input row,
-  persisted across sessions.
+- **F12 config screen** — Quicksave directory is an editable input row,
+  persisted across sessions. **Enter on the row** opens an F9-style folder
+  picker rooted at the current Quicksave path; navigate as usual and press
+  **Esc** to commit. (Same mechanism the Module-directory row uses, just
+  re-targeted at `QuickSaveDirectory`.)
+
+### F11 clone with auto-insert (Left / Shift-Left at orderlist column 0)
+
+In F11 with the cursor on the leftmost digit of an orderlist row, **Left**
+clones the active pattern (the one playing, or the one at the cursor row when
+stopped) into the next free slot, **inserts it into the orderlist below the
+current row**, and advances the F11 cursor onto that new row. **Shift-Left**
+does the same but wipes events on currently-muted channels (with a `^^^`
+note-cut at row 0 so any sample still ringing from the previous pattern is
+silenced cleanly when the clone starts playing).
+
+Status line shows `Dup pat NNN to orderlist YYY` for ~5 s after the op so you
+can see exactly which slot got the clone and where it landed in the orderlist.
+Press any key to dismiss the held message early. Audit trail in
+`PATLOG.TXT` (in the Quicksave folder, or wherever your render dir resolves
+to) records `CLONE src=NNNN dst=NNNN wipe=NNNN` per op.
 
 ### F4 → F3 cursor translation (Feature 2)
 

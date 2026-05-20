@@ -162,6 +162,9 @@ ENDIF
                 Extrn   Glbl_F11:Far
                 Extrn   Glbl_F12:Far
                 Extrn   D_PickModuleDir:Far
+                Extrn   D_PickSampleDir:Far
+                Extrn   D_PickInstrumentDir:Far
+                Extrn   D_PickQuickSaveDir:Far
                 Extrn   D_PickerEsc:Far
                 Extrn   Glbl_F2:Far
                 Extrn   Glbl_F3:Far
@@ -5560,21 +5563,21 @@ SampleDirectoryInput    DW      16
                         DB      013, 43
                         DW      0, Offset SampleDirectory
                         DW      65
-                        DD      0
+                        DD      DWord Ptr D_PickSampleDir
                         DW      28, 30, 30, 28
 
 InstrumentDirectoryInput DW      16
                         DB      13, 44
                         DW      0, Offset InstrumentDirectory
                         DW      65
-                        DD      0
+                        DD      DWord Ptr D_PickInstrumentDir
                         DW      29, 31, 31, 29
 
 QuickSaveDirectoryInput DW      16
                         DB      13, 45
                         DW      0, Offset QuickSaveDirectory
                         DW      65
-                        DD      0
+                        DD      DWord Ptr D_PickQuickSaveDir
                         DW      30, 32, 32, 30
 
 SaveDirectoryConfigButton DW    2

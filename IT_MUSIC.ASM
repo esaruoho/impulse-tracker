@@ -18,7 +18,10 @@ include network.inc
         Extrn   D_SaveCwd:Far
         Extrn   D_RestoreCwd:Far
         Extrn   D_GotoSampleDirectory:Far
+        Extrn   QuickSaveDirectory:Byte
+        Extrn   SampleDirectory:Byte
         Extrn   D_GotoRenderDirectory:Far
+        Extrn   D_GetActiveRenderDirPtr:Far
         Extrn   D_SetCurrentSample:Far
         Extrn   D_SetCurrentInstrument:Far
         Extrn   PE_SetLastInstrument:Far
@@ -88,6 +91,10 @@ include network.inc
         Global  Music_FindFreePattern:Far
         Global  PE_AppendCloneLog:Far
         Global  PE_AppendExtendLog:Far
+        Global  PE_LogKeyEntry:Far
+        Global  PE_LogStage:Far
+        Global  PE_LogEndLine:Far
+        Global  PE_HoldInfoLine:Far
         Global  Music_SetTempoFromClocks:Far
         Global  Music_ImportRenderedPattern:Far
         Global  WAV_LoopRender:Byte
@@ -3879,25 +3886,18 @@ WAV_SavedDriverName     DD      0
 ; at row 0 col=AL with bright-white-on-red attribute via direct VRAM write,
 ; so it survives main-loop death. AH = ASCII char to display. Preserves all regs.
 Proc            WAV_DebugMark Near
-                Push    AX
-                Push    BX
-                Push    ES
-
-                Movzx   BX, AL                  ; BX = col (zero-extended)
-                ShL     BX, 1                   ; BX = col * 2 byte offset
-
-                Mov     AL, AH                  ; save char while we set ES
-                Push    AX
-                Mov     AX, 0B800h
-                Mov     ES, AX
-                Pop     AX                      ; AL = char (was AH)
-
-                Mov     AH, 4Fh                 ; bright white on red attribute
-                Mov     [ES:BX], AX             ; stamp it
-
-                Pop     ES
-                Pop     BX
-                Pop     AX
+                                                ; Visual pink markers
+                                                ; removed -- they were noisy
+                                                ; on the user's screen and
+                                                ; CTRLOLOG.TXT already
+                                                ; captures the same info
+                                                ; per Ctrl-O attempt. This
+                                                ; proc is now a no-op kept
+                                                ; only to satisfy existing
+                                                ; call sites; the real per-
+                                                ; stage trail lives in
+                                                ; PE_LogStage / WAV_Append-
+                                                ; ErrorLog paths.
                 Ret
 EndP            WAV_DebugMark
 
@@ -4152,6 +4152,38 @@ WAV_WHAX_Dec:
                         Assume DS:Nothing
 EndP            WAV_WriteHexAX
 
+;-------------------------------------------------------------------------------
+; WAV_FormatU16Dec3 -- write AX as 3 decimal digits at ES:DI. Advances DI by 3.
+; AX consumed; other regs preserved.
+;-------------------------------------------------------------------------------
+Proc            WAV_FormatU16Dec3 Near
+                Push    BX
+                Push    DX
+
+                Mov     BX, 100
+                Xor     DX, DX
+                Div     BX
+                Add     AL, '0'
+                Mov     [ES:DI], AL
+                Inc     DI
+
+                Mov     AX, DX
+                Mov     BX, 10
+                Xor     DX, DX
+                Div     BX
+                Add     AL, '0'
+                Mov     [ES:DI], AL
+                Inc     DI
+
+                Add     DL, '0'
+                Mov     [ES:DI], DL
+                Inc     DI
+
+                Pop     DX
+                Pop     BX
+                Ret
+EndP            WAV_FormatU16Dec3
+
 WAV_HexBuf              DB      4 Dup (0)
 
 ;-------------------------------------------------------------------------------
@@ -4334,6 +4366,223 @@ PE_PatLogScratchBX      DW      0
 PE_PatLogScratchCX      DW      0
 
 ;-------------------------------------------------------------------------------
+; Stage-log helpers -- write a per-keypress breadcrumb trail to PATLOG.TXT.
+;
+; Use:
+;   PE_LogKeyEntry  -- AL = 'L' or 'R' (key), AH = cursor digit '0'..'2',
+;                      BL = shift flag '0'/'1'. Writes:
+;                          "KEY=L cur=0 sft=1 stages="
+;   PE_LogStage     -- AL = single char. Appends raw char (no separators).
+;   PE_LogEndLine   -- writes CRLF and closes the log.
+;
+; Each call open/seek/write/close-s PATLOG.TXT independently, so even a
+; mid-handler hang leaves all chars written so far on disk. ~3-25 file ops
+; per keypress -- comfortable for DOSBox-X.
+;-------------------------------------------------------------------------------
+PE_StageLogPrefix       DB      "KEY=", 0
+PE_StageLogMid_Cur      DB      " cur=", 0
+PE_StageLogMid_Sft      DB      " sft=", 0
+PE_StageLogMid_Stg      DB      " stages=", 0
+PE_StageLogScratch      DW      0
+PE_StageLogScratch2     DW      0
+
+;-------------------------------------------------------------------------------
+; PE_LogOpenForAppend -- internal: open or create PATLOG.TXT, seek to end,
+; return BX = handle. On any failure, returns BX = 0FFFFh.
+; All other registers preserved.
+;-------------------------------------------------------------------------------
+Proc            PE_LogOpenForAppend Near
+                Push    AX
+                Push    CX
+                Push    DX
+                Push    DS
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+                Mov     DX, Offset WAV_PatLogName
+                Mov     AX, 3D02h
+                Int     21h
+                JNC     PELOA_Opened
+
+                Mov     AH, 3Ch
+                Xor     CX, CX
+                Int     21h
+                JC      PELOA_Fail
+                                                ; created -> BX needs handle
+                Mov     BX, AX
+                Jmp     PELOA_Done
+
+PELOA_Opened:
+                Mov     BX, AX
+                Mov     AX, 4202h
+                Xor     CX, CX
+                Xor     DX, DX
+                Int     21h
+
+PELOA_Done:
+                Pop     DS
+                Pop     DX
+                Pop     CX
+                Pop     AX
+                Ret
+
+PELOA_Fail:
+                Mov     BX, 0FFFFh
+                Pop     DS
+                Pop     DX
+                Pop     CX
+                Pop     AX
+                Ret
+                        Assume DS:Nothing
+EndP            PE_LogOpenForAppend
+
+;-------------------------------------------------------------------------------
+; PE_LogKeyEntry -- start a new keypress line.
+;   AL = key char ('L'/'R')
+;   AH = cursor digit ('0'..'2')
+;   BL = shift flag char ('0'/'1')
+;-------------------------------------------------------------------------------
+Proc            PE_LogKeyEntry Far
+                PushF
+                PushAD
+                Push    DS
+                Push    ES
+                                                ; Stash inputs so they
+                                                ; survive the open call.
+                Mov     CS:[PE_StageLogScratch], AX
+                Mov     CS:[PE_StageLogScratch2], BX
+
+                Call    PE_LogOpenForAppend
+                Cmp     BX, 0FFFFh
+                JE      PELKE_Done
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+                                                ; Leading CRLF separates
+                                                ; this keypress from any
+                                                ; prior un-terminated trail
+                                                ; (e.g. one that hung mid-
+                                                ; ApplyMuteWipe).
+                Mov     SI, Offset WAV_LogCRLF
+                Call    WAV_WriteStringDSSI
+                                                ; "KEY="
+                Mov     SI, Offset PE_StageLogPrefix
+                Call    WAV_WriteStringDSSI
+                                                ; <key char> = AL of scratch
+                Mov     AX, CS:[PE_StageLogScratch]
+                Mov     CS:[PE_StageLogOneChar], AL
+                Mov     CX, 1
+                Mov     DX, Offset PE_StageLogOneChar
+                Mov     AH, 40h
+                Int     21h
+                                                ; " cur="
+                Mov     SI, Offset PE_StageLogMid_Cur
+                Call    WAV_WriteStringDSSI
+                                                ; <cursor digit> = AH of scratch
+                Mov     AX, CS:[PE_StageLogScratch]
+                Mov     CS:[PE_StageLogOneChar], AH
+                Mov     CX, 1
+                Mov     DX, Offset PE_StageLogOneChar
+                Mov     AH, 40h
+                Int     21h
+                                                ; " sft="
+                Mov     SI, Offset PE_StageLogMid_Sft
+                Call    WAV_WriteStringDSSI
+                                                ; <shift char> = BL of scratch2
+                Mov     AX, CS:[PE_StageLogScratch2]
+                Mov     CS:[PE_StageLogOneChar], AL
+                Mov     CX, 1
+                Mov     DX, Offset PE_StageLogOneChar
+                Mov     AH, 40h
+                Int     21h
+                                                ; " stages="
+                Mov     SI, Offset PE_StageLogMid_Stg
+                Call    WAV_WriteStringDSSI
+
+                Mov     AH, 3Eh
+                Int     21h
+
+PELKE_Done:
+                Pop     ES
+                Pop     DS
+                PopAD
+                PopF
+                Ret
+                        Assume DS:Nothing
+EndP            PE_LogKeyEntry
+
+;-------------------------------------------------------------------------------
+; PE_LogStage -- append one stage character to the current line.
+;   AL = char
+;-------------------------------------------------------------------------------
+Proc            PE_LogStage Far
+                PushF
+                PushAD
+                Push    DS
+                Push    ES
+
+                Mov     CS:[PE_StageLogOneChar], AL
+
+                Call    PE_LogOpenForAppend
+                Cmp     BX, 0FFFFh
+                JE      PELS_Done
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+                Mov     CX, 1
+                Mov     DX, Offset PE_StageLogOneChar
+                Mov     AH, 40h
+                Int     21h
+
+                Mov     AH, 3Eh
+                Int     21h
+
+PELS_Done:
+                Pop     ES
+                Pop     DS
+                PopAD
+                PopF
+                Ret
+                        Assume DS:Nothing
+EndP            PE_LogStage
+
+;-------------------------------------------------------------------------------
+; PE_LogEndLine -- terminate the current keypress line with CRLF.
+;-------------------------------------------------------------------------------
+Proc            PE_LogEndLine Far
+                PushF
+                PushAD
+                Push    DS
+                Push    ES
+
+                Call    PE_LogOpenForAppend
+                Cmp     BX, 0FFFFh
+                JE      PELEL_Done
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+                Mov     SI, Offset WAV_LogCRLF
+                Call    WAV_WriteStringDSSI
+
+                Mov     AH, 3Eh
+                Int     21h
+
+PELEL_Done:
+                Pop     ES
+                Pop     DS
+                PopAD
+                PopF
+                Ret
+                        Assume DS:Nothing
+EndP            PE_LogEndLine
+
+PE_StageLogOneChar      DB      0
+
+;-------------------------------------------------------------------------------
 ; WAV_HoldForMarkers -- busy-wait ~15 seconds via Int 1Ah BIOS ticks so the
 ; VRAM debug markers stamped on row 0 by WAV_DebugMark / D_DebugMark survive
 ; long enough for a human to read them. Called from the Music_Import-
@@ -4395,6 +4644,64 @@ WAV_HoldDone:
                 Pop     AX
                 Ret
 EndP            WAV_HoldForMarkers
+
+;-------------------------------------------------------------------------------
+; PE_HoldInfoLine -- Far-callable wrapper around WAV_HoldForMarkers so
+; IT_PE.ASM can hold its CloneDoneMsg / ExtendDoneMsg info-line text for
+; 15 s after a clone/extend op (or until the user presses any key, which
+; also gets eaten). Without this hold the F11 redraw wipes the info line
+; in ~half a second and the user has no chance to read which slot got the
+; clone.
+;-------------------------------------------------------------------------------
+Proc            PE_HoldInfoLine Far
+                                                ; 5 s budget (91 BIOS ticks
+                                                ; @ 18.2 Hz). Bails early on
+                                                ; any keypress and eats the
+                                                ; keystroke so it doesn't
+                                                ; leak into the next event.
+                Push    AX
+                Push    BX
+                Push    CX
+                Push    DX
+                Push    BP
+
+                Mov     AH, 00h
+                Int     1Ah                     ; CX:DX = current ticks
+                Mov     BX, CX                  ; save start hi
+                Mov     BP, DX                  ; save start lo
+
+PE_HIL_Loop:
+                Mov     AH, 01h                 ; peek keyboard
+                Int     16h
+                JNZ     PE_HIL_KeyPressed
+
+                Push    BX
+                Push    BP
+                Mov     AH, 00h
+                Int     1Ah
+                Pop     BP
+                Pop     BX
+
+                Sub     DX, BP                  ; DX = elapsed lo
+                SbB     CX, BX                  ; CX = elapsed hi
+                Test    CX, CX
+                JNZ     PE_HIL_Done
+                Cmp     DX, 91                  ; 5 s budget reached?
+                JB      PE_HIL_Loop
+                Jmp     PE_HIL_Done
+
+PE_HIL_KeyPressed:
+                Mov     AH, 00h
+                Int     16h                     ; eat the keystroke
+
+PE_HIL_Done:
+                Pop     BP
+                Pop     DX
+                Pop     CX
+                Pop     BX
+                Pop     AX
+                Ret
+EndP            PE_HoldInfoLine
 
 ;-------------------------------------------------------------------------------
 ; Music_ArmRenderNoImport / Music_ClearRenderNoImport
@@ -4691,14 +4998,109 @@ WAV_LeaveMode:
                 Jmp     WAV_LeavePostImport
 
 WAV_LeaveSkipImport:
-                ; Tell the user where the file went, since no sample-slot
-                ; arrival will confirm it.
+                ; Build a runtime message: "Saved pat NNN as <filename>"
+                ; where NNN is the rendered pattern number (3 decimal digits)
+                ; and <filename> is the actual file the engine just wrote
+                ; into the Quicksave folder. The user asked for this in the
+                ; status line instead of the static "Pattern rendered..."
+                ; text so they can see exactly what slot was rendered AND
+                ; which file to pick up on the other end of the USB stick.
+                Push    AX
+                Push    BX
+                Push    CX
+                Push    DX
+                Push    SI
+                Push    DI
+                Push    DS
+                Push    ES
+
+                Push    CS
+                Pop     DS
+                Push    CS
+                Pop     ES
+                        Assume DS:Music
+
+                ClD
+                Mov     DI, Offset WAV_NoImportRunMsg
+
+                                                ; "Saved pat "
+                Mov     SI, Offset WAV_NIM_Pfx
+                Mov     CX, WAV_NIM_Pfx_Len
+                Rep     MovsB
+
+                                                ; <pat NNN>
+                Mov     AX, [WAV_PendingPattern]
+                Call    WAV_FormatU16Dec3
+
+                                                ; " as "
+                Mov     SI, Offset WAV_NIM_Mid
+                Mov     CX, WAV_NIM_Mid_Len
+                Rep     MovsB
+
+                                                ; <filename>  (null-terminated
+                                                ; in RenderedFilename, max 12
+                                                ; chars incl null). DS still
+                                                ; = Music at this point.
+                Mov     SI, Offset RenderedFilename
+WAV_NIM_CopyName:
+                Mov     AL, [DS:SI]
+                Test    AL, AL
+                JZ      WAV_NIM_NameEnd
+                Mov     [ES:DI], AL
+                Inc     SI
+                Inc     DI
+                Jmp     WAV_NIM_CopyName
+WAV_NIM_NameEnd:
+                                                ; " in "
                 Push    CS
                 Pop     DS
                         Assume DS:Music
-                Mov     SI, Offset WAV_RenderedNoImportMsg
+                Mov     SI, Offset WAV_NIM_Mid2
+                Mov     CX, WAV_NIM_Mid2_Len
+                Rep     MovsB
+
+                                                ; <active render dir>
+                                                ; (D_GetActiveRenderDirPtr
+                                                ; returns DS:SI -> the
+                                                ; Quicksave folder, falling
+                                                ; back to SampleDirectory).
+                                                ; ES = Music throughout.
+                Call    D_GetActiveRenderDirPtr
+WAV_NIM_CopyDir:
+                Mov     AL, [DS:SI]
+                Test    AL, AL
+                JZ      WAV_NIM_DirEnd
+                Mov     [ES:DI], AL
+                Inc     SI
+                Inc     DI
+                Cmp     DI, Offset WAV_NoImportRunMsg + 62
+                JAE     WAV_NIM_DirEnd          ; clamp so we never write
+                                                ; past the 64-byte buffer
+                Jmp     WAV_NIM_CopyDir
+WAV_NIM_DirEnd:
+
+                                                ; Restore DS = Music for the
+                                                ; SetInfoLine2 caller below.
+                Push    CS
+                Pop     DS
+                                                ; NUL terminator
+                Mov     Byte Ptr [ES:DI], 0
+
+                Pop     ES
+                Pop     DS
+                Pop     DI
+                Pop     SI
+                Pop     DX
+                Pop     CX
+                Pop     BX
+                Pop     AX
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+                Mov     SI, Offset WAV_NoImportRunMsg
                 Xor     AX, AX
-                Mov     BX, 500
+                Mov     BX, 91                  ; ~5 s @ 18.2 Hz BIOS ticks
                 Call    SetInfoLine2
                         Assume DS:Nothing
 
@@ -4824,6 +5226,26 @@ WAV_FailAlloc           DB      "Import failed: out of memory for sample", 0
 WAV_TruncatedMsg        DB      "Pattern truncated to 1MB; sample ", 0FDh, "D", 0
 WAV_BadRenderDirMsg     DB      "Render aborted: Quicksave folder invalid (check F12)", 0
 WAV_RenderedNoImportMsg DB      "Pattern rendered to Quicksave folder (no import)", 0
+WAV_NoImportRunMsg      DB      64 Dup (0)
+WAV_NIM_Pfx             DB      "Saved pat ", 0
+WAV_NIM_Mid             DB      " as ", 0
+WAV_NIM_Mid2            DB      " in ", 0
+WAV_NIM_Pfx_Len         EQU     10
+WAV_NIM_Mid_Len         EQU     4
+WAV_NIM_Mid2_Len        EQU     4
+
+WAV_ImpRunMsg           DB      64 Dup (0)
+WAV_IMP_Pfx             DB      "Pat ", 0
+WAV_IMP_Mid1            DB      " -> ", 0
+WAV_IMP_Mid2            DB      " -> sample ", 0
+WAV_IMP_Mid3            DB      " in inst ", 0
+WAV_IMP_Pfx_Len         EQU     4
+WAV_IMP_Mid1_Len        EQU     4
+WAV_IMP_Mid2_Len        EQU     11
+WAV_IMP_Mid3_Len        EQU     9
+WAV_TargetInst          DW      0       ; instrument slot the new sample was
+                                        ; bound to (in Instrument mode);
+                                        ; 0 = sample mode / no inst created
 WAV_RenderDirCdFailMsg  DB      "Import failed: lost render folder (cd before open)", 0
 WAV_RenderingMsg        DB      "Rendering pattern to WAV ...", 0
 
@@ -4936,32 +5358,69 @@ WAVI_HaveMax:
                 ; consuming any bytes via Read. Logged as " size=<HHHH>"
                 ; in every CTRLOLOG line so size=0000 vs size=002C vs
                 ; size=larger is unambiguous on failure analysis.
-                Mov     BX, AX                  ; handle
-                Push    AX                      ; save handle
+                ;
+                ; Hardened: reload BX from WAV_FileHandle before each Int 21h
+                ; so a clobbered register can't make the seek silently target
+                ; handle 0 (stdin) and leave the real file pointer pinned at
+                ; EOF -- that is exactly what made a perfectly valid 465 KB
+                ; RND0001.003 fail the RIFF check at column 0: the seek-back-
+                ; to-start was issued against the wrong handle, Read pulled
+                ; 0 bytes from EOF, and "missing RIFF" fired against a zero
+                ; buffer. Also stamps marker letters at col 26 ('s' / 'S')
+                ; so any future seek failure shows up on the CRT before we
+                ; even hit the RIFF check.
+                Mov     BX, [CS:WAV_FileHandle]
                 Mov     AX, 4202h
                 Xor     CX, CX
                 Xor     DX, DX
                 Int     21h
+                JC      WAVI_SeekEndFailed
                                                 ; DX:AX = end-of-file (= size).
-                                                ; Only the low word matters for
-                                                ; logging; renders larger than
-                                                ; 64 KB will show truncated
+                                                ; Only the low word matters
+                                                ; for logging; renders larger
+                                                ; than 64 KB show truncated
                                                 ; hex but the success/failure
                                                 ; signal is still readable.
                 Mov     [CS:WAV_LastFileSize], AX
+                Mov     AL, 26
+                Mov     AH, 's'                 ; seek-to-end ok
+                Call    WAV_DebugMark
+                Jmp     WAVI_SeekToStart
 
+WAVI_SeekEndFailed:
+                                                ; Don't bail -- still try
+                                                ; seek-to-start + read so
+                                                ; downstream RIFF check
+                                                ; runs against whatever
+                                                ; the buffer looks like.
+                Mov     Word Ptr [CS:WAV_LastFileSize], 0
+                Mov     AL, 26
+                Mov     AH, 'x'                 ; seek-to-end FAILED
+                Call    WAV_DebugMark
+
+WAVI_SeekToStart:
                                                 ; Seek back to start so the
                                                 ; subsequent Read pulls the
                                                 ; header from offset 0.
+                Mov     BX, [CS:WAV_FileHandle]
                 Mov     AX, 4200h
                 Xor     CX, CX
                 Xor     DX, DX
                 Int     21h
+                JNC     WAVI_SeekStartOK
+                Mov     AL, 26
+                Mov     AH, 'X'                 ; seek-to-start FAILED
+                Call    WAV_DebugMark
+                Jmp     WAVI_DoHeaderRead
 
-                Pop     AX                      ; restore for downstream use
+WAVI_SeekStartOK:
+                Mov     AL, 26
+                Mov     AH, 'S'                 ; seek-to-start ok
+                Call    WAV_DebugMark
 
+WAVI_DoHeaderRead:
                 ; --- Read 44-byte WAV header ---------------------------------
-                Mov     BX, AX
+                Mov     BX, [CS:WAV_FileHandle]
                 Mov     AH, 3Fh
                 Mov     CX, 44
                 Mov     DX, Offset WAVHeader
@@ -5278,13 +5737,22 @@ WAVI_LoopEndDone:
                 Call    Music_AssignSampleToInstrument ; AX = inst num, CF on fail
                 JC      WAVI_SkipInstrument
 
-                ; AX = instrument number returned -- select it for F4
+                ; AX = instrument number returned -- select it for F4 and
+                ; stash for the status-line builder so the user can see
+                ; "sample N in inst M" if M != N (the assign falls back to
+                ; the next free instrument slot when the matching-N slot is
+                ; already occupied).
+                Mov     [CS:WAV_TargetInst], AX
                 Push    AX
                 Call    D_SetCurrentInstrument
                 Pop     AX
                 Call    PE_SetLastInstrument
+                Jmp     WAVI_AfterInstrument
 
 WAVI_SkipInstrument:
+                Mov     Word Ptr [CS:WAV_TargetInst], 0
+
+WAVI_AfterInstrument:
                 Mov     AL, 27
                 Mov     AH, 'h'                 ; instrument-mode block done
                 Call    WAV_DebugMark
@@ -5306,16 +5774,95 @@ WAVI_SkipInstrument:
                 Mov     SI, Offset WAV_LogPrefix_OK
                 Call    WAV_AppendErrorLog
 
+                                                ; Build runtime message:
+                                                ;   "Pat NNN -> <filename>
+                                                ;    -> sample N"
+                                                ; (or fall back to the
+                                                ; static truncated-msg if
+                                                ; the audio was clipped).
+                Cmp     Byte Ptr [CS:WAV_TruncatedFlag], 0
+                JE      WAVI_BuildImpMsg
+
                 Push    CS
                 Pop     DS
-                Mov     SI, Offset WAV_ImportedMsg
-                Cmp     Byte Ptr [CS:WAV_TruncatedFlag], 0
-                JE      WAVI_NormalMsg
                 Mov     SI, Offset WAV_TruncatedMsg
-WAVI_NormalMsg:
                 Mov     AX, [CS:WAV_TargetSlot]
-                Mov     BX, 500
+                Mov     BX, 91                  ; ~5 s
                 Call    SetInfoLine2
+                Jmp     WAVI_MsgDone
+
+WAVI_BuildImpMsg:
+                Push    CS
+                Pop     DS
+                Push    CS
+                Pop     ES
+                        Assume DS:Music
+                ClD
+                Mov     DI, Offset WAV_ImpRunMsg
+
+                                                ; "Pat "
+                Mov     SI, Offset WAV_IMP_Pfx
+                Mov     CX, WAV_IMP_Pfx_Len
+                Rep     MovsB
+                Mov     AX, [WAV_PendingPattern]
+                Call    WAV_FormatU16Dec3
+
+                                                ; " -> "
+                Mov     SI, Offset WAV_IMP_Mid1
+                Mov     CX, WAV_IMP_Mid1_Len
+                Rep     MovsB
+
+                                                ; <filename>
+                Mov     SI, Offset RenderedFilename
+WAVI_ImpCopyName:
+                Mov     AL, [DS:SI]
+                Test    AL, AL
+                JZ      WAVI_ImpNameEnd
+                Mov     [ES:DI], AL
+                Inc     SI
+                Inc     DI
+                Jmp     WAVI_ImpCopyName
+WAVI_ImpNameEnd:
+                                                ; " -> sample "
+                Mov     SI, Offset WAV_IMP_Mid2
+                Mov     CX, WAV_IMP_Mid2_Len
+                Rep     MovsB
+                Mov     AX, [WAV_TargetSlot]
+                Call    WAV_FormatU16Dec3
+
+                                                ; If we're in Instrument mode
+                                                ; and the assign succeeded,
+                                                ; append " in inst MMM" so
+                                                ; the user can tell which
+                                                ; instrument slot now points
+                                                ; at the new sample (these
+                                                ; numbers can differ when
+                                                ; the sample-matching
+                                                ; instrument slot was
+                                                ; already occupied -- the
+                                                ; assign falls back to the
+                                                ; next free instrument
+                                                ; slot).
+                Mov     AX, [WAV_TargetInst]
+                Test    AX, AX
+                JZ      WAVI_NoInst
+
+                Push    AX
+                Mov     SI, Offset WAV_IMP_Mid3
+                Mov     CX, WAV_IMP_Mid3_Len
+                Rep     MovsB
+                Pop     AX
+                Call    WAV_FormatU16Dec3
+
+WAVI_NoInst:
+                Mov     Byte Ptr [ES:DI], 0
+
+                Mov     SI, Offset WAV_ImpRunMsg
+                Xor     AX, AX
+                Mov     BX, 91                  ; ~5 s
+                Call    SetInfoLine2
+
+WAVI_MsgDone:
 
                 Mov     AX, [CS:WAV_TargetSlot]
                 Pop     ES
