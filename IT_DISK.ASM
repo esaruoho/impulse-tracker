@@ -55,6 +55,10 @@ EndS
                 Extrn   M_Object1List:Far
 
                 Extrn   Music_PlayNote:Far
+                Extrn   Music_StartFullSongWAV:Far
+                Extrn   Music_StartFullSongMWAV:Far
+                Extrn   Music_SetUserFilenameFlag:Far
+                Extrn   Music_SetUserBase:Far
                 Extrn   Music_PlaySample:Far
                 Extrn   Music_ReleaseAllPatterns:Far
                 Extrn   Music_ReleaseAllSamples:Far
@@ -248,6 +252,8 @@ ENDIF
                 Global  D_PickInstrumentDir:Far
                 Global  D_PickQuickSaveDir:Far
                 Global  D_GetActiveRenderDirPtr:Far
+                Global  D_FormatWAV:Far
+                Global  D_FormatMWAV:Far
                 Global  D_PickerEsc:Far
                 Global  DirectoryPickerActive:Byte
 
@@ -4187,13 +4193,109 @@ D_PostFileSaveWindow2:
                 Ret
 
 D_PostFileSaveWindow3:
+                                                ; Fork dispatch:
+                                                ;   SaveFormat 1 = S3M
+                                                ;   SaveFormat 4 = WAV
+                                                ;   SaveFormat 5 = MWAV
+                                                ; else = IT module (default).
+                                                ; WAV / MWAV bypass the
+                                                ; module-save path entirely
+                                                ; and trigger the WAV-render
+                                                ; engine in song-mode. The
+                                                ; user-typed filename in the
+                                                ; F10 input is currently
+                                                ; ignored for WAV/MWAV --
+                                                ; the render uses its own
+                                                ; <songpfx>NNNN.WAV naming
+                                                ; (deterministic, derived
+                                                ; from the song name).
+                                                ; Honouring the user filename
+                                                ; for these formats is a
+                                                ; separate task -- requires
+                                                ; teaching Music_Toggle-
+                                                ; WAVRender to take an
+                                                ; override basename.
                 Cmp     SaveFormat, 1
                 JE      D_PostFileSaveWindow4
+                Cmp     SaveFormat, 4
+                JE      D_PostFileSaveWindow_WAV
+                Cmp     SaveFormat, 5
+                JE      D_PostFileSaveWindow_MWAV
 
                 Jmp     D_SaveFileITModule
 
 D_PostFileSaveWindow4:
                 Jmp     D_SaveFileS3MModule
+
+D_PostFileSaveWindow_WAV:
+                                                ; User typed a filename in
+                                                ; F10's input -- it's in
+                                                ; SaveFileName. Copy it
+                                                ; into FileName (which is
+                                                ; what WAVDRV reads via
+                                                ; D_GetFileName during the
+                                                ; render) and set the
+                                                ; "user filename wins" flag
+                                                ; so Music_ToggleWAVRender
+                                                ; skips its auto-rename.
+                Call    D_CopyUserFilenameToFileName
+                Mov     AL, 1
+                Call    Music_SetUserFilenameFlag
+                Call    Music_StartFullSongWAV
+                Mov     AX, 1
+                Ret
+
+D_PostFileSaveWindow_MWAV:
+                Call    D_CopyUserFilenameToFileName
+                Mov     AL, 1
+                Call    Music_SetUserFilenameFlag
+                Call    Music_StartFullSongMWAV
+                Mov     AX, 1
+                Ret
+
+;-------------------------------------------------------------------------------
+; D_CopyUserFilenameToFileName -- copy SaveFileName into FileName so WAVDRV's
+; CopyFileName (which reads FileName via the host's GetFileName callback)
+; picks up the user-typed name. Called from the F10 WAV/MWAV save paths.
+;-------------------------------------------------------------------------------
+Proc            D_CopyUserFilenameToFileName Near
+                Push    AX
+                Push    CX
+                Push    SI
+                Push    DI
+                Push    DS
+                Push    ES
+
+                Push    CS
+                Pop     DS
+                Push    CS
+                Pop     ES
+                        Assume DS:Disk
+
+                ClD
+                Mov     SI, Offset SaveFileName
+                Mov     DI, Offset FileName
+                Mov     CX, 13                  ; 8.3 + null
+                Rep     MovsB
+
+                                                ; Also stash a canonical
+                                                ; copy in Music's WAV_UserBase
+                                                ; so the multi-WAV chain can
+                                                ; suffix channel numbers
+                                                ; without having to re-cross
+                                                ; segments each kick.
+                Mov     SI, Offset SaveFileName
+                Call    Music_SetUserBase
+
+                Pop     ES
+                Pop     DS
+                Pop     DI
+                Pop     SI
+                Pop     CX
+                Pop     AX
+                Ret
+                        Assume DS:Nothing
+EndP            D_CopyUserFilenameToFileName
 
 EndP            D_PostFileSaveWindow
                 Assume DS:Nothing
@@ -4754,8 +4856,25 @@ D_SaveModule11:
                 And     BX, BX
                 JNZ     D_SaveModule12
 
+                                                ; Append default extension
+                                                ; based on SaveFormat:
+                                                ;   1 = .S3M
+                                                ;   4/5 = .WAV (render
+                                                ;          engine builds
+                                                ;          its own real
+                                                ;          name; this just
+                                                ;          stops D_PostFile-
+                                                ;          SaveWindow2 from
+                                                ;          slapping .IT on
+                                                ;          and triggering
+                                                ;          overwrite checks)
+                                                ;   else = .IT
                 Cmp     SaveFormat, 1
                 JE      D_SaveModule13
+                Cmp     SaveFormat, 4
+                JE      D_SaveModule_WAVExt
+                Cmp     SaveFormat, 5
+                JE      D_SaveModule_WAVExt
 
                 Mov     Word Ptr [SI-1], 'I.'
                 Mov     Word Ptr [SI+1], 'T'
@@ -4764,6 +4883,12 @@ D_SaveModule11:
 D_SaveModule13:
                 Mov     Word Ptr [SI-1], 'S.'
                 Mov     Word Ptr [SI+1], 'M3'
+                Mov     Byte Ptr [SI+3], 0
+                Jmp     D_PostFileSaveWindow2
+
+D_SaveModule_WAVExt:
+                Mov     Word Ptr [SI-1], 'W.'
+                Mov     Word Ptr [SI+1], 'VA'
                 Mov     Byte Ptr [SI+3], 0
 
 D_SaveModule12:
@@ -8113,6 +8238,20 @@ Proc            D_SaveSong Far
                 Pop     DS
                         Assume DS:Disk
 
+                                                ; Fork dispatch for Ctrl-S
+                                                ; (global Quicksave). For
+                                                ; WAV/MWAV formats, route
+                                                ; to the song-render engine
+                                                ; instead of the module-
+                                                ; save path. (D_PostFile-
+                                                ; SaveWindow3 has the
+                                                ; matching dispatch for
+                                                ; F10 Enter-on-filename.)
+                Cmp     SaveFormat, 4
+                JE      D_SaveSong_WAV
+                Cmp     SaveFormat, 5
+                JE      D_SaveSong_MWAV
+
                 Mov     SI, Offset SongDirectory
                 Call    D_SetDriveDirectory     ; DS:SI points to cur dir.
 
@@ -8120,6 +8259,14 @@ Proc            D_SaveSong Far
                 JNE     D_SaveSong2
 
                 Jmp     Glbl_F10
+
+D_SaveSong_WAV:
+                Call    Music_StartFullSongWAV
+                Ret
+
+D_SaveSong_MWAV:
+                Call    Music_StartFullSongMWAV
+                Ret
 
 D_SaveSong2:
 ;                Call    D_CheckOverWrite
@@ -8328,6 +8475,26 @@ Proc            D_PickQuickSaveDir Far
                 Jmp     D_PickDir_Common
 EndP            D_PickQuickSaveDir
                 Assume DS:Nothing
+
+;-------------------------------------------------------------------------------
+; D_FormatWAV / D_FormatMWAV: F10 button callbacks for the WAV / MWAV
+; format buttons. Both fire the render engine in song-mode (WAV_SongMode=1
+; so the enter-mode path uses Music_PlaySong instead of Music_PlayPattern,
+; rendering the WHOLE song from order 0 to song end).
+;
+;   WAV  = single file containing the whole-song mix
+;   MWAV = one file per non-empty / non-muted channel (multi-WAV state
+;          machine runs with song-mode armed each kick)
+;-------------------------------------------------------------------------------
+Proc            D_FormatWAV Far
+                Call    Music_StartFullSongWAV
+                Ret
+EndP            D_FormatWAV
+
+Proc            D_FormatMWAV Far
+                Call    Music_StartFullSongMWAV
+                Ret
+EndP            D_FormatMWAV
 
 ;-------------------------------------------------------------------------------
 ; D_PickDir_Common: shared entry-side plumbing for the Sample / Instrument /

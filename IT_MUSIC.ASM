@@ -22,6 +22,8 @@ include network.inc
         Extrn   SampleDirectory:Byte
         Extrn   D_GotoRenderDirectory:Far
         Extrn   D_GetActiveRenderDirPtr:Far
+        Extrn   PE_ChannelIsEmpty:Far
+        Extrn   K_IsKeyDown:Far
         Extrn   D_SetCurrentSample:Far
         Extrn   D_SetCurrentInstrument:Far
         Extrn   PE_SetLastInstrument:Far
@@ -86,6 +88,11 @@ include network.inc
         Global  Music_AutoDetectSoundCard:Far
         Global  Music_ToggleWAVRender:Far
         Global  Music_ArmRenderNoImport:Far
+        Global  Music_StartMultiWAV:Far
+        Global  Music_StartFullSongWAV:Far
+        Global  Music_StartFullSongMWAV:Far
+        Global  Music_SetUserFilenameFlag:Far
+        Global  Music_SetUserBase:Far
         Global  Music_ClearRenderNoImport:Far
         Global  Music_GetMuteChannelTable:Far
         Global  Music_FindFreePattern:Far
@@ -2583,7 +2590,535 @@ EndP            Music_GetWaveForm
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
+;-------------------------------------------------------------------------------
+; Multi-WAV state machine (Shift-Alt-M on F2).
+;
+; Renders the CURRENT pattern once per channel: each channel is solo'd in turn
+; (all others muted via MuteChannelTable), Music_ToggleWAVRender fires, the
+; render plays through, and Music_Poll's finalize hook chains to the next
+; channel until all 64 are done.
+;
+; Filename: each channel's render hijacks WAV_RenderCounter to be the channel
+; number (1..64), so files come out <PFX>0001.<PPP> through <PFX>0064.<PPP>
+; where <PFX> is the song-name-derived prefix and <PPP> is the pattern number.
+;
+; Auto-import is suppressed for the whole sweep -- the user wants files on
+; disk, not 64 sample-slot allocations.
+;-------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
+; Music_StartFullSongWAV -- F10 "WAV" button. Renders the WHOLE song to a
+; single WAV file in the Quicksave folder (or SampleDirectory fallback).
+; No auto-import.
+;-------------------------------------------------------------------------------
+Proc            Music_StartFullSongWAV Far
+                Mov     Byte Ptr [CS:WAV_SongMode], 1
+                Mov     Byte Ptr [CS:WAV_NoImport], 1
+                Xor     AX, AX
+                Call    Music_ToggleWAVRender
+                Ret
+EndP            Music_StartFullSongWAV
+
+;-------------------------------------------------------------------------------
+; Music_SetUserFilenameFlag -- cross-segment accessor for IT_DISK.ASM (which
+; can't write WAV_UserFilenameSet directly without a fixup-overflow because
+; the symbol lives in Music). AL = new value (0 or 1).
+;-------------------------------------------------------------------------------
+Proc            Music_SetUserFilenameFlag Far
+                Mov     Byte Ptr [CS:WAV_UserFilenameSet], AL
+                Ret
+EndP            Music_SetUserFilenameFlag
+
+;-------------------------------------------------------------------------------
+; Music_SetUserBase -- copy DS:SI (caller's user-typed filename) into the
+; Music-side WAV_UserBase buffer so the multi-WAV chain can suffix a
+; channel number per kick. 14 bytes (8.3 + null + slack).
+;-------------------------------------------------------------------------------
+Proc            Music_SetUserBase Far
+                Push    AX
+                Push    CX
+                Push    SI
+                Push    DI
+                Push    ES
+
+                Push    CS
+                Pop     ES
+                Mov     DI, Offset WAV_UserBase
+                Mov     CX, 14
+                ClD
+                Rep     MovsB
+
+                Pop     ES
+                Pop     DI
+                Pop     SI
+                Pop     CX
+                Pop     AX
+                Ret
+EndP            Music_SetUserBase
+
+;-------------------------------------------------------------------------------
+; WAV_BuildChannelFilename -- when multi-WAV is running with a user-typed
+; base name, build "<BASE><NN>.<EXT>" into FileName (DiskDataArea).
+; In: AL = channel number 0..63 (output suffix = chan+1, 1..64)
+; Uses WAV_UserBase as the source. If no '.' in the base, defaults ext
+; to "WAV". Truncates base to 6 chars so the final 8.3 fits.
+;-------------------------------------------------------------------------------
+Proc            WAV_BuildChannelFilename Near
+                Push    AX
+                Push    BX
+                Push    CX
+                Push    DX
+                Push    SI
+                Push    DI
+                Push    DS
+                Push    ES
+
+                                                ; Preserve channel arg
+                Push    AX
+
+                                                ; Scan WAV_UserBase for the
+                                                ; first '.', record its
+                                                ; position in BX. If no
+                                                ; dot found, BX = total
+                                                ; length and we default
+                                                ; the extension to "WAV".
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+                Mov     SI, Offset WAV_UserBase
+                Xor     BX, BX
+WAV_BCF_Scan:
+                LodsB
+                Test    AL, AL
+                JZ      WAV_BCF_ScanDone
+                Cmp     AL, '.'
+                JE      WAV_BCF_ScanDone
+                Inc     BX
+                Cmp     BX, 13
+                JB      WAV_BCF_Scan
+WAV_BCF_ScanDone:
+
+                                                ; Truncate base to 6 chars
+                                                ; max (allow 2-digit chan
+                                                ; suffix + 3-char ext to
+                                                ; fit 8.3 = 8 chars before
+                                                ; dot).
+                Cmp     BX, 6
+                JBE     WAV_BCF_BaseOK
+                Mov     BX, 6
+WAV_BCF_BaseOK:
+
+                                                ; ES:DI -> FileName buffer
+                Call    D_GetFileName
+                Push    DS
+                Pop     ES
+                Mov     DI, SI                  ; ES:DI = FileName dest
+
+                                                ; Restore DS for the source
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+                Mov     SI, Offset WAV_UserBase
+
+                                                ; Copy BX chars of base
+                Mov     CX, BX
+                ClD
+                Rep     MovsB
+
+                                                ; Append 2-digit channel
+                                                ; (chan + 1 = 1..64).
+                Pop     AX                      ; AL = chan
+                Inc     AL                      ; 1-based
+                Xor     AH, AH
+                Mov     CL, 10
+                Div     CL                      ; AL = tens, AH = units
+                Add     AL, '0'
+                Stosb
+                Mov     AL, AH
+                Add     AL, '0'
+                Stosb
+
+                                                ; '.'
+                Mov     AL, '.'
+                Stosb
+
+                                                ; Extension: walk the user
+                                                ; base past the dot. If
+                                                ; there was no dot (BX
+                                                ; ended on null), default
+                                                ; to "WAV".
+                Mov     SI, Offset WAV_UserBase
+                Add     SI, BX                  ; SI = at dot (or null)
+                                                ; -- if it's a null, the
+                                                ; first byte is 0 below and
+                                                ; we drop into the default
+                                                ; WAV branch.
+                Mov     AL, [DS:SI]
+                Test    AL, AL
+                JZ      WAV_BCF_DefaultExt
+                Inc     SI                      ; skip the '.'
+WAV_BCF_ExtLoop:
+                Mov     AL, [DS:SI]
+                Test    AL, AL
+                JZ      WAV_BCF_ExtDone
+                Stosb
+                Inc     SI
+                Jmp     WAV_BCF_ExtLoop
+
+WAV_BCF_DefaultExt:
+                Mov     AL, 'W'
+                Stosb
+                Mov     AL, 'A'
+                Stosb
+                Mov     AL, 'V'
+                Stosb
+
+WAV_BCF_ExtDone:
+                Xor     AL, AL
+                Stosb                           ; null terminator
+
+                Pop     ES
+                Pop     DS
+                Pop     DI
+                Pop     SI
+                Pop     DX
+                Pop     CX
+                Pop     BX
+                Pop     AX
+                Ret
+                        Assume DS:Nothing
+EndP            WAV_BuildChannelFilename
+
+;-------------------------------------------------------------------------------
+; Music_StartFullSongMWAV -- F10 "MWAV" button. Renders the WHOLE song,
+; one WAV per non-empty / non-muted channel, by combining song-mode with
+; the existing multi-WAV state machine.
+;-------------------------------------------------------------------------------
+Proc            Music_StartFullSongMWAV Far
+                Mov     Byte Ptr [CS:WAV_MultiSongFlag], 1
+                Mov     Byte Ptr [CS:WAV_SongMode], 1
+                Call    Music_StartMultiWAV
+                Ret
+EndP            Music_StartFullSongMWAV
+
+Proc            Music_StartMultiWAV Far
+                Push    AX
+                Push    CX
+                Push    SI
+                Push    DI
+                Push    DS
+                Push    ES
+
+                Push    CS
+                Pop     DS
+                Push    CS
+                Pop     ES
+                        Assume DS:Music
+
+                                                ; Backup current mute state.
+                ClD
+                Mov     SI, Offset MuteChannelTable
+                Mov     DI, Offset WAV_MultiSavedMutes
+                Mov     CX, 64
+                Rep     MovsB
+
+                Mov     Byte Ptr [WAV_MultiMode], 1
+                                                ; Start at -1 so the first
+                                                ; WAV_MultiAdvance call lands
+                                                ; on channel 0 (and skips
+                                                ; ahead until a non-empty
+                                                ; channel is found).
+                Mov     Byte Ptr [WAV_MultiChannel], 0FFh
+
+                                                ; Multi-mode never auto-imports;
+                                                ; arm the no-import gate for
+                                                ; every render in the sweep.
+                Mov     Byte Ptr [WAV_NoImport], 1
+
+                                                ; Show "starting" message.
+                Mov     SI, Offset WAV_MultiStartMsg
+                Xor     AX, AX
+                Mov     BX, 91
+                Call    SetInfoLine2
+
+                Call    WAV_MultiAdvance
+
+                Pop     ES
+                Pop     DS
+                Pop     DI
+                Pop     SI
+                Pop     CX
+                Pop     AX
+                Ret
+                        Assume DS:Nothing
+EndP            Music_StartMultiWAV
+
+;-------------------------------------------------------------------------------
+; WAV_MultiSoloChannel -- solo channel BL (0..63) by writing 1 to all 64
+; bytes of MuteChannelTable and then 0 to the target byte. ES=Music on
+; entry (set by caller).
+;-------------------------------------------------------------------------------
+Proc            WAV_MultiSoloChannel Near
+                Push    AX
+                Push    BX
+                Push    CX
+                Push    DI
+
+                Push    CS
+                Pop     ES
+                Mov     DI, Offset MuteChannelTable
+                Mov     AL, 1
+                Mov     CX, 64
+                ClD
+                Rep     StosB
+
+                Xor     BH, BH
+                Mov     DI, Offset MuteChannelTable
+                Add     DI, BX
+                Mov     Byte Ptr [ES:DI], 0     ; unmute target channel
+
+                Pop     DI
+                Pop     CX
+                Pop     BX
+                Pop     AX
+                Ret
+EndP            WAV_MultiSoloChannel
+
+;-------------------------------------------------------------------------------
+; WAV_MultiKickChannel -- solo the current channel and kick off a render
+; via Music_ToggleWAVRender. Counter is set to channel+1 so the rendered
+; filename's 4-digit slot carries the channel number (1..64).
+;-------------------------------------------------------------------------------
+Proc            WAV_MultiKickChannel Near
+                Push    AX
+                Push    BX
+
+                Mov     BL, [CS:WAV_MultiChannel]
+                Call    WAV_MultiSoloChannel
+
+                                                ; Override counter so the
+                                                ; filename digits encode the
+                                                ; channel number rather than
+                                                ; the rolling render counter.
+                                                ; ToggleWAVRender does Inc
+                                                ; before reading, so seed
+                                                ; with channel (Inc -> chan+1
+                                                ; -> 1..64).
+                Mov     AL, [CS:WAV_MultiChannel]
+                Mov     AH, 0
+                Mov     [CS:WAV_RenderCounter], AX
+
+                                                ; Re-arm no-import each
+                                                ; render (leave-mode clears
+                                                ; the session flag, so the
+                                                ; next kick needs it set).
+                                                ; Same for song-mode in the
+                                                ; full-song MWAV case --
+                                                ; D_FormatMWAV stash a flag
+                                                ; (WAV_MultiSongFlag) at
+                                                ; sweep-start so we can
+                                                ; re-set song-mode per kick.
+                Mov     Byte Ptr [CS:WAV_NoImport], 1
+                Mov     AL, [CS:WAV_MultiSongFlag]
+                Mov     Byte Ptr [CS:WAV_SongMode], AL
+
+                                                ; If the sweep was started
+                                                ; with a user-typed base
+                                                ; name (WAV_UserBase[0] !=
+                                                ; 0), build per-channel
+                                                ; filename "BASE<NN>.EXT"
+                                                ; into FileName for THIS
+                                                ; kick, then re-arm the
+                                                ; user-filename flag so
+                                                ; Music_ToggleWAVRender
+                                                ; skips its auto-rename.
+                Cmp     Byte Ptr [CS:WAV_UserBase], 0
+                JE      WAV_MKC_NoUserBase
+                Mov     AL, [CS:WAV_MultiChannel]
+                Call    WAV_BuildChannelFilename
+                Mov     Byte Ptr [CS:WAV_UserFilenameSet], 1
+WAV_MKC_NoUserBase:
+
+                Xor     AX, AX
+                Call    Music_ToggleWAVRender
+
+                Pop     BX
+                Pop     AX
+                Ret
+EndP            WAV_MultiKickChannel
+
+;-------------------------------------------------------------------------------
+; WAV_MultiAdvance -- called from Music_Poll's finalize hook after one
+; channel's render completes. Bumps WAV_MultiChannel and either kicks the
+; next channel or calls WAV_MultiFinish if done.
+;-------------------------------------------------------------------------------
+Proc            WAV_MultiAdvance Near
+WAV_MultiAdvance_NextChan:
+                Inc     Byte Ptr [CS:WAV_MultiChannel]
+                Cmp     Byte Ptr [CS:WAV_MultiChannel], 64
+                JAE     WAV_MultiAdvance_Done
+
+                                                ; Skip channels the user
+                                                ; muted in their original
+                                                ; mix. WAV_MultiSavedMutes
+                                                ; was snapshotted at sweep
+                                                ; start (1 = muted, 0 =
+                                                ; active), and that's the
+                                                ; state the user wants
+                                                ; respected -- the LIVE
+                                                ; MuteChannelTable is being
+                                                ; trashed by the per-channel
+                                                ; solo, so it's useless for
+                                                ; this check.
+                Mov     BL, [CS:WAV_MultiChannel]
+                Xor     BH, BH
+                Cmp     Byte Ptr [CS:WAV_MultiSavedMutes + BX], 0
+                JNE     WAV_MultiAdvance_NextChan
+
+                                                ; Empty-channel skip ONLY
+                                                ; applies in pattern-mode
+                                                ; (Shift-Alt-M). In song-
+                                                ; mode (F10 MWAV), the
+                                                ; editor's currently-loaded
+                                                ; pattern is irrelevant --
+                                                ; the song plays many
+                                                ; patterns and a channel
+                                                ; that's empty in pattern 0
+                                                ; can still have notes in
+                                                ; pattern 17. Without
+                                                ; decoding every pattern in
+                                                ; the orderlist (deferred),
+                                                ; the safe default for
+                                                ; song-mode is: skip only
+                                                ; muted channels, render
+                                                ; every unmuted one.
+                Cmp     Byte Ptr [CS:WAV_MultiSongFlag], 0
+                JNE     WAV_MultiAdvance_DoKick
+
+                Mov     BL, [CS:WAV_MultiChannel]
+                Call    PE_ChannelIsEmpty
+                JZ      WAV_MultiAdvance_NextChan       ; ZF=1 -> empty, skip
+
+WAV_MultiAdvance_DoKick:
+
+                Call    WAV_MultiKickChannel
+                Ret
+WAV_MultiAdvance_Done:
+                Call    WAV_MultiFinish
+                Ret
+EndP            WAV_MultiAdvance
+
+; WAV_ChannelIsEmpty moved to IT_PE.ASM as PE_ChannelIsEmpty (Far) -- the
+; PatternDataArea segment + MaxRow data live in the Pattern segment so the
+; scan has to run from there.
+
+;-------------------------------------------------------------------------------
+; WAV_MultiFinish -- restore the original MuteChannelTable, clear the
+; multi-mode flag, show a completion message.
+;-------------------------------------------------------------------------------
+Proc            WAV_MultiFinish Near
+                Push    AX
+                Push    CX
+                Push    SI
+                Push    DI
+                Push    DS
+                Push    ES
+
+                Push    CS
+                Pop     DS
+                Push    CS
+                Pop     ES
+                        Assume DS:Music
+
+                ClD
+                Mov     SI, Offset WAV_MultiSavedMutes
+                Mov     DI, Offset MuteChannelTable
+                Mov     CX, 64
+                Rep     MovsB
+
+                Mov     Byte Ptr [WAV_MultiMode], 0
+                Mov     Byte Ptr [WAV_MultiSongFlag], 0
+                                                ; Clear the user-base so the
+                                                ; next sweep without a user
+                                                ; filename falls back to
+                                                ; auto-naming.
+                Mov     Byte Ptr [WAV_UserBase], 0
+
+                Mov     SI, Offset WAV_MultiDoneMsg
+                Xor     AX, AX
+                Mov     BX, 91
+                Call    SetInfoLine2
+
+                Pop     ES
+                Pop     DS
+                Pop     DI
+                Pop     SI
+                Pop     CX
+                Pop     AX
+                Ret
+                        Assume DS:Nothing
+EndP            WAV_MultiFinish
+
 Proc            Music_Poll Far
+
+                ; --- Multi-WAV Esc abort -----------------------------
+                ; If we're in the middle of a multi-channel sweep and the
+                ; user presses Esc, peek-and-eat the keystroke, stop the
+                ; current render, restore mutes, and exit the chain
+                ; cleanly. Without this the user has no way to abort a
+                ; 64-channel sweep gone wrong without nuking IT.
+                Cmp     Byte Ptr [CS:WAV_MultiMode], 0
+                JE      Music_Poll_NoMultiEsc
+                                                ; Poll BIOS keyboard shift
+                                                ; state for Esc held. Int 16h
+                                                ; AH=01h doesn't work here
+                                                ; because IT's own dispatcher
+                                                ; consumes the queue before
+                                                ; Music_Poll gets a chance.
+                                                ; K_IsKeyDown reads the raw
+                                                ; shift-state map maintained
+                                                ; by the keyboard ISR -- no
+                                                ; queue dependency.
+                Push    BX
+                Mov     BX, 01h                         ; Esc scancode
+                Call    K_IsKeyDown
+                Pop     BX
+                JZ      Music_Poll_NoMultiEsc           ; Esc not held
+                                                ; Mark multi-mode off so
+                                                ; the existing finalize
+                                                ; path won't try to chain
+                                                ; another channel.
+                Mov     Byte Ptr [CS:WAV_MultiMode], 0
+                                                ; Restore the original
+                                                ; mute state immediately.
+                Push    AX
+                Push    CX
+                Push    SI
+                Push    DI
+                Push    DS
+                Push    ES
+                Push    CS
+                Pop     DS
+                Push    CS
+                Pop     ES
+                ClD
+                Mov     SI, Offset WAV_MultiSavedMutes
+                Mov     DI, Offset MuteChannelTable
+                Mov     CX, 64
+                Rep     MovsB
+                Pop     ES
+                Pop     DS
+                Pop     DI
+                Pop     SI
+                Pop     CX
+                Pop     AX
+                                                ; Let the in-flight render
+                                                ; finish on its own (it'll
+                                                ; flow through Toggle/leave
+                                                ; once PlayMode hits 0); we
+                                                ; just made sure no NEW
+                                                ; channel will be kicked.
+
+Music_Poll_NoMultiEsc:
 
                 ; --- Single-press WAV-render auto-finalize check -----
                 ; Trigger Music_ToggleWAVRender (leave + import) if:
@@ -2605,6 +3140,15 @@ Proc            Music_Poll Far
                 Mov     Byte Ptr [CS:WAV_FinalizeDelay], 0
                 Xor     AX, AX
                 Call    Music_ToggleWAVRender
+
+                                                ; Multi-WAV chain: after the
+                                                ; leave returns (RenderMode=0
+                                                ; again), advance to the next
+                                                ; channel if still running.
+                Cmp     Byte Ptr [CS:WAV_MultiMode], 0
+                JE      Music_Poll_NoMulti
+                Call    WAV_MultiAdvance
+Music_Poll_NoMulti:
                 Ret
 
 Music_Poll_Drive:
@@ -3870,6 +4414,40 @@ WAV_RenderMode          DB      0
 WAV_AutoFinalize        DB      0       ; 1 = single-press flow armed
 WAV_FinalizeDelay       DB      0       ; frame counter after PlayMode=0
 
+; Song-mode flag: when 1, the WAV render plays the WHOLE SONG (Music_PlaySong
+; from order 0) instead of a single pattern. Set by D_FormatWAV / D_FormatMWAV
+; (F10's WAV / MWAV buttons), cleared at leave-mode.
+WAV_SongMode            DB      0
+WAV_UserFilenameSet     DB      0       ; 1 = caller already populated
+                                        ; FileName (DiskDataArea) with a
+                                        ; user-typed save name; skip the
+                                        ; WAV_RenderBasename overwrite.
+WAV_UserBase            DB      14 Dup (0)
+                                        ; canonical copy of the user-typed
+                                        ; filename for multi-WAV mode --
+                                        ; each kick suffixes a 2-digit
+                                        ; channel number into the base
+                                        ; before the '.' and copies the
+                                        ; result into FileName so files
+                                        ; come out NAME01.WAV..NAME64.WAV
+                                        ; without overwriting each other.
+
+; Multi-WAV state (Shift-Alt-M = current pattern split per channel)
+WAV_MultiMode           DB      0       ; 0=off, 1=running
+WAV_MultiChannel        DB      0       ; channel currently being rendered
+                                        ; (0..63); incremented after each
+                                        ; finalize via Music_Poll.
+WAV_MultiSavedMutes     DB      64 Dup (0)
+                                        ; backup of MuteChannelTable taken at
+                                        ; Music_StartMultiWAV; restored by
+                                        ; WAV_MultiFinish.
+WAV_MultiDoneMsg        DB      "Multi-WAV done: 64 files written", 0
+WAV_MultiStartMsg       DB      "Multi-WAV: rendering 64 channels...", 0
+WAV_MultiSongFlag       DB      0       ; 1 = sweep renders WHOLE song per
+                                        ; channel (F10 MWAV); 0 = sweep
+                                        ; renders current pattern per
+                                        ; channel (Shift-Alt-M).
+
 ; Shift-Ctrl-O variant: skip the auto-import after the render so the file
 ; lands in the Quicksave folder without consuming a sample slot. The
 ; dispatcher in IT_PE.ASM arms WAV_NoImport via Music_ArmRenderNoImport
@@ -4791,10 +5369,86 @@ Proc            Music_ToggleWAVRender Far       ; AX = pattern (on enter)
 
                 Mov     Byte Ptr [CS:WAV_RenderMode], 1
 
-                ; Build a unique basename REN<NNN> for this render and
+                ; Build a unique basename <PFX><NNNN> for this render and
                 ; copy it into the song's FileName buffer so WAVDRV's
                 ; CopyFileName picks it up. This guarantees each Ctrl-O
                 ; produces a distinct file that won't clobber prior renders.
+                ;
+                ; Prefix logic: first 3 chars of the song name
+                ; (SongDataArea offset 4), uppercased, with any non-alpha-
+                ; numeric character replaced by 'X'. If the song name is
+                ; empty (byte 4 is 0 or space), the prefix falls back to
+                ; "PTN" â better default than the prior hard-coded "RND".
+                Push    DS
+                Push    ES
+                Push    CS
+                Pop     ES
+                Mov     AX, CS:SongDataArea
+                Test    AX, AX
+                JZ      WAV_PrefixUsePTN
+                Mov     DS, AX
+                Mov     AL, [DS:4]
+                Cmp     AL, 0
+                JE      WAV_PrefixUsePTN
+                Cmp     AL, ' '
+                JE      WAV_PrefixUsePTN
+
+                Mov     SI, 4                   ; SongData:4 = song name
+                Mov     DI, Offset WAV_RenderBasename
+                Mov     CX, 3
+WAV_PrefixLoop:
+                LodsB
+                Test    AL, AL
+                JZ      WAV_PrefixPadX
+                Cmp     AL, ' '
+                JE      WAV_PrefixPadX
+                Cmp     AL, 'a'
+                JB      WAV_PrefixNoUp
+                Cmp     AL, 'z'
+                JA      WAV_PrefixNoUp
+                Sub     AL, 'a' - 'A'
+WAV_PrefixNoUp:
+                Cmp     AL, '0'
+                JB      WAV_PrefixSub
+                Cmp     AL, '9'
+                JBE     WAV_PrefixStore
+                Cmp     AL, 'A'
+                JB      WAV_PrefixSub
+                Cmp     AL, 'Z'
+                JBE     WAV_PrefixStore
+WAV_PrefixSub:
+                Mov     AL, 'X'
+WAV_PrefixStore:
+                StosB
+                Loop    WAV_PrefixLoop
+                Jmp     WAV_PrefixDone
+
+WAV_PrefixPadX:
+                                                ; ran into a null/space in
+                                                ; the middle of the song
+                                                ; name -- pad remaining
+                                                ; chars with 'X' so the
+                                                ; basename is always 3
+                                                ; valid chars wide.
+                Mov     AL, 'X'
+WAV_PrefixPadLoop:
+                StosB
+                Loop    WAV_PrefixPadLoop
+                Jmp     WAV_PrefixDone
+
+WAV_PrefixUsePTN:
+                Mov     DI, Offset WAV_RenderBasename
+                Mov     AL, 'P'
+                StosB
+                Mov     AL, 'T'
+                StosB
+                Mov     AL, 'N'
+                StosB
+
+WAV_PrefixDone:
+                Pop     ES
+                Pop     DS
+
                 Inc     Word Ptr [CS:WAV_RenderCounter]
                 Mov     AX, [CS:WAV_RenderCounter]
                 Mov     BX, 1000
@@ -4819,6 +5473,24 @@ Proc            Music_ToggleWAVRender Far       ; AX = pattern (on enter)
                 Mov     [CS:WAV_RenderBasename+6], AL
 
                 ; Copy basename into FileName buffer (in DiskDataArea segment)
+                                                ; Only overwrite IT's
+                                                ; FileName with the auto-
+                                                ; generated WAV_RenderBasename
+                                                ; if the caller HASN'T
+                                                ; already populated it with
+                                                ; a user-typed save name
+                                                ; (F10 WAV/MWAV save path).
+                                                ; The user-typed filename
+                                                ; wins -- "song.wav" stays
+                                                ; "song.wav", doesn't get
+                                                ; replaced by "WHA0001.".
+                Cmp     Byte Ptr [CS:WAV_UserFilenameSet], 0
+                JNE     WAV_UserFilenamePath
+
+                                                ; Auto-rename path: stamp
+                                                ; WAV_RenderBasename into
+                                                ; DiskDataArea's FileName so
+                                                ; WAVDRV picks it up.
                 Push    DS
                 Push    ES
                 Call    D_GetFileName           ; DS:SI = FileName buffer
@@ -4832,6 +5504,33 @@ Proc            Music_ToggleWAVRender Far       ; AX = pattern (on enter)
                 Rep     MovsB
                 Pop     ES
                 Pop     DS
+                Jmp     WAV_AfterBasenameCopy
+
+WAV_UserFilenamePath:
+                                                ; User-filename path: copy
+                                                ; FileName (already populated
+                                                ; by the F10 save dispatcher
+                                                ; via D_CopyUserFilenameTo-
+                                                ; FileName) INTO RenderedFile-
+                                                ; name so the leave-mode
+                                                ; status message reflects
+                                                ; the real file on disk
+                                                ; (otherwise "Saved pat NNN
+                                                ; as <userfile>" would lie
+                                                ; about the filename).
+                Push    DS
+                Push    ES
+                Call    D_GetFileName           ; DS:SI = FileName buffer
+                Push    CS
+                Pop     ES
+                Mov     DI, Offset RenderedFilename
+                Mov     CX, 13                  ; 8.3 + null
+                ClD
+                Rep     MovsB
+                Pop     ES
+                Pop     DS
+
+WAV_AfterBasenameCopy:
 
                 ; Build RenderedFilename (RND<NNNN>.<PPP>) now too so we
                 ; can log a START line before any audio teardown. Same code
@@ -4850,6 +5549,29 @@ Proc            Music_ToggleWAVRender Far       ; AX = pattern (on enter)
                 Rep     MovsB
                 Mov     AL, '.'
                 StosB
+                                                ; In song-mode the extension
+                                                ; is the literal ".WAV" --
+                                                ; there's no single pattern
+                                                ; number to encode, the
+                                                ; render contains the whole
+                                                ; song. Single-pattern mode
+                                                ; uses the 3-digit pattern
+                                                ; number as the extension
+                                                ; (preserves the existing
+                                                ; <PFX>NNNN.<PPP> traceback
+                                                ; story).
+                Cmp     Byte Ptr [CS:WAV_SongMode], 0
+                JE      WAV_FN_PatternExt
+
+                Mov     AL, 'W'
+                StosB
+                Mov     AL, 'A'
+                StosB
+                Mov     AL, 'V'
+                StosB
+                Jmp     WAV_FN_Done
+
+WAV_FN_PatternExt:
                 Mov     AX, [CS:WAV_PendingPattern]
                 Mov     BX, 100
                 Xor     DX, DX
@@ -4865,6 +5587,8 @@ Proc            Music_ToggleWAVRender Far       ; AX = pattern (on enter)
                 Mov     AL, DL
                 Add     AL, '0'
                 StosB
+
+WAV_FN_Done:
                 Xor     AL, AL
                 StosB
                 Pop     ES
@@ -4928,9 +5652,27 @@ WAV_SkipCwdSave:
                 Call    SetInfoLine2
                         Assume DS:Nothing
 
+                                                ; Song-mode: WAV_SongMode
+                                                ; is set by D_FormatWAV /
+                                                ; D_FormatMWAV (the F10 WAV/
+                                                ; MWAV buttons). Renders the
+                                                ; WHOLE song from order 0
+                                                ; via Music_PlaySong instead
+                                                ; of one pattern via
+                                                ; Music_PlayPattern.
+                Cmp     Byte Ptr [CS:WAV_SongMode], 0
+                JNE     WAV_PlaySongMode
+
                 Mov     AX, [CS:WAV_PendingPattern]
                 Xor     CX, CX
                 Call    Music_PlayPattern
+                Jmp     WAV_PlayDone
+
+WAV_PlaySongMode:
+                Xor     AX, AX                          ; start from order 0
+                Call    Music_PlaySong
+
+WAV_PlayDone:
 
                 ; Arm async finalize: Music_Poll will trigger leave+import
                 ; once playback stops and WAVDRV has closed its file.
@@ -5106,6 +5848,12 @@ WAV_NIM_DirEnd:
 
 WAV_LeavePostImport:
                 Mov     Byte Ptr [CS:WAV_SessionNoImport], 0
+                                                ; Song-mode is a per-render
+                                                ; flag; clear it now so the
+                                                ; next Ctrl-O reverts to
+                                                ; single-pattern behaviour.
+                Mov     Byte Ptr [CS:WAV_SongMode], 0
+                Mov     Byte Ptr [CS:WAV_UserFilenameSet], 0
 
                 Mov     AL, 8
                 Mov     AH, '7'

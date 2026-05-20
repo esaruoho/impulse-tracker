@@ -560,6 +560,8 @@ USKeyboardTable    Label Byte
          DW      0Dh
          DB      5       ; Alt-M
          DW      3200h
+         DB      11      ; Shift+Alt-M (fork extension)
+         DW      3232h
          DB      0FFh
 
         DB      51      ; ,
@@ -1356,6 +1358,7 @@ K_TranslateKey3:
 
                 Cmp     BL, 11
                 JB      K_TranslateCondition10
+                JE      K_TranslateCondition11
 
                 Jmp     K_TranslateKeyNoKey
 
@@ -1440,6 +1443,18 @@ K_TranslateCondition10:
                 Mul     CS:KeyPadValue
                 Add     AL, DL
                 Mov     CS:KeyPadValue, AL
+
+K_TranslateCondition11:                 ; Shift + Alt (any Alt side)
+                                        ; CH bits: 1=R-shift, 2=L-shift,
+                                        ;          20=L-alt, 40=R-alt,
+                                        ;          1=Caps (mask Not 67h).
+                Test    CH, Not 67h     ; reject if Ctrl/Insert/etc. held
+                JNZ     K_TranslateKey3
+                Test    CH, 6           ; shift must be held
+                JZ      K_TranslateKey3
+                Test    CH, 60h         ; alt must be held
+                JZ      K_TranslateKey3
+                Jmp     K_TranslateKeyEnd
 
 K_TranslateKeyNoKey:
                 Xor     DX, DX

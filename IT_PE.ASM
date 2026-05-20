@@ -64,6 +64,7 @@ EndS
                 Extrn   Music_PlayPattern:Far
                 Extrn   Music_ToggleWAVRender:Far
                 Extrn   Music_ArmRenderNoImport:Far
+                Extrn   Music_StartMultiWAV:Far
                 Extrn   Music_ClearRenderNoImport:Far
                 Extrn   Music_GetMuteChannelTable:Far
                 Extrn   Music_FindFreePattern:Far
@@ -155,6 +156,7 @@ ENDIF
 
                 Global  PE_SetPatternModified:Far
                 Global  PE_GetLastInstrument:Far
+                Global  PE_ChannelIsEmpty:Far
                 Global  PE_SetLastInstrument:Far
                 Global  PE_DrawPatternEdit:Far
                 Global  PE_PrePatternEdit:Far
@@ -287,6 +289,7 @@ PE_ForkExtConfigPad     DB      13 Dup (0)
 PE_FORKEXTCONFIG_SIZE   EQU     16
 CloneOnMsg              DB      "Clone respects channel mutes: ON", 0
 CloneOffMsg             DB      "Clone respects channel mutes: OFF", 0
+ApplyWipeFiredMsg       DB      "ApplyMuteWipe fired", 0
 CloneDoneMsg            DB      "Pattern cloned to slot ", 0FDh, "D", 0
                                                         ; Runtime-formatted
                                                         ; message: "Dup pat
@@ -724,8 +727,12 @@ ENDIF
                         DW      Offset MIDIInputToggle
 
                         DB      1
-                        DW      3200h           ; Alt 'M'
+                        DW      3200h           ; Alt 'M' = BlockMix (orig)
                         DW      Offset PEFunction_BlockMix
+
+                        DB      1
+                        DW      3232h           ; Shift-Alt 'M' = Multi-WAV
+                        DW      Offset PEFunction_StartMultiWAVKey
 
                         DB      1
                         DW      1000h           ; Alt 'Q'
@@ -2595,6 +2602,30 @@ Proc            PE_OrderList_ApplyMuteWipe Near
                 Push    DI
                 Push    DS
                 Push    ES
+
+                                                ; Diagnostic: confirm the
+                                                ; proc was reached. If
+                                                ; you press Alt-D with the
+                                                ; M-toggle ON and DON'T
+                                                ; see this message, the
+                                                ; wipe-mode latch failed
+                                                ; (or the check skipped
+                                                ; the call). If you DO
+                                                ; see it but the cloned
+                                                ; pattern still has notes
+                                                ; on muted channels, the
+                                                ; bug is inside this proc.
+                Push    SI
+                Push    DS
+                Push    AX
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset ApplyWipeFiredMsg
+                Xor     AX, AX
+                Call    SetInfoLine
+                Pop     AX
+                Pop     DS
+                Pop     SI
 
                                                 ; Hang markers row 49 col
                                                 ; 20..29 -- finer than the
@@ -7824,6 +7855,91 @@ EndP            PEFunction_BlockDouble
 ; change R's scancode. So we bind Alt-R to this dispatcher and split on
 ; the live shift-key state. Shift held -> ClearViews. Shift not held ->
 ; ReplicateAtCursor.
+
+; Alt-M dispatcher: same scancode for Alt-M and Shift-Alt-M (3200h). Plain
+; Alt-M keeps its original behaviour (block-mix); Shift-Alt-M starts the
+; Multi-WAV per-channel render of the current pattern.
+;
+; Fires a "fired" message at entry so we can confirm the keymap is even
+; routing to this dispatcher. If you press Shift-Alt-M and DON'T see the
+; message, the keymap never matched -- the scancode isn't 3200h for
+; Shift-Alt-M and we need a different binding.
+AltM_FiredMsg           DB      "Alt-M dispatcher fired", 0
+
+;-------------------------------------------------------------------------------
+; PE_ChannelIsEmpty -- scan channel BL across all rows of PatternDataArea.
+; Out: ZF=1 if every row has (note==NONOTE && instrument==0 && effect==0).
+; All other regs preserved. Called from IT_MUSIC.ASM's multi-WAV chain
+; (Music_StartMultiWAV -> WAV_MultiAdvance) so empty channels get skipped.
+;-------------------------------------------------------------------------------
+Proc            PE_ChannelIsEmpty Far
+                Push    AX
+                Push    BX
+                Push    CX
+                Push    DI
+                Push    ES
+
+                Xor     BH, BH
+                Mov     AX, BX
+                Mov     CX, 5
+                Mul     CX                      ; AX = channel * 5
+                Mov     DI, AX                  ; DI = column offset row 0
+
+                Mov     AX, CS:PatternDataArea
+                Test    AX, AX
+                JZ      PE_CIE_Empty
+                Mov     ES, AX
+                Mov     CX, CS:MaxRow
+                Inc     CX
+
+PE_CIE_Loop:
+                                                ; Strict "is a NOTE triggered
+                                                ; on this row?" check. Only
+                                                ; pitches 0..119 (C-0..B-9)
+                                                ; count -- note-cut (^^^ =
+                                                ; 0FEh), note-off (0FFh),
+                                                ; and NONOTE (0FDh) all
+                                                ; produce no new sound, so
+                                                ; a channel that contains
+                                                ; ONLY cuts/offs is treated
+                                                ; as silent for multi-WAV
+                                                ; skip purposes.
+                Mov     AL, Byte Ptr [ES:DI+0]
+                Cmp     AL, 120
+                JB      PE_CIE_NonEmpty
+                Add     DI, 320
+                Loop    PE_CIE_Loop
+
+PE_CIE_Empty:
+                Xor     AX, AX                  ; ZF=1
+                Jmp     PE_CIE_Done
+
+PE_CIE_NonEmpty:
+                Mov     AX, 1
+                Test    AX, AX                  ; ZF=0
+
+PE_CIE_Done:
+                Pop     ES
+                Pop     DI
+                Pop     CX
+                Pop     BX
+                Pop     AX
+                Ret
+EndP            PE_ChannelIsEmpty
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
+; Shift-Alt-M handler. The keymap now binds 3232h (a fork-extension code
+; emitted by IT_K.ASM's M-scancode block when Shift+Alt are both held,
+; via the new K_TranslateCondition11 for Shift+Alt). Plain Alt-M (3200h)
+; routes straight to PEFunction_BlockMix unchanged.
+Proc            PEFunction_StartMultiWAVKey Far
+                Call    Music_StartMultiWAV
+                Mov     AX, 1
+                Ret
+EndP            PEFunction_StartMultiWAVKey
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 Proc            PEFunction_AltR_Dispatch Far
 

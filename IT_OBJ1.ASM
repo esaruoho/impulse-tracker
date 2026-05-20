@@ -1319,6 +1319,8 @@ O1_SaveModuleList       DW      15
                         DW      Near Ptr OldITFormatButton      ; 19
 IF DDCOMPRESS
                         DW      Near Ptr IT215FormatButton      ; 20
+                        DW      Near Ptr WAVFormatButton        ; 21
+                        DW      Near Ptr MWAVFormatButton       ; 22
 ENDIF
                         DW      0
 
@@ -1496,7 +1498,7 @@ OldITFormatButton       DW      2
                         DB      " IT2xx", 0
 
 IT215FormatButton       DW      2
-                        DW      19, 15, 14, 15
+                        DW      19, 21, 14, 15
                         DW      0
                         DW      0, 0
                         DW      5
@@ -1507,6 +1509,43 @@ IT215FormatButton       DW      2
                         DB      8
                         DB      0
                         DB      " IT215", 0
+
+;-------------------------------------------------------------------------------
+; Fork additions: WAV (whole song to single WAV) and MWAV (whole song with
+; each non-empty channel rendered to its own WAV). Click-action buttons --
+; not radio-button save formats -- so the callback fires the render
+; pipeline directly instead of setting a flag for D_SaveSong to consume.
+;
+; Nav-link quads continue the IT214 -> S3M -> OldIT -> IT215 chain. Each
+; button's first DW group is [next, prev, up, down] object IDs (where
+; "next/prev" are the cursor-key neighbours within the format-button
+; column). WAV id = 21, MWAV id = 22.
+;-------------------------------------------------------------------------------
+WAVFormatButton         DW      2
+                        DW      20, 22, 14, 15
+                        DW      0
+                        DW      0, 0
+                        DW      5                       ; press = radio
+                        DD      DWord Ptr D_GetFormatType
+                        DW      4                       ; SaveFormat = 4
+                        DW      0, 0
+                        DB      69, 24, 77, 26
+                        DB      8
+                        DB      0
+                        DB      "  WAV", 0
+
+MWAVFormatButton        DW      2
+                        DW      21, 15, 14, 15
+                        DW      0
+                        DW      0, 0
+                        DW      5                       ; press = radio
+                        DD      DWord Ptr D_GetFormatType
+                        DW      5                       ; SaveFormat = 5
+                        DW      0, 0
+                        DB      69, 27, 77, 29
+                        DB      8
+                        DB      0
+                        DB      " MWAV", 0
 
 
 ELSE
