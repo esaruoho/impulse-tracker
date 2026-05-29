@@ -175,6 +175,7 @@ ENDIF
                 Extrn   Glbl_Shift_F1:Far
                 Extrn   Glbl_Shift_F6:Far
                 Extrn   Glbl_Shift_F9:Far
+                Extrn   Glbl_Shift_F4:Far
                 Extrn   Glbl_Alt_F1:Far
                 Extrn   Glbl_Alt_F2:Far
                 Extrn   Glbl_Alt_F3:Far
@@ -403,6 +404,7 @@ ENDIF
                 Global  O1_ShowTime
                 Global  O1_SampleCenterList
                 Global  O1_ConfirmClearMessage
+                Global  O1_ConfirmCreateMIDIIn
                 Global  O1_SampleAmplificationList
                 Global  O1_EnableInstrumentMode
                 Global  O1_OutOfSoundCardMemoryList
@@ -3152,6 +3154,10 @@ GlobalKeyChain:
                         DW      13Eh            ; F4
                         DD      DWord Ptr Glbl_Ctrl_F4
 
+                        DB      6               ; Shift...
+                        DW      13Eh            ; F4
+                        DD      DWord Ptr Glbl_Shift_F4
+
                         DB      0               ; F5
                         DW      13Fh
                         DD      DWord Ptr Glbl_F5
@@ -3852,6 +3858,26 @@ O1_ConfirmClearMessage  DW      4
                         DW      Near Ptr ConfirmOverWriteOKButton
                         DW      Near Ptr ConfirmOverWriteCancelButton
                         DW      0
+
+; Fork: confirm dialog for Shift-F4 batch-create of 16 MIDI-in instruments.
+O1_ConfirmCreateMIDIIn  DW      4
+                        DW      Near Ptr IdleFunctionList
+                        DW      Near Ptr OKCancelList
+                        DW      Near Ptr EmptyObject
+                        DW      Near Ptr CreateMIDIInBox
+                        DW      Near Ptr CreateMIDIInText
+                        DW      Near Ptr ConfirmOverWriteOKButton
+                        DW      Near Ptr ConfirmOverWriteCancelButton
+                        DW      0
+
+CreateMIDIInBox         DW      0       ; Box Object
+                        DB      18, 25, 62, 32
+                        DB      3
+
+CreateMIDIInText        DW      1
+                        DB      25, 27
+                        DB      20h
+                        DB      "Create 16 MIDI-In instruments?", 0
 
 O1_ConfirmNoSave        DW      4
                         DW      Near Ptr IdleFunctionList
@@ -6347,6 +6373,7 @@ IF FILTERENVELOPES
                         DW      Near Ptr InstrumentFilterCutoff ; 30
                         DW      Near Ptr InstrumentFilterResonance ; 31
 ENDIF
+                        DW      Near Ptr InstrumentMIDIInChannel ; 32/30
                         DW      Near Ptr InstrumentMIDIText
                         DW      Near Ptr FillHeader
                         DW      Near Ptr SetHelpContext7
@@ -6363,7 +6390,8 @@ ENDIF
                         DB      "MIDI Channel", 13
                         DB      "MIDI Program", 13
                         DB      "MIDI Bank Low", 13
-                        DB      "MIDI Bank High", 0
+                        DB      "MIDI Bank High", 13
+                        DB      "MIDI In Channel", 0
 
 InstrumentPitchText     DW      1
                         DB      35, 28
@@ -6488,7 +6516,25 @@ ELSE
 ENDIF
                         DW      -1, 127
                         DW      6, 3Fh
-                        DW      27, 0FFFFh, 4, 4
+IF FILTERENVELOPES
+                        DW      27, 32, 4, 4
+ELSE
+                        DW      27, 30, 4, 4
+ENDIF
+                        DW      0FFFFh, 0FFFFh
+                        DW      16
+
+; Fork: per-instrument MIDI-IN channel (multitimbral). Stored at
+; instrument-header byte 1Fh (IT-spec reserved). 0=off, 1..16=ch, 17=All.
+InstrumentMIDIInChannel DW      14
+IF FILTERENVELOPES
+                        DB      54, 48
+ELSE
+                        DB      54, 46
+ENDIF
+                        DW      0, 17
+                        DW      6, 1Fh
+                        DW      28, 0FFFFh, 4, 4
                         DW      0FFFFh, 0FFFFh
                         DW      16
 
@@ -6505,9 +6551,9 @@ InstrumentTranslateBox  DW      0
 
 InstrumentMIDIBox1      DW      0
 IF FILTERENVELOPES
-                        DB      53, 41, 71, 48
+                        DB      53, 41, 71, 49
 ELSE
-                        DB      53, 41, 71, 46
+                        DB      53, 41, 71, 47
 ENDIF
                         DB      27
 

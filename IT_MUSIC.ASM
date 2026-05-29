@@ -150,6 +150,8 @@ include network.inc
         Global  Music_GetNumberOfInstruments:Far
         Global  Music_ClearInstrument:Far
         Global  Music_ClearAllInstruments:Far
+        Global  Music_CreateMIDIInInstruments:Far
+        Global  MIDIMultiEnable:Byte
         Global  Music_InstrumentHasEnvelopes:Far
         Global  Music_GetHostChannelInformationTable:Far
         Global  Music_GetSlaveChannelInformationTable:Far
@@ -4025,6 +4027,106 @@ Music_ClearAllInstruments1:
                 Ret
 
 EndP            Music_ClearAllInstruments
+
+;=== Fork: multitimbral MIDI-in ============================================
+; MIDIMultiEnable - master switch for the live MIDI-in multitimbral synth.
+; 0 = off (classic note-entry), 1 = on (route note-on by MIDI channel to
+; the instrument whose header byte 1Fh matches the channel).
+MIDIMultiEnable DB      0
+
+MCMI_Count      DB      0       ; scratch: channels assigned this run
+MCMI_Name       DB      'MIDI In Ch 01' ; 13 chars; digits patched per slot
+
+; Music_CreateMIDIInInstruments - fill the first 16 EMPTY instrument slots
+; (1..99) with instruments set to respond to MIDI-in channels 1..16 (stored
+; at header byte 1Fh), named 'MIDI In Ch NN'.  Turns MIDIMultiEnable on.
+; A slot counts as empty when its name byte [hdr+20h] = 0.
+; Returns AX = number of instruments created.
+Proc            Music_CreateMIDIInInstruments Far
+
+                Push    BX
+                Push    CX
+                Push    DX
+                Push    SI
+                Push    DI
+                Push    DS
+                Push    ES
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+
+                Mov     Byte Ptr [MCMI_Count], 0
+                Mov     BX, 1                   ; BX = instrument slot 1..99
+
+MCMI_Loop:
+                Cmp     Byte Ptr [MCMI_Count], 16
+                JAE     MCMI_Done
+                Cmp     BX, 99
+                JA      MCMI_Done
+
+                ; ES:DI -> this instrument's header
+                Mov     DI, BX
+                Add     DI, DI
+                Mov     ES, SongDataArea
+                Mov     DI, [ES:DI+64712]
+
+                Cmp     Byte Ptr [ES:DI+20h], 0 ; name byte 0 => empty
+                JNE     MCMI_Next               ; slot in use, skip
+
+                Mov     AX, BX                  ; init slot from template
+                Call    Music_ClearInstrument
+
+                ; re-fetch header (registers safe, but pointer is local)
+                Mov     DI, BX
+                Add     DI, DI
+                Mov     ES, SongDataArea
+                Mov     DI, [ES:DI+64712]
+
+                Mov     AL, [MCMI_Count]
+                Inc     AL                      ; AL = channel 1..16
+                Mov     [ES:DI+1Fh], AL         ; per-instrument MIDI-in ch
+
+                ; copy the 13-char name template to [hdr+20h]
+                Push    DI
+                Add     DI, 20h
+                Mov     SI, Offset MCMI_Name
+                Mov     CX, 13
+                Rep     MovsB                   ; DS:SI(Music) -> ES:DI
+                Pop     DI
+
+                ; patch the two-digit channel number into the name
+                Mov     AL, [ES:DI+1Fh]         ; AL = channel 1..16
+                Xor     AH, AH
+                Mov     CL, 10
+                Div     CL                      ; AL=tens, AH=units
+                Add     AL, '0'
+                Add     AH, '0'
+                Mov     [ES:DI+20h+11], AL
+                Mov     [ES:DI+20h+12], AH
+
+                Inc     Byte Ptr [MCMI_Count]
+
+MCMI_Next:
+                Inc     BX
+                Jmp     MCMI_Loop
+
+MCMI_Done:
+                Mov     Byte Ptr [MIDIMultiEnable], 1
+                Mov     AL, [MCMI_Count]
+                Xor     AH, AH                  ; AX = count created
+
+                Pop     ES
+                Pop     DS
+                Pop     DI
+                Pop     SI
+                Pop     DX
+                Pop     CX
+                Pop     BX
+                Ret
+
+EndP            Music_CreateMIDIInInstruments
+                Assume DS:Nothing
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 

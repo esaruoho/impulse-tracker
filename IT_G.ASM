@@ -37,6 +37,7 @@ EndS
                 Extrn   Display_SelectDisplayList:Far
 
                 Extrn   M_Object1List:Far
+                Extrn   Music_CreateMIDIInInstruments:Far
 
                 Extrn   I_ClearTables:Far
 
@@ -63,6 +64,7 @@ EndS
                 Extrn   O1_InstrumentListVolume:Far
                 Extrn   O1_InstrumentListPanning:Far
                 Extrn   O1_InstrumentListPitch:Far
+                Extrn   O1_ConfirmCreateMIDIIn:Far
 
                 Extrn   O1_KeyboardList:Far
                 Extrn   O1_LoadSampleList:Far
@@ -112,6 +114,7 @@ ENDIF
                 Global  Glbl_F5:Far
                 Global  Glbl_F6:Far
                 Global  Glbl_Shift_F1:Far
+                Global  Glbl_Shift_F4:Far
                 Global  Glbl_Shift_F6:Far
                 Global  Glbl_Shift_F9:Far
                 Global  Glbl_F8:Far
@@ -304,6 +307,23 @@ Proc            Glbl_F3 Far
 EndP            Glbl_F3
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
+; Fork: Shift-F4 batch-creates 16 MIDI-in instruments (multitimbral synth).
+; Falls through into Glbl_F4 afterwards so the instrument screen is shown.
+Proc            Glbl_Shift_F4 Far
+
+                Mov     DI, Offset O1_ConfirmCreateMIDIIn
+                Mov     CX, 4
+                Call    M_Object1List           ; DX = 1 (OK) / 0 (Cancel)
+
+                Test    DX, DX
+                JZ      Glbl_Shift_F4_Done      ; cancelled
+
+                Call    Music_CreateMIDIInInstruments
+
+Glbl_Shift_F4_Done:
+
+EndP            Glbl_Shift_F4
 
 Proc            Glbl_F4 Far
 
