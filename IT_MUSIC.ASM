@@ -152,6 +152,7 @@ include network.inc
         Global  Music_ClearAllInstruments:Far
         Global  Music_CreateMIDIInInstruments:Far
         Global  MIDIMultiEnable:Byte
+        Global  Music_GetMIDIMultiEnable:Far
         Global  Music_InstrumentHasEnvelopes:Far
         Global  Music_GetHostChannelInformationTable:Far
         Global  Music_GetSlaveChannelInformationTable:Far
@@ -4127,6 +4128,19 @@ MCMI_Done:
 
 EndP            Music_CreateMIDIInInstruments
                 Assume DS:Nothing
+
+; Far getter so the Inst-segment live router can read MIDIMultiEnable
+; (which lives in the Music segment). Returns AL = flag, preserves rest.
+Proc            Music_GetMIDIMultiEnable Far
+                Push    DS
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+                Mov     AL, [MIDIMultiEnable]
+                Pop     DS
+                        Assume DS:Nothing
+                Ret
+EndP            Music_GetMIDIMultiEnable
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 

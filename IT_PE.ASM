@@ -787,12 +787,20 @@ ENDIF
                         DW      Offset PEFunction_BlockSwap
 
                         DB      1
-                        DW      2200h           ; Alt 'G'
+                        DW      2200h           ; Alt 'G' = block halve
                         DW      Offset PEFunction_BlockHalve
 
                         DB      1
-                        DW      2100h           ; Alt 'F'
+                        DW      2222h           ; Shift-Alt 'G' = halve + tile
+                        DW      Offset PEFunction_BlockHalveTile
+
+                        DB      1
+                        DW      2100h           ; Alt 'F' = block double
                         DW      Offset PEFunction_BlockDouble
+
+                        DB      1
+                        DW      2121h           ; Shift-Alt 'F' = double + tile
+                        DW      Offset PEFunction_BlockDoubleTile
 
 ;                        DB      0
 ;                        DW      14Eh            ; Grey Plus
@@ -7847,6 +7855,326 @@ PEFunction_BlockDouble5:
                 Ret
 
 EndP            PEFunction_BlockDouble
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
+;-------------------------------------------------------------------------------
+; PEFunction_BlockHalveTile -- Shift-Alt-G
+;
+; Compress the marked block to half its row height in place (every-other source
+; row -> packed dest), then tile the half-height chunk downward through the
+; rest of the pattern until MaxRow. Only the marked column range is touched.
+;
+; Example: 8-row block at rows 0..7 (8 channels) becomes 4 compressed rows at
+; rows 0..3, then repeats at 4..7, 8..11, ..., until end of pattern.
+;-------------------------------------------------------------------------------
+BHT_HalfHeight  DW 0
+BHT_WidthBytes  DW 0
+BHT_SourceBase  DW 0
+BHT_DestRow     DW 0
+BHT_SrcRowIdx   DW 0
+
+Proc            PEFunction_BlockHalveTile Far
+                Cmp     BlockMark, 0
+                JE      PEFunction_NoBlockMarkedMessage
+
+                Mov     AX, BlockBottom
+                Sub     AX, BlockTop
+                Inc     AX
+                Cmp     AX, 2
+                JB      BHT_Done                ; need >= 2 rows to halve
+
+                Mov     DI, 5                   ; undo type = block-halve
+                Call    PE_AddToUndoBuffer
+
+                                                ; Stash dimensions
+                Mov     AX, BlockBottom
+                Sub     AX, BlockTop
+                Inc     AX
+                ShR     AX, 1                   ; AX = half_height
+                Mov     [CS:BHT_HalfHeight], AX
+
+                Mov     AX, BlockRight
+                Sub     AX, BlockLeft
+                Inc     AX
+                Mov     BX, 5
+                Mul     BX
+                Mov     [CS:BHT_WidthBytes], AX
+
+                                                ; Compute (BlockTop * 320) +
+                                                ; (BlockLeft * 5) = top-left
+                                                ; byte offset within
+                                                ; PatternDataArea.
+                Mov     AX, 320
+                Mul     Word Ptr CS:[BlockTop]
+                Mov     BX, AX
+                Mov     AX, 5
+                Mul     Word Ptr CS:[BlockLeft]
+                Add     AX, BX
+                Mov     [CS:BHT_SourceBase], AX
+
+                Mov     DS, CS:PatternDataArea
+                Push    DS
+                Pop     ES
+
+                                                ; STEP 1: compress source
+                                                ; rows 2k -> dest rows k for
+                                                ; k = 0..half_height-1.
+                Mov     SI, [CS:BHT_SourceBase]
+                Mov     DI, SI
+                Mov     CX, [CS:BHT_HalfHeight]
+                ClD
+
+BHT_CompressLoop:
+                Push    CX
+                Push    SI
+                Push    DI
+                Mov     CX, [CS:BHT_WidthBytes]
+                Rep     MovsB
+                Pop     DI
+                Pop     SI
+                Pop     CX
+                Add     SI, 640                 ; +2 source rows
+                Add     DI, 320                 ; +1 dest row
+                Loop    BHT_CompressLoop
+
+                                                ; STEP 2: tile compressed
+                                                ; chunk downward.
+                                                ; First dest row = BlockTop
+                                                ; + half_height.
+                Mov     SI, [CS:BHT_SourceBase]
+                Mov     AX, BlockTop
+                Add     AX, [CS:BHT_HalfHeight]
+                Mov     [CS:BHT_DestRow], AX
+
+                                                ; DI = DestRow*320 + Left*5
+                Mov     AX, 320
+                Mul     Word Ptr CS:[BHT_DestRow]
+                Mov     BX, AX
+                Mov     AX, 5
+                Mul     Word Ptr CS:[BlockLeft]
+                Add     AX, BX
+                Mov     DI, AX
+
+                Mov     Word Ptr [CS:BHT_SrcRowIdx], 0
+
+BHT_TileLoop:
+                Mov     AX, [CS:BHT_DestRow]
+                Cmp     AX, CS:MaxRow
+                JA      BHT_TileDone
+
+                Push    SI
+                Push    DI
+                Mov     CX, [CS:BHT_WidthBytes]
+                Rep     MovsB
+                Pop     DI
+                Pop     SI
+
+                Add     DI, 320                 ; next dest row
+                Inc     Word Ptr [CS:BHT_DestRow]
+
+                Add     SI, 320                 ; next source row
+                Inc     Word Ptr [CS:BHT_SrcRowIdx]
+                Mov     AX, [CS:BHT_SrcRowIdx]
+                Cmp     AX, [CS:BHT_HalfHeight]
+                JB      BHT_TileLoop
+
+                                                ; wrap source back to base
+                Mov     SI, [CS:BHT_SourceBase]
+                Mov     Word Ptr [CS:BHT_SrcRowIdx], 0
+                Jmp     BHT_TileLoop
+
+BHT_TileDone:
+BHT_Done:
+                Mov     AX, 1
+                Ret
+EndP            PEFunction_BlockHalveTile
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
+;-------------------------------------------------------------------------------
+; PEFunction_BlockDoubleTile -- Shift-Alt-F
+;
+; Expand the marked block to twice its row height in place: each source row k
+; becomes dest rows 2k and 2k+1 (both copies of the source row), overflowing
+; below BlockBottom. Then tile the doubled chunk downward through the rest of
+; the pattern. Source range that would extend past MaxRow during expansion is
+; clamped (no out-of-bounds writes).
+;
+; Example: 8-row block at rows 0..7 becomes 16 rows of expanded content at
+; rows 0..15, then tiles at 16..31, 32..47, ..., until MaxRow.
+;-------------------------------------------------------------------------------
+BDT_BlockHeight DW 0
+BDT_DoubleHeight DW 0
+BDT_WidthBytes  DW 0
+BDT_SourceBase  DW 0
+BDT_DestRow     DW 0
+BDT_SrcRowIdx   DW 0
+BDT_ExpandIdx   DW 0
+
+Proc            PEFunction_BlockDoubleTile Far
+                Cmp     BlockMark, 0
+                JE      PEFunction_NoBlockMarkedMessage
+
+                Mov     AX, BlockBottom
+                Sub     AX, BlockTop
+                Inc     AX
+                Test    AX, AX
+                JZ      BDT_Done                ; empty block
+
+                Mov     DI, 4                   ; undo type = block-double
+                Call    PE_AddToUndoBuffer
+
+                Mov     [CS:BDT_BlockHeight], AX
+                Add     AX, AX
+                Mov     [CS:BDT_DoubleHeight], AX
+
+                Mov     AX, BlockRight
+                Sub     AX, BlockLeft
+                Inc     AX
+                Mov     BX, 5
+                Mul     BX
+                Mov     [CS:BDT_WidthBytes], AX
+
+                Mov     AX, 320
+                Mul     Word Ptr CS:[BlockTop]
+                Mov     BX, AX
+                Mov     AX, 5
+                Mul     Word Ptr CS:[BlockLeft]
+                Add     AX, BX
+                Mov     [CS:BDT_SourceBase], AX
+
+                Mov     DS, CS:PatternDataArea
+                Push    DS
+                Pop     ES
+
+                                                ; STEP 1: expand IN REVERSE.
+                                                ; Walk source rows from
+                                                ; block_height-1 downwards to
+                                                ; 0. For each source row k,
+                                                ; write to dest rows 2k+1
+                                                ; THEN 2k. Reverse order
+                                                ; avoids overwriting source
+                                                ; before we've copied it.
+                Mov     AX, [CS:BDT_BlockHeight]
+                Dec     AX
+                Mov     [CS:BDT_ExpandIdx], AX
+
+BDT_ExpandLoop:
+                                                ; Source offset for row k =
+                                                ; SourceBase + k*320
+                Mov     AX, [CS:BDT_ExpandIdx]
+                Mov     BX, 320
+                Mul     BX
+                Add     AX, [CS:BDT_SourceBase]
+                Mov     SI, AX
+
+                                                ; Upper twin: dest row 2k+1
+                Mov     AX, [CS:BDT_ExpandIdx]
+                Add     AX, AX
+                Inc     AX
+                Add     AX, BlockTop
+                Cmp     AX, CS:MaxRow
+                JA      BDT_SkipUpperTwin
+
+                                                ; DI = (BlockTop+2k+1)*320
+                                                ;    + BlockLeft*5
+                Mov     BX, 320
+                Mul     BX                      ; AX = abs_row*320
+                Mov     BX, AX
+                Mov     AX, 5
+                Mul     Word Ptr CS:[BlockLeft]
+                Add     AX, BX
+                Mov     DI, AX
+
+                Push    SI
+                Mov     CX, [CS:BDT_WidthBytes]
+                Rep     MovsB
+                Pop     SI
+
+BDT_SkipUpperTwin:
+                                                ; Lower twin: dest row 2k
+                Mov     AX, [CS:BDT_ExpandIdx]
+                Add     AX, AX
+                Add     AX, BlockTop
+                Cmp     AX, CS:MaxRow
+                JA      BDT_SkipLowerTwin
+
+                Mov     BX, 320
+                Mul     BX
+                Mov     BX, AX
+                Mov     AX, 5
+                Mul     Word Ptr CS:[BlockLeft]
+                Add     AX, BX
+                Mov     DI, AX
+
+                Push    SI
+                Mov     CX, [CS:BDT_WidthBytes]
+                Rep     MovsB
+                Pop     SI
+
+BDT_SkipLowerTwin:
+                Mov     AX, [CS:BDT_ExpandIdx]
+                Test    AX, AX
+                JZ      BDT_ExpandDone
+                Dec     AX
+                Mov     [CS:BDT_ExpandIdx], AX
+                Jmp     BDT_ExpandLoop
+
+BDT_ExpandDone:
+
+                                                ; STEP 2: tile the doubled
+                                                ; chunk downward. Source
+                                                ; chunk occupies rows
+                                                ; BlockTop..BlockTop+
+                                                ; DoubleHeight-1 (clamped at
+                                                ; MaxRow). Dest starts at
+                                                ; BlockTop+DoubleHeight.
+                Mov     SI, [CS:BDT_SourceBase]
+                Mov     AX, BlockTop
+                Add     AX, [CS:BDT_DoubleHeight]
+                Mov     [CS:BDT_DestRow], AX
+
+                Mov     AX, 320
+                Mul     Word Ptr CS:[BDT_DestRow]
+                Mov     BX, AX
+                Mov     AX, 5
+                Mul     Word Ptr CS:[BlockLeft]
+                Add     AX, BX
+                Mov     DI, AX
+
+                Mov     Word Ptr [CS:BDT_SrcRowIdx], 0
+
+BDT_TileLoop:
+                Mov     AX, [CS:BDT_DestRow]
+                Cmp     AX, CS:MaxRow
+                JA      BDT_TileDone
+
+                Push    SI
+                Push    DI
+                Mov     CX, [CS:BDT_WidthBytes]
+                Rep     MovsB
+                Pop     DI
+                Pop     SI
+
+                Add     DI, 320
+                Inc     Word Ptr [CS:BDT_DestRow]
+
+                Add     SI, 320
+                Inc     Word Ptr [CS:BDT_SrcRowIdx]
+                Mov     AX, [CS:BDT_SrcRowIdx]
+                Cmp     AX, [CS:BDT_DoubleHeight]
+                JB      BDT_TileLoop
+
+                Mov     SI, [CS:BDT_SourceBase]
+                Mov     Word Ptr [CS:BDT_SrcRowIdx], 0
+                Jmp     BDT_TileLoop
+
+BDT_TileDone:
+BDT_Done:
+                Mov     AX, 1
+                Ret
+EndP            PEFunction_BlockDoubleTile
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 

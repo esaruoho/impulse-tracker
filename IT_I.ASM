@@ -211,6 +211,8 @@ EndS
 
                 Public  UpdateWAVEForm
                 Public  MIDI_PlayNote, MIDI_NoteOff, MIDI_ClearTable
+                Public  MIDIMulti_Route
+                Extrn   Music_GetMIDIMultiEnable:Far
                 Public  MIDI_PlaySample, MIDI_FindChannel, MIDI_AllocateChannel
                 Public  MIDI_GetChannel
 
@@ -8661,6 +8663,175 @@ MIDI_PlaySample2:
                 Ret
 
 EndP            MIDI_PlaySample
+
+;............................................................................
+; Fork: live multitimbral MIDI-in router. Called from MIDISend (IT_K) on a
+; complete channel-voice message.
+;   In:  AL = status byte (8n / 9n),  AH = note 0..127,  BL = velocity 0..127
+;   Out: AL = 1 if consumed (played / cut), else AL = 0
+; v1 = monophonic per MIDI channel: host channel = 48 + channel(0..15), so
+; each of the 16 parts is one voice (a new note steals its own channel).
+; Note = MIDI note clamped 0..119 (no user transpose yet); volume = vel>>1;
+; note-off / note-on-vel0 issues a note-cut on that channel. Routing picks
+; the first instrument whose header byte 1Fh = channel+1 (or = 17 = All).
+; Self-contained: only Music_PlayNote + Music_GetSongSegment + the enable
+; getter; no dependence on the pattern-editor MIDI note path.
+MMR_Stat        DB      0
+MMR_Note        DB      0
+MMR_Vel         DB      0
+MMR_Ch          DB      0
+MMR_Host        DB      0
+MMR_Inst        DB      0
+MMR_NoteData    DB      0FDh, 0, 0FFh, 0, 0
+
+Proc            MIDIMulti_Route Far
+                Push    BX
+                Push    CX
+                Push    DX
+                Push    SI
+                Push    DI
+                Push    DS
+                Push    ES
+
+                Mov     [CS:MMR_Stat], AL
+                Mov     [CS:MMR_Note], AH
+                Mov     [CS:MMR_Vel], BL
+
+                Call    Music_GetMIDIMultiEnable    ; AL = master flag
+                Test    AL, AL
+                JZ      MMR_No
+
+                Mov     AL, [CS:MMR_Stat]
+                And     AL, 0Fh                     ; AL = MIDI channel 0..15
+                Mov     [CS:MMR_Ch], AL
+                Add     AL, 48
+                Mov     [CS:MMR_Host], AL           ; host channel 48..63
+
+                Mov     AL, [CS:MMR_Stat]
+                And     AL, 0F0h
+                Cmp     AL, 90h
+                JNE     MMR_Off
+                Cmp     Byte Ptr [CS:MMR_Vel], 0
+                JE      MMR_Off
+
+                ; --- Note ON ---
+                Call    MMR_FindInst                ; AL = inst 1..99 or 0
+                Test    AL, AL
+                JZ      MMR_No
+                Mov     [CS:MMR_Inst], AL
+
+                Mov     AL, [CS:MMR_Note]           ; IT note = MIDI note
+                Cmp     AL, 119
+                JA      MMR_No
+
+                Mov     AH, [CS:MMR_Vel]            ; volume = vel>>1, 1..64
+                Shr     AH, 1
+                Cmp     AH, 64
+                JBE     MMR_VolOK
+                Mov     AH, 64
+MMR_VolOK:
+                Test    AH, AH
+                JNZ     MMR_VolNZ
+                Mov     AH, 1
+MMR_VolNZ:
+                Mov     SI, Offset MMR_NoteData
+                Mov     [CS:SI], AL                 ; note
+                Mov     DL, [CS:MMR_Inst]
+                Mov     [CS:SI+1], DL              ; instrument
+                Mov     [CS:SI+2], AH             ; volume
+                Mov     Word Ptr [CS:SI+3], 0     ; no command
+
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset MMR_NoteData
+                Mov     AL, [CS:MMR_Host]
+                Xor     AH, AH                     ; AX = host channel
+                Mov     DH, 32                     ; ignore mute
+                Call    Music_PlayNote
+                Jmp     MMR_Yes
+
+MMR_Off:
+                ; --- Note OFF / vel0 : cut this channel's voice ---
+                Mov     SI, Offset MMR_NoteData
+                Mov     Byte Ptr [CS:SI], 0FFh    ; note cut
+                Mov     Byte Ptr [CS:SI+1], 0     ; no instrument change
+                Mov     Byte Ptr [CS:SI+2], 0FFh  ; keep volume
+                Mov     Word Ptr [CS:SI+3], 0
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset MMR_NoteData
+                Mov     AL, [CS:MMR_Host]
+                Xor     AH, AH
+                Mov     DH, 32
+                Call    Music_PlayNote
+                Jmp     MMR_Yes
+
+MMR_Yes:
+                Pop     ES
+                Pop     DS
+                Pop     DI
+                Pop     SI
+                Pop     DX
+                Pop     CX
+                Pop     BX
+                Mov     AL, 1
+                Ret
+
+MMR_No:
+                Pop     ES
+                Pop     DS
+                Pop     DI
+                Pop     SI
+                Pop     DX
+                Pop     CX
+                Pop     BX
+                Xor     AL, AL
+                Ret
+EndP            MIDIMulti_Route
+
+; MMR_FindInst: in MMR_Ch (0..15); out AL = first instrument 1..99 whose
+; header byte 1Fh = MMR_Ch+1 or = 17 (All), or AL = 0 if none. Near.
+Proc            MMR_FindInst Near
+                Push    BX
+                Push    CX
+                Push    DX
+                Push    DI
+                Push    ES
+                Mov     DL, [CS:MMR_Ch]
+                Inc     DL                        ; target 1..16
+                Call    Music_GetSongSegment      ; AX = song segment
+                Mov     ES, AX
+                Mov     CX, 1
+MMR_FI_Loop:
+                Cmp     CX, 99
+                JA      MMR_FI_None
+                Mov     DI, CX
+                Add     DI, DI
+                Mov     DI, [ES:DI+64712]         ; ES:DI -> instrument header
+                Mov     AL, [ES:DI+1Fh]
+                Cmp     AL, DL
+                JE      MMR_FI_Found
+                Cmp     AL, 17
+                JE      MMR_FI_Found
+                Inc     CX
+                Jmp     MMR_FI_Loop
+MMR_FI_Found:
+                Mov     AX, CX                    ; AL = instrument 1..99
+                Pop     ES
+                Pop     DI
+                Pop     DX
+                Pop     CX
+                Pop     BX
+                Ret
+MMR_FI_None:
+                Xor     AL, AL
+                Pop     ES
+                Pop     DI
+                Pop     DX
+                Pop     CX
+                Pop     BX
+                Ret
+EndP            MMR_FindInst
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 

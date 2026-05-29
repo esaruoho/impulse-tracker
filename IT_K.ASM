@@ -17,6 +17,7 @@ include switch.inc
                 Extrn   S_GetDestination:Far
                 Extrn   Music_Stop:Far
                 Extrn   Music_KBPlaySong:Far
+                Extrn   MIDIMulti_Route:Far
                 Extrn   Music_SetTempoFromClocks:Far
                 Extrn   Music_IncreaseVolume:Far
                 Extrn   Music_DecreaseVolume:Far
@@ -400,6 +401,8 @@ USKeyboardTable    Label Byte
          DW      6
          DB      5       ; Alt-F
          DW      2100h
+         DB      11      ; Shift+Alt-F (fork extension)
+         DW      2121h
          DB      0FFh
 
         DB      34      ; G
@@ -411,6 +414,8 @@ USKeyboardTable    Label Byte
          DW      7
          DB      5       ; Alt-G
          DW      2200h
+         DB      11      ; Shift+Alt-G (fork extension)
+         DW      2222h
          DB      0FFh
 
         DB      35      ; H
@@ -1897,6 +1902,7 @@ EndP            MIDIBufferEmpty
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
+MIDIMultiConsumed DB    0       ; fork: 1 if live router consumed last note
 Proc            MIDISend Far            ; Given AL = data byte.
 
                 Push    DS
@@ -2051,6 +2057,35 @@ MIDISend1:
 
 MIDISend2:
                 Mov     [MIDIDataInput], BL
+
+                ; Fork: live multitimbral MIDI-in. On a complete channel-
+                ; voice message (8n/9n + 2 data bytes) hand it to
+                ; MIDIMulti_Route. If it consumes the event, zero
+                ; MIDIDataInput so the active page does not also receive the
+                ; note. No-op (router returns 0) unless MIDIMultiEnable is on,
+                ; so classic note-entry is byte-for-byte unchanged when off.
+                Cmp     BL, 2
+                JB      MIDISendEnd
+                Mov     AL, [MIDIStatusByte]
+                And     AL, 0F0h
+                Cmp     AL, 80h
+                JB      MIDISendEnd
+                Cmp     AL, 0A0h
+                JAE     MIDISendEnd
+                PushAD
+                Push    ES
+                Push    DS
+                Mov     AL, [MIDIStatusByte]
+                Mov     AH, [MIDIDataByte1]
+                Mov     BL, [MIDIDataByte2]
+                Call    MIDIMulti_Route
+                Mov     [CS:MIDIMultiConsumed], AL
+                Pop     DS
+                Pop     ES
+                PopAD
+                Cmp     Byte Ptr [MIDIMultiConsumed], 0
+                JE      MIDISendEnd
+                Mov     Byte Ptr [MIDIDataInput], 0
 
 MIDISendEnd:
                 Pop     DS
