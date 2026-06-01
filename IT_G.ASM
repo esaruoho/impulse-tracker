@@ -38,6 +38,8 @@ EndS
 
                 Extrn   M_Object1List:Far
                 Extrn   Music_CreateMIDIInInstruments:Far
+                Extrn   Music_GetMIDIMultiEnable:Far
+                Extrn   Music_SetMIDIMultiEnable:Far
 
                 Extrn   I_ClearTables:Far
 
@@ -200,6 +202,7 @@ CurrentListSegment DW   0
 TempoSetMsg     DB      "Tempo set to ", 0FDh, "D beats per minute", 0
 SpeedSetMsg     DB      "Speed set to ", 0FDh, "D frames per row", 0
 VolumeSetMsg    DB      "Global Volume set to ", 0FDh, "D", 0
+MIDIMultiOffMsg DB      "MIDI multitimbral input OFF - normal MIDI restored", 0
 
 InstrumentScreenTable   Label
         DW      Offset O1_InstrumentListGeneral
@@ -308,10 +311,30 @@ EndP            Glbl_F3
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-; Fork: Shift-F4 batch-creates 16 MIDI-in instruments (multitimbral synth).
-; Falls through into Glbl_F4 afterwards so the instrument screen is shown.
+; Fork: Shift-F4 toggles the live multitimbral MIDI-in synth.
+;   - OFF -> confirm, batch-create 16 MIDI-in instruments + enable the router,
+;            then fall through into Glbl_F4 so the instrument screen is shown.
+;   - ON  -> turn the router back OFF (instruments are left intact) so normal
+;            sample/instrument MIDI preview works again. Without this the
+;            enable flag was a one-way latch and there was no way to stop the
+;            router hijacking every note on channels 1..16.
 Proc            Glbl_Shift_F4 Far
 
+                Call    Music_GetMIDIMultiEnable
+                Test    AL, AL
+                JZ      Glbl_Shift_F4_Create    ; currently off -> create+enable
+
+                                                ; currently on -> disable
+                Xor     AL, AL
+                Call    Music_SetMIDIMultiEnable
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset MIDIMultiOffMsg
+                Call    SetInfoLine
+                Mov     AX, 1
+                Ret
+
+Glbl_Shift_F4_Create:
                 Mov     DI, Offset O1_ConfirmCreateMIDIIn
                 Mov     CX, 4
                 Call    M_Object1List           ; DX = 1 (OK) / 0 (Cancel)

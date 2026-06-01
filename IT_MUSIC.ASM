@@ -153,6 +153,7 @@ include network.inc
         Global  Music_CreateMIDIInInstruments:Far
         Global  MIDIMultiEnable:Byte
         Global  Music_GetMIDIMultiEnable:Far
+        Global  Music_SetMIDIMultiEnable:Far
         Global  Music_InstrumentHasEnvelopes:Far
         Global  Music_GetHostChannelInformationTable:Far
         Global  Music_GetSlaveChannelInformationTable:Far
@@ -4185,6 +4186,22 @@ Proc            Music_GetMIDIMultiEnable Far
                         Assume DS:Nothing
                 Ret
 EndP            Music_GetMIDIMultiEnable
+
+; Far setter: AL = new MIDIMultiEnable value (0 = off, 1 = on). Lets Shift-F4
+; turn the live multitimbral router back OFF -- without this the flag was a
+; one-way latch and creating the 16 instruments permanently hijacked every
+; note on channels 1..16, killing normal sample/instrument preview with no
+; way to recover short of restarting IT.
+Proc            Music_SetMIDIMultiEnable Far
+                Push    DS
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+                Mov     [MIDIMultiEnable], AL
+                Pop     DS
+                        Assume DS:Nothing
+                Ret
+EndP            Music_SetMIDIMultiEnable
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
