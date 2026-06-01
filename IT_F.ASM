@@ -4841,24 +4841,36 @@ Proc            F_SetControlInstrument Far
 
                 Mov     DI, Offset O1_InitialiseInstrumentList
                                                 ; Default focus on the "No"
-                                                ; button (object index 6),
-                                                ; not the "OK" button at
-                                                ; index 5. Accidentally
+                                                ; button so accidentally
                                                 ; pressing Enter on this
-                                                ; prompt USED TO wipe every
-                                                ; instrument header via
-                                                ; Music_ClearAllInstruments,
-                                                ; destroying any volume /
-                                                ; pan / pitch envelopes the
-                                                ; user had already drawn
-                                                ; while in Sample mode.
-                                                ; M_Object1List writes CX
-                                                ; into the list's header
-                                                ; word (see IT_M.ASM:648),
-                                                ; which is the initial-
-                                                ; focus index for the
-                                                ; framework.
-                Mov     CX, 6
+                                                ; prompt does NOT wipe every
+                                                ; instrument header (and the
+                                                ; envelopes the user drew in
+                                                ; Sample mode).
+                                                ;
+                                                ; M_Object1List writes CX into
+                                                ; the list's header word; the
+                                                ; framework then locates the
+                                                ; focused object at
+                                                ; list+CX*2+6 (IT_M.ASM:463).
+                                                ; The +6 skips the idle-list
+                                                ; and key-list pointers, so
+                                                ; the focusable array is
+                                                ; 0-based from EmptyObject:
+                                                ;   3 = OK button
+                                                ;   4 = No button
+                                                ;   5 = list terminator (0)
+                                                ; A value of 6 ran two slots
+                                                ; PAST the terminator into the
+                                                ; next list's bytes -> garbage
+                                                ; object pointer -> wild Call
+                                                ; -> crash the instant the
+                                                ; dialog opened (and "nothing"
+                                                ; appeared selected). The "No"
+                                                ; button is index 4 -- exactly
+                                                ; where O1_ConfirmDelete puts
+                                                ; its default Cancel button.
+                Mov     CX, 4
                 Call    M_Object1List
                                                 ; DX = 0 -> don't initialise
                                                 ; DX = 1 -> initialise
