@@ -152,7 +152,10 @@ jobs:
             exit 1
           fi
           echo "--- IT.EXE ---"
-          ls -la IT.EXE it.exe 2>/dev/null
+          # Step runs under `bash -e`; `it.exe` (lowercase) usually doesn't exist,
+          # and a bare `ls` of a missing file returns non-zero and would abort the
+          # whole step before the driver count. Guard it.
+          ls -la IT.EXE it.exe 2>/dev/null || true
           DRVS=( *.drv )
           NETS=( *.net )
           echo "--- Sound drivers: ${#DRVS[@]} found ---"
