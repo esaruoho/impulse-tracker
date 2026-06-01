@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'OPTIONAL explicit version (e.g. 2.355). Leave BLANK to auto-increment the latest release (v2.354 -> v2.355).'
+        description: 'OPTIONAL explicit tag (e.g. v2.354-2026-06-01). Leave BLANK to use v2.354 stamped with today''s date.'
         required: false
         default: ''
 
@@ -33,24 +33,16 @@ jobs:
         run: |
           set -euo pipefail
           if [ -n "${INPUT_VERSION:-}" ]; then
-            # User typed an explicit version — honour it verbatim.
+            # User typed an explicit tag — honour it verbatim.
             TAG="v${INPUT_VERSION#v}"
-            echo "Using explicit version: $TAG"
+            echo "Using explicit tag: $TAG"
           else
-            # No input — auto-increment. Find the highest existing vMAJOR.MINOR
-            # tag and bump its trailing number. v2.354 -> v2.355. Zero typing:
-            # this is what makes "press one button, get a release" work.
-            LATEST=$(gh api "repos/$GITHUB_REPOSITORY/tags" --paginate --jq '.[].name' \
-                       | grep -E '^v[0-9]+\.[0-9]+$' | sort -V | tail -1 || true)
-            if [ -z "$LATEST" ]; then
-              TAG="v2.355"
-              echo "No existing v-tags found — starting at $TAG"
-            else
-              BASE="${LATEST%.*}"        # v2
-              NUM="${LATEST##*.}"        # 354
-              TAG="${BASE}.$((NUM + 1))" # v2.355
-              echo "Latest tag $LATEST -> new tag $TAG"
-            fi
+            # No input — the version is ALWAYS v2.354, distinguished only by
+            # today's date (year-month-day). Zero typing: press Run workflow,
+            # leave the field blank, and you get v2.354-<today>.
+            DATE=$(date -u +%Y-%m-%d)
+            TAG="v2.354-$DATE"
+            echo "Dated release tag: $TAG"
           fi
           echo "Target tag: $TAG at $GITHUB_SHA"
           # If this exact tag already exists, delete its release + tag so the
