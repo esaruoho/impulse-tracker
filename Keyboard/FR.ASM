@@ -55,7 +55,7 @@ StartKeyboardTable:
 
         DB      3       ; 2
         DB      0
-        DW      'Ç'
+        DW      '¬Ç'
         DB      3       ; "
         DW      '2'
         DB      7
@@ -100,7 +100,7 @@ StartKeyboardTable:
 
         DB      8       ; 7
         DB      0
-        DW      'ä'
+        DW      '¬ä'
         DB      3       ; 
         DW      '7'
         DB      7
@@ -118,7 +118,7 @@ StartKeyboardTable:
 
         DB      10      ; 9
         DB      0
-        DW      'á'
+        DW      '¬á'
         DB      3       ; 
         DW      '9'
         DB      7
@@ -127,7 +127,7 @@ StartKeyboardTable:
 
         DB      11      ; 0
         DB      0
-        DW      'Ö'
+        DW      '¬Ö'
         DB      3       ; =
         DW      '0'
         DB      7
@@ -138,7 +138,7 @@ StartKeyboardTable:
         DB      0
         DW      ')'
         DB      3       ; ?
-        DW      '¯'
+        DW      '√∏'
         DB      7
         DW      ']'
         DB      0FFh
@@ -272,18 +272,18 @@ StartKeyboardTable:
         DW      1900h
         DB      0FFh
 
-        DB      26      ; è
+        DB      26      ; ¬è
         DB      0
         DW      '^'
-        DB      3       ; Ü
-        DW      '˘'
+        DB      3       ; ¬Ü
+        DW      '√π'
         DB      0FFh
 
         DB      27      ; .
         DB      0
         DW      '$'
         DB      3       ; ~
-        DW      'ú'
+        DW      '¬ú'
         DB      0FFh
 
         DB      30      ; A
@@ -385,10 +385,10 @@ StartKeyboardTable:
         DW      2600h
         DB      0FFh
 
-        DB      39      ; ô
+        DB      39      ; ¬ô
         DB      1
         DW      'M'
-        DB      2       ; î
+        DB      2       ; ¬î
         DW      'm'
         DB      4       ; Ctrl-M
         DW      0Dh
@@ -396,10 +396,10 @@ StartKeyboardTable:
         DW      3200h
         DB      0FFh
 
-        DB      40      ; é
+        DB      40      ; ¬é
         DB      0
-        DW      "ó"
-        DB      3       ; Ñ
+        DW      "¬ó"
+        DB      3       ; ¬Ñ
         DW      '%'
         DB      0FFh
 
@@ -407,7 +407,7 @@ StartKeyboardTable:
         DB      0
         DW      "*"
         DB      3       ; *
-        DW      "Ê"
+        DW      "√¶"
         DB      0FFh
 
         DB      43      ; <

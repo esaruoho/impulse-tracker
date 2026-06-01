@@ -63,8 +63,8 @@ StartKeyboardTable:
         DB      4       ; 3
         DB      0
         DW      '3'
-        DB      3       ; œ
-        DW      'œ'
+        DB      3       ; Âœ
+        DW      'Âœ'
         DB      0FFh
 
         DB      5       ; 4

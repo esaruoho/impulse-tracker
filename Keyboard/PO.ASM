@@ -375,16 +375,16 @@ StartKeyboardTable:
 
         DB      39
          DB      0
-         DW      'c' ; porque o ‡ nao funciona no IT
+         DW      'c' ; porque o Â‡ nao funciona no IT
          DB      3
-         DW      'C' ; porque o € nao funciona no IT
+         DW      'C' ; porque o Â€ nao funciona no IT
          DB      0FFh
 
         DB      40
          DB      0
-         DW      "o" ; porque o § nao funciona no IT
+         DW      "o" ; porque o Â§ nao funciona no IT
          DB      3
-         DW      'a' ; porque o ¦ nao funciona no IT
+         DW      'a' ; porque o Â¦ nao funciona no IT
          DB      0FFh
 
         DB      41

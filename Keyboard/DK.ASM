@@ -68,14 +68,14 @@ StartKeyboardTable:
         DB      3       ; #
         DW      '#'
         DB      7
-        DW      'ú'
+        DW      '¬ú'
         DB      0FFh
 
         DB      5       ; 4
         DB      0
         DW      '4'
         DB      3       ; $
-        DW      'œ'
+        DW      '√è'
         DB      7
         DW      '$'
         DB      0FFh
@@ -139,7 +139,7 @@ StartKeyboardTable:
 
         DB      13      ; '
         DB      0
-        DW      "Ô"
+        DW      "√Ø"
         DB      3       ; `
         DW      "`"
         DB      7
@@ -266,16 +266,16 @@ StartKeyboardTable:
         DW      1900h
         DB      0FFh
 
-        DB      26      ; è
+        DB      26      ; ¬è
         DB      0
-        DW      'è'
-        DB      3       ; Ü
-        DW      'Ü'
+        DW      '¬è'
+        DB      3       ; ¬Ü
+        DW      '¬Ü'
         DB      0FFh
 
         DB      27      ; .
         DB      0
-        DW      '˘'
+        DW      '√π'
         DB      3       ; ~
         DW      '^'
         DB      0FFh
@@ -379,25 +379,25 @@ StartKeyboardTable:
         DW      2600h
         DB      0FFh
 
-        DB      39      ; ô
+        DB      39      ; ¬ô
         DB      0
-        DW      'ô'
-        DB      3       ; î
-        DW      'î'
+        DW      '¬ô'
+        DB      3       ; ¬î
+        DW      '¬î'
         DB      0FFh
 
-        DB      40      ; é
+        DB      40      ; ¬é
         DB      0
-        DW      "é"
-        DB      3       ; Ñ
-        DW      'Ñ'
+        DW      "¬é"
+        DB      3       ; ¬Ñ
+        DW      '¬Ñ'
         DB      0FFh
                   
         DB      41
         DB      0
-        DW      "´"
+        DW      "¬´"
         DB      3
-        DW      "ı"
+        DW      "√µ"
         DB      0FFh
 
         DB      43      ; *

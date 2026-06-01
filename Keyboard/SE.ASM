@@ -262,11 +262,11 @@ StartKeyboardTable:
         DW      1900h
         DB      0FFh
 
-        DB      26      ; è
+        DB      26      ; ¬è
         DB      0
-        DW      'è'
-        DB      3       ; Ü
-        DW      'Ü'
+        DW      '¬è'
+        DB      3       ; ¬Ü
+        DW      '¬Ü'
         DB      0FFh
 
         DB      27      ; .
@@ -375,18 +375,18 @@ StartKeyboardTable:
         DW      2600h
         DB      0FFh
 
-        DB      39      ; ô
+        DB      39      ; ¬ô
         DB      0
-        DW      'ô'
-        DB      3       ; î
-        DW      'î'
+        DW      '¬ô'
+        DB      3       ; ¬î
+        DW      '¬î'
         DB      0FFh
 
-        DB      40      ; é
+        DB      40      ; ¬é
         DB      0
-        DW      "é"
-        DB      3       ; Ñ
-        DW      'Ñ'
+        DW      "¬é"
+        DB      3       ; ¬Ñ
+        DW      '¬Ñ'
         DB      0FFh
 
         DB      41
