@@ -300,6 +300,17 @@ jobs:
           # File list
           ( cd "$STAGE" && ls -la ) > "$STAGE/PACKAGED.TXT"
 
+          # DOS/Windows render LF-only text as a wall of junk. Every text file in
+          # the zip MUST be CRLF. The committed docs (IT.TXT etc.) already are,
+          # but BUILD.TXT / PACKAGED.TXT are generated here with bash (LF). Force
+          # CRLF on every text-ish file. 's/\r*$/\r/' collapses 0+ trailing CRs to
+          # exactly one, so it is safe to run on already-CRLF files (no doubling).
+          find "$STAGE" -type f \
+            \( -iname '*.TXT' -o -iname '*.DIZ' -o -iname '*.FAQ' -o -iname '*.NFO' -o -iname '*.CFG' \) \
+            -print0 | while IFS= read -r -d '' f; do
+              sed -i 's/\r*$/\r/' "$f"
+            done
+
           echo "stage=$STAGE" >> "$GITHUB_OUTPUT"
           echo "--- Staged contents ---"
           find "$STAGE" -maxdepth 2 -print

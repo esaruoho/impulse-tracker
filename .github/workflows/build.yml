@@ -73,6 +73,35 @@ jobs:
           rm tools/tasm-toolchain.zip
           ls -la tools/
 
+      - name: Overwrite TLINK with 3.01 (toolchain ships 7.1 which can't link drivers)
+        run: |
+          # CLAUDE.md: TLINK 7.1 links IT.EXE fine but fatal-errors on every
+          # driver ("No program entry point") — so a build with TLINK 7.1 looks
+          # green but ships ZERO drivers. Need TLINK 3.01 (53,510 bytes).
+          # Public copy: nolanvenhola/zeliard2026. Mirrors the release workflow.
+          mapfile -t TASM_PATHS < <(find tools -iname 'TASM.EXE' -o -iname 'tasm.exe')
+          if [ ${#TASM_PATHS[@]} -eq 0 ]; then
+            echo "::error::TASM.EXE not found anywhere under tools/ — secret may be corrupt"
+            find tools -maxdepth 3 -printf '%p\n' | head -40
+            exit 1
+          fi
+          TLINK_URL="https://raw.githubusercontent.com/nolanvenhola/zeliard2026/main/3_Assembly/tasm/tool/tasm201/TLINK.EXE"
+          curl -fsSL -o /tmp/TLINK.EXE "$TLINK_URL"
+          SIZE=$(stat -c%s /tmp/TLINK.EXE)
+          if [ "$SIZE" -ne 53510 ]; then
+            echo "::error::Downloaded TLINK.EXE is $SIZE bytes; expected 53510 (TLINK 3.01)"
+            exit 1
+          fi
+          for tasm in "${TASM_PATHS[@]}"; do
+            d=$(dirname "$tasm")
+            cp /tmp/TLINK.EXE "$d/TLINK.EXE"
+            cp /tmp/TLINK.EXE "$d/tlink.exe"
+            echo "Installed TLINK 3.01 ($SIZE bytes) into $d/"
+          done
+          [ -f tools/TLINK.EXE ] && cp /tmp/TLINK.EXE tools/TLINK.EXE
+          [ -f tools/tlink.exe ] && cp /tmp/TLINK.EXE tools/tlink.exe
+          ls -la $(find tools -iname 'tlink.exe')
+
       - name: Write DOSBox-X build script
         run: |
           cat > build.conf <<EOF
@@ -117,16 +146,31 @@ jobs:
           tail -100 DRV_SND.LOG 2>/dev/null || echo "(missing)"
           echo "--- DRV_NET.LOG (last 50) ---"
           tail -50 DRV_NET.LOG 2>/dev/null || echo "(missing)"
-          if [ ! -f IT.EXE ]; then
+          shopt -s nullglob nocaseglob
+          if [ ! -f IT.EXE ] && [ ! -f it.exe ]; then
             echo "::error::IT.EXE was not produced"
             exit 1
           fi
           echo "--- IT.EXE ---"
-          ls -la IT.EXE
-          echo "--- Sound drivers (root, *.DRV) ---"
-          ls -la *.DRV 2>/dev/null || echo "(none copied)"
-          echo "--- Network drivers (*.NET) ---"
-          ls -la *.NET 2>/dev/null || echo "(none copied)"
+          ls -la IT.EXE it.exe 2>/dev/null
+          DRVS=( *.drv )
+          NETS=( *.net )
+          echo "--- Sound drivers: ${#DRVS[@]} found ---"
+          ls -la "${DRVS[@]}" 2>/dev/null || echo "(none copied)"
+          echo "--- Network drivers: ${#NETS[@]} found ---"
+          ls -la "${NETS[@]}" 2>/dev/null || echo "(none copied)"
+          # A green build that links IT.EXE but produces ZERO drivers is the
+          # exact TLINK-7.1 trap. Fail loudly so the checkmark means something.
+          if [ ${#DRVS[@]} -eq 0 ]; then
+            echo "::error::No sound drivers produced — build is NOT shippable. Check TLINK version + DRV_SND.LOG."
+            tail -50 DRV_SND.LOG 2>/dev/null || true
+            exit 1
+          fi
+          if [ ${#NETS[@]} -eq 0 ]; then
+            echo "::error::No network driver (.NET) produced — check DRV_NET.LOG."
+            tail -50 DRV_NET.LOG 2>/dev/null || true
+            exit 1
+          fi
 
       - name: Upload IT.EXE + drivers artifact
         uses: actions/upload-artifact@v4
@@ -134,8 +178,11 @@ jobs:
           name: IT-EXE-${{ github.sha }}
           path: |
             IT.EXE
+            it.exe
             *.DRV
+            *.drv
             *.NET
+            *.net
             MAKE.LOG
             DRV_SND.LOG
             DRV_NET.LOG
