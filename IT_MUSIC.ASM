@@ -3993,6 +3993,28 @@ Proc            Music_InstrumentHasEnvelopes Far    ; AX = instrument number
                 Mov     ES, SongDataArea
                 Mov     DI, [ES:DI+64712]   ; ES:DI -> live instrument header
 
+                                            ; Fork: reject a structurally-
+                                            ; invalid instrument BEFORE the
+                                            ; template compare. A real IT
+                                            ; envelope has at most 25 nodes; a
+                                            ; node count > 25 in any of the
+                                            ; three envelopes (vol 130h, pan
+                                            ; 182h, pitch 1D4h -> counts at
+                                            ; +131h/+183h/+1D5h) means the slot
+                                            ; holds uninitialised / leftover
+                                            ; garbage, NOT user-drawn data.
+                                            ; Report "default" (ZF=1) so the
+                                            ; caller clears it to the template
+                                            ; rather than preserving garbage
+                                            ; that would later crash
+                                            ; I_MapEnvelope.
+                Cmp     Byte Ptr [ES:DI+131h], 25
+                JA      MIHE_Garbage
+                Cmp     Byte Ptr [ES:DI+183h], 25
+                JA      MIHE_Garbage
+                Cmp     Byte Ptr [ES:DI+1D5h], 25
+                JA      MIHE_Garbage
+
                 Add     DI, 130h            ; advance to envelope section
                 Mov     SI, Offset InstrumentHeader
                 Add     SI, 130h            ; matching offset in template
@@ -4001,8 +4023,12 @@ Proc            Music_InstrumentHasEnvelopes Far    ; AX = instrument number
                 ClD
                 RepE    CmpsB               ; ZF=1 if all 250 bytes match,
                                             ; ZF=0 on first mismatch.
-                                            ; Pops below preserve flags.
+                Jmp     MIHE_Done           ; (Jmp + Pops preserve flags.)
 
+MIHE_Garbage:
+                Cmp     SI, SI              ; force ZF=1 -> "default" -> clear
+
+MIHE_Done:
                 Pop     DI
                 Pop     ES
                 Pop     SI
@@ -4105,6 +4131,24 @@ MCMI_Loop:
                 Add     AH, '0'
                 Mov     [ES:DI+20h+11], AL
                 Mov     [ES:DI+20h+12], AH
+
+                ; Fork: map every note to the same-numbered sample (this slot,
+                ; BX = 1..99) so the instrument makes sound the moment it is
+                ; created -- previously the template's empty keymap left every
+                ; MIDI-In instrument silent until the user mapped a sample by
+                ; hand. The keyboard table at hdr+40h is 120 (note,sample)
+                ; pairs; we write the sample byte at each odd offset (41h,43h,
+                ; ...) and leave the template's chromatic note bytes intact.
+                ; Mirrors F_SetControlInstrument's keymap fill.
+                Push    DI
+                Add     DI, 41h
+                Mov     AL, BL                  ; AL = sample number = slot
+                Mov     CX, 120
+MCMI_KeyMap:
+                Mov     [ES:DI], AL
+                Add     DI, 2
+                Loop    MCMI_KeyMap
+                Pop     DI
 
                 Inc     Byte Ptr [MCMI_Count]
 

@@ -6970,6 +6970,26 @@ I_MapEnvelopeXAxis1:
                 Xor     DH, DH
                 Mov     DL, [SI+1]
 
+                                        ; Fork crash-proof: a real IT envelope
+                                        ; never has more than 25 nodes. A
+                                        ; count > 25 means the instrument
+                                        ; header is uninitialised / leftover
+                                        ; garbage (e.g. a sample-mode module
+                                        ; whose instrument slots were never
+                                        ; normalised before flipping to
+                                        ; instrument mode). Without this clamp
+                                        ; the node-draw loop below walks the
+                                        ; garbage count, reads far past the
+                                        ; 82-byte envelope struct, and writes
+                                        ; through a wild pointer -> EMM386
+                                        ; error #12 GP fault / hard hang.
+                                        ; Clamping to 25 bounds the loop and
+                                        ; all struct reads (25*3 = 75 < 82);
+                                        ; valid envelopes are unaffected.
+                Cmp     DX, 25
+                JBE     I_MapEnvelopeNodeOK
+                Mov     DX, 25
+I_MapEnvelopeNodeOK:
                 Mov     CS:MaxNode, DX
                 Cmp     CS:CurrentNode, DX
                 JB      I_MapEnvelope2
