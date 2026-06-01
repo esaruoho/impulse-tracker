@@ -3,9 +3,22 @@ name: Build IT.EXE
 on:
   push:
     branches: [main]
+    # Don't burn a full ~3-min DOS build on doc-only commits.
+    paths-ignore:
+      - '**.md'
+      - '**.TXT'
+      - '**.txt'
+      - 'ReleaseDocumentation/**'
+      - 'InternalDocumentation/**'
+      - 'LICENSE'
   pull_request:
     branches: [main]
   workflow_dispatch:
+
+# A newer push to the same branch/PR supersedes an in-flight build.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:

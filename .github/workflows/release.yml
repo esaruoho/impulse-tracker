@@ -6,12 +6,17 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version number for this release (e.g. 2.354). If a release with this tag already exists, it will be deleted and replaced.'
-        required: true
-        default: '2.354'
+        description: 'OPTIONAL explicit version (e.g. 2.355). Leave BLANK to auto-increment the latest release (v2.354 -> v2.355).'
+        required: false
+        default: ''
 
 permissions:
   contents: write
+
+# One release at a time; never cancel a half-finished one mid-publish.
+concurrency:
+  group: dos-release
+  cancel-in-progress: false
 
 jobs:
   package:
@@ -20,21 +25,40 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create or replace tag (manual run only)
+      - name: Resolve version and create tag (manual run only)
         if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ github.event.inputs.version }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
-          TAG="v${VERSION#v}"
+          set -euo pipefail
+          if [ -n "${INPUT_VERSION:-}" ]; then
+            # User typed an explicit version — honour it verbatim.
+            TAG="v${INPUT_VERSION#v}"
+            echo "Using explicit version: $TAG"
+          else
+            # No input — auto-increment. Find the highest existing vMAJOR.MINOR
+            # tag and bump its trailing number. v2.354 -> v2.355. Zero typing:
+            # this is what makes "press one button, get a release" work.
+            LATEST=$(gh api "repos/$GITHUB_REPOSITORY/tags" --paginate --jq '.[].name' \
+                       | grep -E '^v[0-9]+\.[0-9]+$' | sort -V | tail -1 || true)
+            if [ -z "$LATEST" ]; then
+              TAG="v2.355"
+              echo "No existing v-tags found — starting at $TAG"
+            else
+              BASE="${LATEST%.*}"        # v2
+              NUM="${LATEST##*.}"        # 354
+              TAG="${BASE}.$((NUM + 1))" # v2.355
+              echo "Latest tag $LATEST -> new tag $TAG"
+            fi
+          fi
           echo "Target tag: $TAG at $GITHUB_SHA"
-          # Delete existing release (if any) so the new build replaces it cleanly
+          # If this exact tag already exists, delete its release + tag so the
+          # new build replaces it cleanly (only happens on an explicit re-run).
           if gh release view --repo "$GITHUB_REPOSITORY" "$TAG" >/dev/null 2>&1; then
             echo "Existing release $TAG found — deleting it"
             gh release delete --repo "$GITHUB_REPOSITORY" "$TAG" --yes --cleanup-tag || true
           fi
-          # Delete remote tag if still present (cleanup-tag should have handled it,
-          # but be defensive in case the release didn't exist but a stale tag did)
           if gh api "repos/$GITHUB_REPOSITORY/git/refs/tags/$TAG" >/dev/null 2>&1; then
             echo "Stale tag $TAG still present — deleting"
             gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$TAG"

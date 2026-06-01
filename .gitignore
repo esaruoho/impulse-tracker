@@ -68,3 +68,10 @@ CACHE.ITS
 # Holds user-specific MIDI ports, sound-driver pick, Quicksave path, envelope
 # presets — do NOT commit.
 IT.CFG
+
+# Local release/build artifacts — these are produced by builds and the GitHub
+# Actions release; they should never be committed.
+IT2354-esaruoho-*.zip
+IT-V*.zip
+dosbox-test/
+dosbox-test.conf
