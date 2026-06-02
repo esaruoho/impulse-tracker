@@ -3994,21 +3994,47 @@ Proc            Music_InstrumentHasEnvelopes Far    ; AX = instrument number
                 Mov     ES, SongDataArea
                 Mov     DI, [ES:DI+64712]   ; ES:DI -> live instrument header
 
-                                            ; Fork: reject a structurally-
-                                            ; invalid instrument BEFORE the
-                                            ; template compare. A real IT
-                                            ; envelope has at most 25 nodes; a
-                                            ; node count > 25 in any of the
-                                            ; three envelopes (vol 130h, pan
-                                            ; 182h, pitch 1D4h -> counts at
-                                            ; +131h/+183h/+1D5h) means the slot
-                                            ; holds uninitialised / leftover
-                                            ; garbage, NOT user-drawn data.
-                                            ; Report "default" (ZF=1) so the
-                                            ; caller clears it to the template
-                                            ; rather than preserving garbage
-                                            ; that would later crash
-                                            ; I_MapEnvelope.
+                                            ; --- IMPI gate (the real fix) ---
+                                            ; A genuinely-initialised instrument
+                                            ; header always starts with the
+                                            ; "IMPI" magic: Music_ClearInstrument
+                                            ; copies the InstrumentHeader
+                                            ; template, whose first four bytes
+                                            ; are "IMPI", and disk loads write it
+                                            ; too. Uninitialised instrument slots
+                                            ; (sample-only loads, Shift-Enter
+                                            ; bulk-load -- neither touches the
+                                            ; instrument region) hold leftover
+                                            ; garbage that practically never
+                                            ; spells "IMPI" (four exact bytes).
+                                            ;
+                                            ; If the magic is absent this is NOT
+                                            ; a real instrument and must never be
+                                            ; "preserved" -> report default
+                                            ; (ZF=1) so the caller clears it to
+                                            ; the template. This is the
+                                            ; definitive signal the old
+                                            ; node-count heuristic only
+                                            ; approximated: garbage with small
+                                            ; node counts used to slip through
+                                            ; and reach I_MapEnvelope; it cannot
+                                            ; pass the IMPI test.
+                Cmp     Byte Ptr [ES:DI], 'I'
+                JNE     MIHE_Garbage
+                Cmp     Byte Ptr [ES:DI+1], 'M'
+                JNE     MIHE_Garbage
+                Cmp     Byte Ptr [ES:DI+2], 'P'
+                JNE     MIHE_Garbage
+                Cmp     Byte Ptr [ES:DI+3], 'I'
+                JNE     MIHE_Garbage
+
+                                            ; Belt-and-suspenders: even on an
+                                            ; IMPI header a node count > 25 is
+                                            ; impossible for a real IT envelope,
+                                            ; so treat it as garbage if it ever
+                                            ; happens. The matching I_MapEnvelope
+                                            ; MaxNode<=25 clamp on main is the
+                                            ; independent renderer-side backstop.
                 Cmp     Byte Ptr [ES:DI+131h], 25
                 JA      MIHE_Garbage
                 Cmp     Byte Ptr [ES:DI+183h], 25

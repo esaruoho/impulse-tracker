@@ -1,11 +1,58 @@
 # Feature: Retain drawn envelopes when converting Samples → Instruments
 
-**Status: WORK IN PROGRESS — DO NOT MERGE.** This PR re-introduces a feature that
-was scalpel-removed from `main` because it crashed. It is parked here, with the
-code and full diagnosis, so a stronger agent can implement it *correctly*. The
-shipping `main` is the stable IT2.15-equivalent behaviour (always clear+re-init);
-this branch is the opposite — it brings the fragile feature back so it can be
-fixed, not shipped as-is.
+**Status: IMPROVED, STILL DO NOT MERGE WITHOUT REAL-HARDWARE VERIFICATION.**
+This PR re-introduces a feature that was scalpel-removed from `main` because it
+crashed, then **rebuilds it on the correct signal** (see "BREAKTHROUGH" below).
+`main` stays the stable IT2.15-equivalent (always clear+re-init); this branch is
+the fixed feature, parked until verified on a real DOS PC (the original crash is
+EMM386-#12 / real-hardware-specific and can't be reproduced under DOSBox-X).
+
+## BREAKTHROUGH: the right signal is the `IMPI` magic, not template-diff
+
+The bug was using the *wrong question*. The old code asked "do this instrument's
+envelope bytes differ from the default template?" — which uninitialised
+**garbage** passes trivially, so garbage got "preserved" and fed to
+`I_MapEnvelope` → crash.
+
+The right question is "**is this even a real instrument?**" — and IT already
+answers it: every initialised instrument header starts with the 4-byte magic
+**`"IMPI"`** at offset 0 (`InstrumentHeader` template, `IT_MUSIC.ASM:371`;
+`Music_ClearInstrument` copies it; disk loads write it). Garbage slots
+(sample-only loads, `Shift-Enter` bulk-load — neither touches the instrument
+region) practically never spell `IMPI` (four exact bytes, ~1 in 4e9).
+
+`Music_InstrumentHasEnvelopes` now gates on `IMPI` FIRST:
+- **No `IMPI`** → not a real instrument → report "default" → caller clears it to
+  template. Garbage can never be preserved; the renderer never sees a non-`IMPI`
+  header. **Crash class eliminated at the signal, not patched downstream.**
+- **`IMPI` present** → real instrument; its envelope structs are guaranteed valid,
+  so the template-diff on the envelope section is now safe and decides preserve
+  (user drew something) vs clear+reinit (real but blank).
+
+The old node-count>25 heuristic is kept as a *secondary* belt; the
+`I_MapEnvelope` `MaxNode<=25` clamp on `main` remains the independent
+renderer-side backstop.
+
+### Why this is strictly safe
+Worst case (a user somehow drew an envelope on a slot that never got `IMPI`):
+that slot is cleared instead of preserved — it degrades to stable IT2.15
+behaviour for that one slot. **It never crashes.** Normal case: real instruments
+with drawn envelopes carry `IMPI` and are preserved.
+
+### The one open question for the verifier
+Does drawing an envelope always land on an `IMPI` header? `F_NewSong` only clears
+instruments when the user ticks that box, so slots *can* be garbage — but the
+instrument-edit UI very likely initialises a slot on first edit (confirm on real
+hardware). If it does, `IMPI` is fully airtight. If some edit path writes
+envelope bytes onto a magic-less slot, that slot degrades safely to "cleared"
+(no crash), and that path should be taught to write the template on first
+envelope edit.
+
+---
+
+(Original diagnosis below, retained for context. Note: the "directions for a
+correct fix" list predates the BREAKTHROUGH; direction (2)/(1) are essentially
+what `IMPI` gating achieves.)
 
 ## What the feature is supposed to do
 
