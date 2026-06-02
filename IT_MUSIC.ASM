@@ -154,6 +154,7 @@ include network.inc
         Global  MIDIMultiEnable:Byte
         Global  Music_GetMIDIMultiEnable:Far
         Global  Music_SetMIDIMultiEnable:Far
+        Global  Music_InstrumentHasEnvelopes:Far
         Global  Music_GetHostChannelInformationTable:Far
         Global  Music_GetSlaveChannelInformationTable:Far
         Global  Music_SetGlobalVolume:Far
@@ -3958,12 +3959,87 @@ EndP            Music_ClearInstrument
                 Assume DS:Nothing
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
-; Music_InstrumentHasEnvelopes was removed. It existed only to gate the F12
-; Samples -> Instruments "preserve drawn envelopes" feature, which is reverted
-; to upstream behaviour (F_SetControlInstrument now always clears+re-inits via
-; Music_ClearAllInstruments). The feature shipped a string of crashes (EMM386
-; #12 from garbage instrument headers reaching the envelope renderer, plus a
-; wild-call from a bad dialog-focus index) and was pulled at the source.
+; Music_InstrumentHasEnvelopes -- AX = instrument number (0-based).
+;
+; Compares the envelope section of the live instrument header against the
+; default InstrumentHeader template. Bytes 130h..554 cover the Volume,
+; Pan, and Pitch/Filter envelope structs plus trailing padding (250 bytes
+; total). If any byte differs, the user has drawn (or otherwise edited)
+; envelope data on this instrument and it must NOT be wiped.
+;
+; Returns:
+;   ZF = 1 (Equal)   if envelope bytes match template (default-blank)
+;   ZF = 0 (NotEq)   if any envelope byte differs (custom data present)
+;
+; Used by F_SetControlInstrument to gate the per-instrument auto-init
+; during the F12 Samples -> Instruments mode flip, so envelopes drawn
+; while in Sample mode are preserved across the transition.
+;-------------------------------------------------------------------------------
+
+Proc            Music_InstrumentHasEnvelopes Far    ; AX = instrument number
+
+                Push    AX
+                Push    CX
+                Push    DS
+                Push    SI
+                Push    ES
+                Push    DI
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+
+                Mov     DI, AX
+                Add     DI, DI
+                Mov     ES, SongDataArea
+                Mov     DI, [ES:DI+64712]   ; ES:DI -> live instrument header
+
+                                            ; Fork: reject a structurally-
+                                            ; invalid instrument BEFORE the
+                                            ; template compare. A real IT
+                                            ; envelope has at most 25 nodes; a
+                                            ; node count > 25 in any of the
+                                            ; three envelopes (vol 130h, pan
+                                            ; 182h, pitch 1D4h -> counts at
+                                            ; +131h/+183h/+1D5h) means the slot
+                                            ; holds uninitialised / leftover
+                                            ; garbage, NOT user-drawn data.
+                                            ; Report "default" (ZF=1) so the
+                                            ; caller clears it to the template
+                                            ; rather than preserving garbage
+                                            ; that would later crash
+                                            ; I_MapEnvelope.
+                Cmp     Byte Ptr [ES:DI+131h], 25
+                JA      MIHE_Garbage
+                Cmp     Byte Ptr [ES:DI+183h], 25
+                JA      MIHE_Garbage
+                Cmp     Byte Ptr [ES:DI+1D5h], 25
+                JA      MIHE_Garbage
+
+                Add     DI, 130h            ; advance to envelope section
+                Mov     SI, Offset InstrumentHeader
+                Add     SI, 130h            ; matching offset in template
+                Mov     CX, 250             ; vol+pan+pitch envelopes + padding
+
+                ClD
+                RepE    CmpsB               ; ZF=1 if all 250 bytes match,
+                                            ; ZF=0 on first mismatch.
+                Jmp     MIHE_Done           ; (Jmp + Pops preserve flags.)
+
+MIHE_Garbage:
+                Cmp     SI, SI              ; force ZF=1 -> "default" -> clear
+
+MIHE_Done:
+                Pop     DI
+                Pop     ES
+                Pop     SI
+                Pop     DS
+                Pop     CX
+                Pop     AX
+                Ret
+
+EndP            Music_InstrumentHasEnvelopes
+                Assume DS:Nothing
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 

@@ -128,7 +128,9 @@ EndS
                 Extrn   Music_GetSongSegment:Far
                 Extrn   Music_InitMixTable:Far
                 Extrn   Music_InitMuteTable:Far
+                Extrn   Music_ClearInstrument:Far
                 Extrn   Music_ClearAllInstruments:Far
+                Extrn   Music_InstrumentHasEnvelopes:Far
                 Extrn   Music_SetGlobalVolume:Far
                 Extrn   Music_InitStereo:Far
                 Extrn   Music_Stop:Far
@@ -4838,7 +4840,37 @@ Proc            F_SetControlInstrument Far
                 Push    DS
 
                 Mov     DI, Offset O1_InitialiseInstrumentList
-                Mov     CX, 3
+                                                ; Default focus on the "No"
+                                                ; button so accidentally
+                                                ; pressing Enter on this
+                                                ; prompt does NOT wipe every
+                                                ; instrument header (and the
+                                                ; envelopes the user drew in
+                                                ; Sample mode).
+                                                ;
+                                                ; M_Object1List writes CX into
+                                                ; the list's header word; the
+                                                ; framework then locates the
+                                                ; focused object at
+                                                ; list+CX*2+6 (IT_M.ASM:463).
+                                                ; The +6 skips the idle-list
+                                                ; and key-list pointers, so
+                                                ; the focusable array is
+                                                ; 0-based from EmptyObject:
+                                                ;   3 = OK button
+                                                ;   4 = No button
+                                                ;   5 = list terminator (0)
+                                                ; A value of 6 ran two slots
+                                                ; PAST the terminator into the
+                                                ; next list's bytes -> garbage
+                                                ; object pointer -> wild Call
+                                                ; -> crash the instant the
+                                                ; dialog opened (and "nothing"
+                                                ; appeared selected). The "No"
+                                                ; button is index 4 -- exactly
+                                                ; where O1_ConfirmDelete puts
+                                                ; its default Cancel button.
+                Mov     CX, 4
                 Call    M_Object1List
                                                 ; DX = 0 -> don't initialise
                                                 ; DX = 1 -> initialise
@@ -4849,18 +4881,62 @@ Proc            F_SetControlInstrument Far
                 Test    DX, DX
                 JZ      F_SetControlInstrument3
 
-                Call    Music_ClearAllInstruments
+                                                ; Per-instrument envelope-
+                                                ; preserving init.
+                                                ;
+                                                ; The original code did an
+                                                ; unconditional
+                                                ; Music_ClearAllInstruments
+                                                ; then re-walked 0..99 to
+                                                ; copy sample names + fill
+                                                ; the 120-note keymap. That
+                                                ; wiped every Vol / Pan /
+                                                ; Pitch / Filter envelope
+                                                ; the user had drawn while
+                                                ; still in Sample mode
+                                                ; (envelopes don't sound in
+                                                ; Sample mode, so users
+                                                ; frequently pre-draw them
+                                                ; before flipping modes).
+                                                ;
+                                                ; Replacement: for each
+                                                ; slot 0..98, check whether
+                                                ; the live instrument's
+                                                ; envelope bytes deviate
+                                                ; from the default template
+                                                ; (Music_InstrumentHasEnvelopes
+                                                ;  in IT_MUSIC.ASM). If yes,
+                                                ; preserve the entire
+                                                ; instrument as-is. If no,
+                                                ; clear+re-init this single
+                                                ; slot exactly as before.
+                                                ; "Initialize Instruments =
+                                                ; YES" now means "set up
+                                                ; sample mappings on blank
+                                                ; instruments, leave my
+                                                ; envelopes alone."
 
-                                                ; OK.. for samples 1..99
-                                                ; check if sample exists.
-                                                ; if so, copy name&set all
-                                                ; notes of instrument.
                 Push    DS
                 Pop     ES                      ; ES = SongDataSegment
 
                 Xor     DX, DX
 
 F_SetControlInstrument1:
+                Mov     AX, DX
+                Call    Music_InstrumentHasEnvelopes
+                JNE     F_SetControlInstrument6 ; non-default envelope ->
+                                                ; preserve. Skip clear AND
+                                                ; skip the auto-name/keymap
+                                                ; fill below. Also skip the
+                                                ; network notify -- nothing
+                                                ; about this instrument
+                                                ; changed.
+
+                Mov     AX, DX                  ; envelope is default ->
+                Call    Music_ClearInstrument   ; safe to wipe this slot
+                                                ; back to template before
+                                                ; populating.
+
                 Mov     BX, DX
                 Add     BX, BX
                 Mov     SI, [DS:BX+64912]       ; SI points to sample
@@ -4899,6 +4975,8 @@ IF NETWORKENABLED
 F_SetControlInstrument5:
                 Call    Network_FinishedSendQueue
 ENDIF
+
+F_SetControlInstrument6:
                 Inc     DX
                 Cmp     DX, 99
                 JBE     F_SetControlInstrument1
