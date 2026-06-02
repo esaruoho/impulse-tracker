@@ -203,6 +203,7 @@ TempoSetMsg     DB      "Tempo set to ", 0FDh, "D beats per minute", 0
 SpeedSetMsg     DB      "Speed set to ", 0FDh, "D frames per row", 0
 VolumeSetMsg    DB      "Global Volume set to ", 0FDh, "D", 0
 MIDIMultiOffMsg DB      "MIDI multitimbral input OFF - normal MIDI restored", 0
+ShiftF4NeedInstrMsg DB  "Enable Instruments mode first (F12) to use Shift-F4", 0
 
 InstrumentScreenTable   Label
         DW      Offset O1_InstrumentListGeneral
@@ -320,6 +321,30 @@ EndP            Glbl_F3
 ;            router hijacking every note on channels 1..16.
 Proc            Glbl_Shift_F4 Far
 
+                                                ; Shift-F4 (multitimbral MIDI-in
+                                                ; batch-create / toggle) only
+                                                ; makes sense in Instrument
+                                                ; mode -- the 16 things it
+                                                ; creates ARE instruments.
+                                                ; Running it in Sample mode is
+                                                ; confusing, so gate it: bail
+                                                ; with an info-line hint when
+                                                ; bit 2 of the song flags
+                                                ; (Instrument mode) is clear.
+                Call    Music_GetSongSegment
+                Mov     DS, AX
+                        Assume DS:Nothing
+                Test    Byte Ptr [DS:2Ch], 4
+                JNZ     Glbl_Shift_F4_InstrMode
+
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset ShiftF4NeedInstrMsg
+                Call    SetInfoLine
+                Mov     AX, 1
+                Ret
+
+Glbl_Shift_F4_InstrMode:
                 Call    Music_GetMIDIMultiEnable
                 Test    AL, AL
                 JZ      Glbl_Shift_F4_Create    ; currently off -> create+enable
