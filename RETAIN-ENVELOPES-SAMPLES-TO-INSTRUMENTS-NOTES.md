@@ -21,38 +21,57 @@ answers it: every initialised instrument header starts with the 4-byte magic
 (sample-only loads, `Shift-Enter` bulk-load — neither touches the instrument
 region) practically never spell `IMPI` (four exact bytes, ~1 in 4e9).
 
-`Music_InstrumentHasEnvelopes` now gates on `IMPI` FIRST:
-- **No `IMPI`** → not a real instrument → report "default" → caller clears it to
-  template. Garbage can never be preserved; the renderer never sees a non-`IMPI`
-  header. **Crash class eliminated at the signal, not patched downstream.**
-- **`IMPI` present** → real instrument; its envelope structs are guaranteed valid,
-  so the template-diff on the envelope section is now safe and decides preserve
-  (user drew something) vs clear+reinit (real but blank).
+### Final policy: "always remap, keep envelopes" (chosen by the maintainer)
 
-The old node-count>25 heuristic is kept as a *secondary* belt; the
-`I_MapEnvelope` `MaxNode<=25` clamp on `main` remains the independent
-renderer-side backstop.
+A new helper `Music_InstrumentIsReal` (AX = instrument#) returns ZF=1 iff the
+header starts with `IMPI`. `F_SetControlInstrument`'s Initialise=YES loop now:
+
+```
+for each slot 0..98:
+    if NOT IsReal(slot):            ; no IMPI -> garbage
+        Music_ClearInstrument(slot) ; -> valid blank template (IMPI, 0-node env)
+    ; slot is now guaranteed valid (IMPI + valid envelope section)
+    if matching sample exists:
+        copy sample name -> instrument name (offset 20h)
+        fill 120-note keymap        (offset 41h) -> all notes play this sample
+    ; the envelope section (130h+) is NEVER written here
+```
+
+Consequences:
+- **Garbage can never reach the envelope renderer** — non-IMPI slots are cleared
+  to a valid template before anything else. **Crash class eliminated at the signal.**
+- **Drawn envelopes always survive** — the loop never touches bytes 130h+, on any
+  slot, real or just-cleared.
+- **Every instrument ends up mapped & playable** — name + keymap are (re)written
+  for every slot with a matching sample, including ones that have a drawn
+  envelope. (The earlier "skip slots that have envelopes" design left such a slot
+  *silent* because its default keymap points every note at sample 0 — that bug is
+  gone.)
+
+Trade-off the maintainer accepted: a hand-crafted real instrument's custom name
+and multi-sample keymap get overwritten with the simple auto-mapping. That is the
+intent of "Initialise = YES"; a user who wants zero changes answers **No** (which,
+on stable `main`, already flips to Instrument mode and keeps everything).
+
+The `I_MapEnvelope` `MaxNode<=25` clamp on `main` remains as an independent
+renderer-side backstop for any malformed-but-IMPI instrument loaded from disk.
 
 ### Why this is strictly safe
-Worst case (a user somehow drew an envelope on a slot that never got `IMPI`):
-that slot is cleared instead of preserved — it degrades to stable IT2.15
-behaviour for that one slot. **It never crashes.** Normal case: real instruments
-with drawn envelopes carry `IMPI` and are preserved.
+The renderer never sees a non-IMPI header, and the envelope section of any slot
+is never mutated by this path. There is no longer a "drew on a magic-less slot"
+failure mode to worry about (we don't gate on envelopes at all anymore) — the
+only thing `IMPI` decides is whether to clear garbage first. **It never crashes.**
 
-### The one open question for the verifier
-Does drawing an envelope always land on an `IMPI` header? `F_NewSong` only clears
-instruments when the user ticks that box, so slots *can* be garbage — but the
-instrument-edit UI very likely initialises a slot on first edit (confirm on real
-hardware). If it does, `IMPI` is fully airtight. If some edit path writes
-envelope bytes onto a magic-less slot, that slot degrades safely to "cleared"
-(no crash), and that path should be taught to write the template on first
-envelope edit.
+### What the verifier should still confirm on real hardware
+The original crash is EMM386-#12 / real-hardware-specific (DOSBox-X can't
+reproduce it). Confirm on a DOS PC: (1) the old repro (Shift-Enter bulk-load →
+F12 Samples→Instruments → Initialise=YES) no longer crashes; (2) a genuinely
+drawn envelope survives the flip AND the instrument is now mapped/playable; (3)
+a normal song still converts as expected.
 
 ---
 
-(Original diagnosis below, retained for context. Note: the "directions for a
-correct fix" list predates the BREAKTHROUGH; direction (2)/(1) are essentially
-what `IMPI` gating achieves.)
+(Original diagnosis below, retained for context.)
 
 ## What the feature is supposed to do
 

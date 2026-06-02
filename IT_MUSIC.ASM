@@ -154,7 +154,7 @@ include network.inc
         Global  MIDIMultiEnable:Byte
         Global  Music_GetMIDIMultiEnable:Far
         Global  Music_SetMIDIMultiEnable:Far
-        Global  Music_InstrumentHasEnvelopes:Far
+        Global  Music_InstrumentIsReal:Far
         Global  Music_GetHostChannelInformationTable:Far
         Global  Music_GetSlaveChannelInformationTable:Far
         Global  Music_SetGlobalVolume:Far
@@ -3959,24 +3959,25 @@ EndP            Music_ClearInstrument
                 Assume DS:Nothing
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
-; Music_InstrumentHasEnvelopes -- AX = instrument number (0-based).
+; Music_InstrumentIsReal -- AX = instrument number (0-based).
 ;
-; Compares the envelope section of the live instrument header against the
-; default InstrumentHeader template. Bytes 130h..554 cover the Volume,
-; Pan, and Pitch/Filter envelope structs plus trailing padding (250 bytes
-; total). If any byte differs, the user has drawn (or otherwise edited)
-; envelope data on this instrument and it must NOT be wiped.
+; Returns ZF=1 if the live instrument header starts with the "IMPI" magic --
+; i.e. a real, initialised instrument (cleared to the InstrumentHeader
+; template, or loaded from disk, both of which write "IMPI" at offset 0).
+; Returns ZF=0 if the magic is absent -- an uninitialised slot holding
+; leftover garbage (sample-only loads and Shift-Enter bulk-load never touch
+; the instrument region). Garbage practically never spells "IMPI" (four exact
+; bytes, ~1 in 4e9).
 ;
-; Returns:
-;   ZF = 1 (Equal)   if envelope bytes match template (default-blank)
-;   ZF = 0 (NotEq)   if any envelope byte differs (custom data present)
-;
-; Used by F_SetControlInstrument to gate the per-instrument auto-init
-; during the F12 Samples -> Instruments mode flip, so envelopes drawn
-; while in Sample mode are preserved across the transition.
+; F_SetControlInstrument uses this to decide, per slot, whether to clear
+; before mapping: real instruments are left in place so their drawn envelopes
+; survive the Samples->Instruments flip; garbage slots are cleared to the
+; valid template first, so the envelope renderer (I_MapEnvelope) never sees a
+; non-IMPI header. This is the definitive signal the old "envelope bytes
+; differ from template" test got wrong -- garbage passed that trivially.
 ;-------------------------------------------------------------------------------
 
-Proc            Music_InstrumentHasEnvelopes Far    ; AX = instrument number
+Proc            Music_InstrumentIsReal Far          ; AX = instrument number
 
                 Push    AX
                 Push    CX
@@ -3993,69 +3994,12 @@ Proc            Music_InstrumentHasEnvelopes Far    ; AX = instrument number
                 Add     DI, DI
                 Mov     ES, SongDataArea
                 Mov     DI, [ES:DI+64712]   ; ES:DI -> live instrument header
-
-                                            ; --- IMPI gate (the real fix) ---
-                                            ; A genuinely-initialised instrument
-                                            ; header always starts with the
-                                            ; "IMPI" magic: Music_ClearInstrument
-                                            ; copies the InstrumentHeader
-                                            ; template, whose first four bytes
-                                            ; are "IMPI", and disk loads write it
-                                            ; too. Uninitialised instrument slots
-                                            ; (sample-only loads, Shift-Enter
-                                            ; bulk-load -- neither touches the
-                                            ; instrument region) hold leftover
-                                            ; garbage that practically never
-                                            ; spells "IMPI" (four exact bytes).
-                                            ;
-                                            ; If the magic is absent this is NOT
-                                            ; a real instrument and must never be
-                                            ; "preserved" -> report default
-                                            ; (ZF=1) so the caller clears it to
-                                            ; the template. This is the
-                                            ; definitive signal the old
-                                            ; node-count heuristic only
-                                            ; approximated: garbage with small
-                                            ; node counts used to slip through
-                                            ; and reach I_MapEnvelope; it cannot
-                                            ; pass the IMPI test.
-                Cmp     Byte Ptr [ES:DI], 'I'
-                JNE     MIHE_Garbage
-                Cmp     Byte Ptr [ES:DI+1], 'M'
-                JNE     MIHE_Garbage
-                Cmp     Byte Ptr [ES:DI+2], 'P'
-                JNE     MIHE_Garbage
-                Cmp     Byte Ptr [ES:DI+3], 'I'
-                JNE     MIHE_Garbage
-
-                                            ; Belt-and-suspenders: even on an
-                                            ; IMPI header a node count > 25 is
-                                            ; impossible for a real IT envelope,
-                                            ; so treat it as garbage if it ever
-                                            ; happens. The matching I_MapEnvelope
-                                            ; MaxNode<=25 clamp on main is the
-                                            ; independent renderer-side backstop.
-                Cmp     Byte Ptr [ES:DI+131h], 25
-                JA      MIHE_Garbage
-                Cmp     Byte Ptr [ES:DI+183h], 25
-                JA      MIHE_Garbage
-                Cmp     Byte Ptr [ES:DI+1D5h], 25
-                JA      MIHE_Garbage
-
-                Add     DI, 130h            ; advance to envelope section
-                Mov     SI, Offset InstrumentHeader
-                Add     SI, 130h            ; matching offset in template
-                Mov     CX, 250             ; vol+pan+pitch envelopes + padding
+                Mov     SI, Offset InstrumentHeader  ; template[0..3] = "IMPI"
+                Mov     CX, 4
 
                 ClD
-                RepE    CmpsB               ; ZF=1 if all 250 bytes match,
-                                            ; ZF=0 on first mismatch.
-                Jmp     MIHE_Done           ; (Jmp + Pops preserve flags.)
-
-MIHE_Garbage:
-                Cmp     SI, SI              ; force ZF=1 -> "default" -> clear
-
-MIHE_Done:
+                RepE    CmpsB               ; ZF=1 iff header[0..3] == "IMPI"
+                                            ; (Pops below do not touch flags)
                 Pop     DI
                 Pop     ES
                 Pop     SI
@@ -4064,7 +4008,7 @@ MIHE_Done:
                 Pop     AX
                 Ret
 
-EndP            Music_InstrumentHasEnvelopes
+EndP            Music_InstrumentIsReal
                 Assume DS:Nothing
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½

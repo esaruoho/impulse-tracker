@@ -130,7 +130,7 @@ EndS
                 Extrn   Music_InitMuteTable:Far
                 Extrn   Music_ClearInstrument:Far
                 Extrn   Music_ClearAllInstruments:Far
-                Extrn   Music_InstrumentHasEnvelopes:Far
+                Extrn   Music_InstrumentIsReal:Far
                 Extrn   Music_SetGlobalVolume:Far
                 Extrn   Music_InitStereo:Far
                 Extrn   Music_Stop:Far
@@ -4881,40 +4881,36 @@ Proc            F_SetControlInstrument Far
                 Test    DX, DX
                 JZ      F_SetControlInstrument3
 
-                                                ; Per-instrument envelope-
-                                                ; preserving init.
+                                                ; Always-remap, keep-envelopes
+                                                ; init (see PR #3 notes).
                                                 ;
-                                                ; The original code did an
-                                                ; unconditional
-                                                ; Music_ClearAllInstruments
-                                                ; then re-walked 0..99 to
-                                                ; copy sample names + fill
-                                                ; the 120-note keymap. That
-                                                ; wiped every Vol / Pan /
-                                                ; Pitch / Filter envelope
-                                                ; the user had drawn while
-                                                ; still in Sample mode
-                                                ; (envelopes don't sound in
-                                                ; Sample mode, so users
-                                                ; frequently pre-draw them
-                                                ; before flipping modes).
+                                                ; Upstream did an unconditional
+                                                ; Music_ClearAllInstruments then
+                                                ; walked 0..99 copying sample
+                                                ; names + filling the 120-note
+                                                ; keymap -- which wiped every
+                                                ; Vol/Pan/Pitch/Filter envelope
+                                                ; the user drew in Sample mode.
                                                 ;
-                                                ; Replacement: for each
-                                                ; slot 0..98, check whether
-                                                ; the live instrument's
-                                                ; envelope bytes deviate
-                                                ; from the default template
-                                                ; (Music_InstrumentHasEnvelopes
-                                                ;  in IT_MUSIC.ASM). If yes,
-                                                ; preserve the entire
-                                                ; instrument as-is. If no,
-                                                ; clear+re-init this single
-                                                ; slot exactly as before.
-                                                ; "Initialize Instruments =
-                                                ; YES" now means "set up
-                                                ; sample mappings on blank
-                                                ; instruments, leave my
-                                                ; envelopes alone."
+                                                ; New policy: for each slot,
+                                                ; clear ONLY if it is not a real
+                                                ; instrument -- i.e. it lacks the
+                                                ; "IMPI" magic, so it holds
+                                                ; uninitialised garbage. Real
+                                                ; instruments are left in place.
+                                                ; Then, for every slot whose
+                                                ; matching sample exists, write
+                                                ; the instrument name + 120-note
+                                                ; keymap so it is valid and
+                                                ; playable. The envelope section
+                                                ; (130h+) is NEVER touched, so
+                                                ; drawn envelopes always survive
+                                                ; AND every instrument still ends
+                                                ; up mapped. Garbage can never
+                                                ; reach the envelope renderer
+                                                ; because non-IMPI slots are
+                                                ; cleared to a valid blank
+                                                ; template first.
 
                 Push    DS
                 Pop     ES                      ; ES = SongDataSegment
@@ -4923,20 +4919,20 @@ Proc            F_SetControlInstrument Far
 
 F_SetControlInstrument1:
                 Mov     AX, DX
-                Call    Music_InstrumentHasEnvelopes
-                JNE     F_SetControlInstrument6 ; non-default envelope ->
-                                                ; preserve. Skip clear AND
-                                                ; skip the auto-name/keymap
-                                                ; fill below. Also skip the
-                                                ; network notify -- nothing
-                                                ; about this instrument
-                                                ; changed.
+                Call    Music_InstrumentIsReal  ; ZF=1 -> "IMPI" present (real
+                                                ; instrument): keep it, do NOT
+                                                ; clear, so its drawn envelope
+                                                ; survives. ZF=0 -> garbage slot.
+                JZ      F_SetControlInstrumentMap
 
-                Mov     AX, DX                  ; envelope is default ->
-                Call    Music_ClearInstrument   ; safe to wipe this slot
-                                                ; back to template before
-                                                ; populating.
+                Mov     AX, DX                  ; garbage -> clear to a valid
+                Call    Music_ClearInstrument   ; blank template (IMPI + 0-node
+                                                ; envelopes) before mapping. This
+                                                ; is what keeps the envelope
+                                                ; renderer from ever seeing a
+                                                ; non-IMPI header.
 
+F_SetControlInstrumentMap:
                 Mov     BX, DX
                 Add     BX, BX
                 Mov     SI, [DS:BX+64912]       ; SI points to sample
@@ -4944,9 +4940,17 @@ F_SetControlInstrument1:
 
                 Test    Byte Ptr [DS:SI+12h], 1
                 JZ      F_SetControlInstrument2
-                                                ; No sample there!
+                                                ; No matching sample -> nothing
+                                                ; to map; a real instrument here
+                                                ; is left fully intact.
 
-                                                ; Copy name
+                                                ; Copy sample name -> instrument
+                                                ; name (offset 20h) and fill the
+                                                ; 120-note keymap (offset 41h).
+                                                ; Both sit well before the
+                                                ; envelope section (130h), so
+                                                ; mapping NEVER disturbs a drawn
+                                                ; envelope.
                 Mov     CX, 26
                 Add     SI, 14h
                 Add     DI, 20h
@@ -4975,8 +4979,6 @@ IF NETWORKENABLED
 F_SetControlInstrument5:
                 Call    Network_FinishedSendQueue
 ENDIF
-
-F_SetControlInstrument6:
                 Inc     DX
                 Cmp     DX, 99
                 JBE     F_SetControlInstrument1
