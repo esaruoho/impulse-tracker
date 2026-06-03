@@ -83,6 +83,7 @@ EndS
 
                 Extrn   Music_PlayPattern:Far
                 Extrn   Music_Stop:Far
+                Extrn   Music_SilenceSampleVoices:Far
                 Extrn   Music_PlaySong:Far
                 Extrn   Music_PlayNote:Far
                 Extrn   Music_ToggleChannel:Far
@@ -3994,7 +3995,19 @@ I_AmplifySample5:
                 And     DX, DX
                 JZ      I_AmplifySampleEnd
 
-                Call    Music_Stop
+                                                ; FEATURE-CARD >> features/sample-amplify-keeps-playback.feature
+                                                ; Fork: amplifying (normalizing) a
+                                                ; sample no longer stops the whole
+                                                ; song. Silence ONLY the voices
+                                                ; playing THIS sample (AL = 1..99
+                                                ; slot) so the mixer won't read the
+                                                ; PCM while we rewrite it in place;
+                                                ; every other channel keeps playing.
+                                                ; Same pattern as the F3 loader
+                                                ; keyjazz fix (a44c41b). The proc's
+                                                ; PushA/PopA preserves AX for the
+                                                ; Music_GetSampleLocation below.
+                Call    Music_SilenceSampleVoices
 
                 Xor     CX, CX
                 Call    Music_GetSampleLocation ; Loads DS:ESI and ECX again.
