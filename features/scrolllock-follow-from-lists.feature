@@ -131,14 +131,28 @@ Feature: User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument Li
     When the user presses Ctrl-F
     Then Pattern Follow Mode is forced ON, the LED lights, and the Pattern Editor opens
 
+  @bug @shipped @build-verified @runtime-untested
+  Scenario: Ctrl-F INSIDE the Pattern Editor (F2) toggles Follow Mode, not the config dialog
+    # BUG (reported by Esa 2026-06-03): "press Ctrl-F while in the pattern editor and
+    # follow pattern is on -> the F2 Pattern Editor Settings dialog opens instead of
+    # follow being toggled off." Cause: PE_ScrollLockFollow always tail-jumped to
+    # Glbl_F2, and a second F2 (CurrentMode==2) opens Pattern Edit Config.
+    # FIX (commit e04be2c): the handler now calls Glbl_GetCurrentMode; when
+    # CurrentMode==2 it toggles Follow inline (mirrors PEFunction_ToggleTrace, DS-safe)
+    # and returns AX=1 (redraw) instead of re-entering Glbl_F2.
+    # cite: IT_PE.ASM PE_ScrollLockFollow -> PE_SLF_Toggle branch ; commit e04be2c
+    Given the user is in the Pattern Editor (CurrentMode==2) with Follow Mode ON
+    When the user presses Ctrl-F
+    Then Follow Mode is toggled OFF (LED + info line update)
+    And the F2 Pattern Edit Config dialog does NOT open
+    # @runtime-untested: fix built + relaunched; awaiting Esa's confirm
+
   @shipped @build-verified @runtime-untested
-  Scenario: Ctrl-F in the Pattern Editor (F2), Order List (F11), or Song Variables (F12)
-    # Same single GlobalKeyList entry + same handler as the F3/F4 case above, and
-    # all three screens' keylists fall through to GlobalKeyList (F2's keylist IS
-    # GlobalKeyList; F11=O1_OrderPanningList, F12=O1_ConfigureITList both chain to
-    # it). Expected to work, but NOT yet each key-pressed -> stays untested until
-    # confirmed. On F2 it just re-asserts Follow (already there) -- harmless.
-    Given the user is on the Pattern Editor (F2), Order List (F11), or Song Variables (F12)
+  Scenario: Ctrl-F on the Order List (F11) or Song Variables (F12) enters the editor
+    # Same single GlobalKeyList entry; F11=O1_OrderPanningList and F12=O1_ConfigureITList
+    # both chain to GlobalKeyList. From these (CurrentMode != 2) the handler forces
+    # Follow ON and enters the Pattern Editor via Glbl_F2, same as the F3/F4 path.
+    Given the user is on the Order List (F11) or Song Variables (F12)
     When the user presses Ctrl-F
     Then Pattern Follow Mode is forced ON, the LED lights, and the Pattern Editor opens
 

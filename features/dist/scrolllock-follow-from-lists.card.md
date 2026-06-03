@@ -4,9 +4,9 @@
 
 **Intent:** As someone auditioning samples/instruments against a playing song, I want Scroll Lock on the list screens to drop me into the Pattern Editor with Pattern Follow Mode already on, So that one key takes me from "browsing a slot" to "watching the cursor follow playback" without a separate F2 then Scroll Lock.
 
-**Grades:** @build-verified × 5 · @runtime-untested × 2 · @shipped × 4 · @stock × 1 · @todo × 1
+**Grades:** @build-verified × 8 · @runtime-untested × 4 · @runtime-verified × 1 · @shipped × 7 · @stock × 1 · @todo × 1
 
-**Scenarios: 6**
+**Scenarios: 9**
 
 
 ---
@@ -50,7 +50,40 @@
 <sub>cite: IT_OBJ1.ASM:6666 InstrumentGlobalKeyList DB 0 / DW 146h -> PE_ScrollLockFollow</sub>
 
 
-## 4. Follow Mode is forced ON, never toggled off, from the lists
+## 4. Ctrl-F in the Sample List (F3) or Instrument List (F4)
+
+`@shipped @build-verified @runtime-verified`
+
+
+- Given the user is on the Sample List (F3) or Instrument List (F4)
+- When the user presses Ctrl-F
+- Then Pattern Follow Mode is forced ON, the LED lights, and the Pattern Editor opens
+
+
+## 5. Ctrl-F INSIDE the Pattern Editor (F2) toggles Follow Mode, not the config dialog
+
+`@bug @shipped @build-verified @runtime-untested`
+
+
+- Given the user is in the Pattern Editor (CurrentMode==2) with Follow Mode ON
+- When the user presses Ctrl-F
+- Then Follow Mode is toggled OFF (LED + info line update)
+- And the F2 Pattern Edit Config dialog does NOT open
+
+<sub>cite: IT_PE.ASM PE_ScrollLockFollow -> PE_SLF_Toggle branch ; commit e04be2c</sub>
+
+
+## 6. Ctrl-F on the Order List (F11) or Song Variables (F12) enters the editor
+
+`@shipped @build-verified @runtime-untested`
+
+
+- Given the user is on the Order List (F11) or Song Variables (F12)
+- When the user presses Ctrl-F
+- Then Pattern Follow Mode is forced ON, the LED lights, and the Pattern Editor opens
+
+
+## 7. Follow Mode is forced ON, never toggled off, from the lists
 
 `@shipped @build-verified`
 
@@ -62,7 +95,7 @@
 <sub>cite: IT_PE.ASM:13339 uses "Mov TracePlayback, 1" (set), NOT "Xor ...,1" (toggle)</sub>
 
 
-## 5. The handler hands Glbl_F2 the dispatcher's own DS (no segment damage)
+## 8. The handler hands Glbl_F2 the dispatcher's own DS (no segment damage)
 
 `@shipped @build-verified`
 
@@ -74,12 +107,12 @@
 <sub>cite: IT_PE.ASM:13339 Push DS (dispatcher) / Push CS Pop DS (Pattern seg for</sub>
 
 
-## 6. (not built) Scroll Lock from other screens (Order list F11, Song vars F12)
+## 9. (not built) Scroll Lock / Ctrl-F from other screens (Order list F11, Song vars F12)
 
 `@todo`
 
 
-- Given the user is on the Order List or Song Variables screen
-- When the user presses Scroll Lock
-- Then nothing happens (no binding) — this is intentional, revisit only if asked
+- Given the user is on the Order List (F11) or Song Variables (F12) screen
+- When the user presses Scroll Lock or Ctrl-F
+- Then nothing happens (no binding) — intentional; F11 is the pending follow-up
 

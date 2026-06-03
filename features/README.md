@@ -336,19 +336,21 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **What it does:** As someone auditioning samples/instruments against a playing song, I want Scroll Lock on the list screens to drop me into the Pattern Editor with Pattern Follow Mode already on, So that one key takes me from "browsing a slot" to "watching the cursor follow playback" without a separate F2 then Scroll Lock.
 
-**Behaviour (7 scenarios):**
+**Behaviour (9 scenarios):**
 
 - Scroll Lock inside the Pattern Editor still just toggles Follow Mode — `@stock @build-verified`
 - Scroll Lock in the Sample List opens the Pattern Editor with Follow Mode on — `@shipped @build-verified @runtime-untested`
 - Scroll Lock in the Instrument List does the same — `@shipped @build-verified @runtime-untested`
-- Ctrl-F on the Sample or Instrument List does the same as Scroll Lock — `@shipped @build-verified @runtime-untested`
+- Ctrl-F in the Sample List (F3) or Instrument List (F4) — `@shipped @build-verified @runtime-verified`
+- Ctrl-F INSIDE the Pattern Editor (F2) toggles Follow Mode, not the config dialog — `@shipped @build-verified @runtime-untested`
+- Ctrl-F on the Order List (F11) or Song Variables (F12) enters the editor — `@shipped @build-verified @runtime-untested`
 - Follow Mode is forced ON, never toggled off, from the lists — `@shipped @build-verified`
 - The handler hands Glbl_F2 the dispatcher's own DS (no segment damage) — `@shipped @build-verified`
 - (not built) Scroll Lock / Ctrl-F from other screens (Order list F11, Song vars F12) — `@todo`
 
-**How it does it:** **Key procs:** `PE_ScrollLockFollow`, `TracePlayback`, `PEFunction_ToggleTrace`, `Glbl_F2`, `K_SetScrollLock`, `SampleGlobalKeyList`, `InstrumentGlobalKeyList` · **Source files:** `IT_OBJ1.ASM`
+**How it does it:** **Key procs:** `PE_ScrollLockFollow`, `TracePlayback`, `PEFunction_ToggleTrace`, `Glbl_F2`, `K_SetScrollLock`, `SampleGlobalKeyList`, `InstrumentGlobalKeyList` · **Source files:** `IT_PE.ASM`
 
-**Grade:** @build-verified ×6 · @runtime-untested ×3 · @shipped ×5 · @stock ×1 · @todo ×1
+**Grade:** @build-verified ×8 · @runtime-untested ×4 · @runtime-verified ×1 · @shipped ×7 · @stock ×1 · @todo ×1
 
 **Commits:** `91dfc0b` Scroll Lock on F3/F4 lists -> Pattern Editor + Follow Mode
 
