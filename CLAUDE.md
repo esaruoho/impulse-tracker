@@ -8,6 +8,26 @@ This file is a development guide for both human contributors and AI coding assis
 
 Full Impulse Tracker 2.15 source, BSD-3-Clause. Originally released 2014 on Bitbucket alongside Jeffrey Lim's "20 Years of Impulse Tracker" blog series. TASM 4.1 / TLINK 3.01 / Borland MAKE 4.0 + DOS target. 16-bit real-mode segmented assembly with 386 extensions (`.386P`). Builds `IT.EXE` plus a set of `.DRV` sound drivers loaded at runtime.
 
+## Report Cards & Self-Maintaining Docs (`features/` + git hooks)
+
+This repo documents its own behaviour with **report cards** — Gherkin `.feature` files in `features/`, one per behaviour cluster (e.g. `f11-order-list.feature`, `midi-in-multitimbral.feature`). Each card is the durable understanding-store: Given/When/Then scenarios, each cited to its source proc + line + commit, graded with tags (`@stock` upstream / `@shipped` fork / `@build-verified` / `@hw-untested`). The schema is `GHERKIN-FEATURE-WIKI-PATTERN.md`. **When you change a documented behaviour, update its card in the same motion — don't let it drift.**
+
+Each card carries a **triad**: the `.feature` (the spec/claims), a sibling `*.session.md` (the conversation that spawned it — the "vibe diff"), and a `RESULT-LOG` (what actually shipped: dated commit/PR lines). The triad makes the wiki rebuildable straight from git.
+
+The RESULT-LOG keeps itself current via **version-controlled git hooks in `.githooks/`**:
+
+- `pre-commit` stamps cards whose WATCHed symbols are in the *staged* diff and `git add`s the card so the note rides into the same commit (the everyday direct-to-main path).
+- `post-merge` does the same for merges / PRs (records the merge SHA + PR number).
+- `report-card-stamp.sh` is the shared engine. Mapping is **by symbol** (each card's `# WATCH:` line lists the procs it cites), so touching an unrelated part of a shared file like `IT_G.ASM` doesn't tag every card. `features/` and `.githooks/` are excluded from the scanned diff so a card can't self-tag.
+
+**ONE-TIME SETUP PER CLONE (REQUIRED — git won't auto-run committed hooks):**
+
+```
+git config core.hooksPath .githooks
+```
+
+Run that once after cloning (e.g. on the Mac Mini). Without it the cards still work as docs, but they stop self-updating. Verify with `git config core.hooksPath` (should print `.githooks`). Full detail: `.githooks/README.md`.
+
 ## User-Facing Keyboard Reference (from IT.TXT — DO NOT GUESS)
 
 **Source of truth:** `ReleaseDocumentation/IT.TXT` and the IRQ-level handler in `IT_K.ASM`. If a key isn't listed here and isn't in `IT.TXT`, look it up before mentioning it to the user. Hallucinated key bindings (e.g. claiming "Space" is the play key, or calling Ctrl-O "module load" when it's WAV render) waste the user's time and erode trust. This has happened more than once. **Do not guess.**
