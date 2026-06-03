@@ -108,9 +108,14 @@ itself.
 
 - `@build-verified` is real: full DOSBox-X `BUILDALL` via `buildall.conf`,
   `IT_MUSIC.asm` assembled Error/Warning = None, `IT.EXE` linked (TLINK 3.01).
-- `@runtime-untested` is honest: I did **not** run IT.EXE and press Right then
-  Shift-Right on F11 mid-render to watch the file land and confirm no wedge. That
-  smoke test is still owed. The logic is verified by reading, not by running.
+- `@runtime-verified` (2026-06-03): after shipping, IT.EXE was launched in
+  DOSBox-X and Esa drove the exact scenario — pressed Right, then Shift-Right
+  mid-render. Result: "it worked without a hitch", the in-flight render audibly
+  cut off ("neutered the stuff it was writing" = `Music_Stop` truncating
+  playback), and IT did **not** wedge. The smoke test that was owed is now paid.
+  The `LL*.WAV` files left in the repo root are that run's output (no Quicksave
+  folder configured, so they landed in cwd). The "old behaviour" scenario stays
+  build-only — it's the pre-fix wedge, not re-runnable now.
 
 ## How to get back
 

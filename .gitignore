@@ -63,6 +63,13 @@ OUTPUT.*
 004_*.001
 CACHE.ITS
 
+# WAV render outputs + Ctrl-O log — produced by running IT.EXE (Quicksave
+# renders land here when no Quicksave folder is configured). Never commit.
+*.WAV
+*.wav
+CTRLOLOG.TXT
+CTRLOLOG.OLD
+
 # personal IT.CFG kept in repo root for zip staging (canonical copy lives on
 # /Volumes/AIFORIA2/IT.CFG and is bundled into every IT2354-esaruoho-<sha>.zip).
 # Holds user-specific MIDI ports, sound-driver pick, Quicksave path, envelope
