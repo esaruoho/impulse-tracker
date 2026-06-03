@@ -12,6 +12,18 @@
 > - Date:   2026-06-03
 > - Agent:  Claude Code (Opus 4.8, 1M context)
 
+## How to get back (the seed is clickable, not just summarized)
+
+- **Transcript:** file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/8fdac3f9-0da3-4d36-a1e1-7e0d3ed99894.jsonl
+- **Session ID:** `8fdac3f9-0da3-4d36-a1e1-7e0d3ed99894`
+  (confirmed live by transcript mtime matching wall-clock at capture)
+- **Resume:** `claude --resume 8fdac3f9-0da3-4d36-a1e1-7e0d3ed99894`
+- **Window:** 2026-06-03 06:12:14Z … 08:09:12Z (UTC; 09:12 … 11:09 EEST).
+- **Honest caveat:** the WAV feature's earliest framing also touched earlier
+  transcripts the same day (`227bcb50…` ended 07:59Z; `1fa213d0…` is the
+  report-card-memory originSessionId). 8fdac3f9 is where the feature was built
+  and report-carded; the cross-session thread is noted, not hidden.
+
 ---
 
 ## The arc in one line

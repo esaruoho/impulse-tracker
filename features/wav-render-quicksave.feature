@@ -49,6 +49,18 @@
 #   The card is incomplete without it. The session is the vibe-diff unit:
 #   future versions diff the dialogue (requests, refinements, corrections),
 #   not just the code and the card.
+#
+# RESULT (third leg of the triad: .feature spec + .session convo + what shipped):
+#   Feature delivery : be595b2 (.000 -> .WAV), 74c3fe8 (LL<HHMMSS>.WAV)
+#                      direct to esaruoho/main, no PR
+#   This card authored: 3d5882a (card + back-links), 47015b7 (session),
+#                       3fd46da (generative-seed preamble)
+#   Triad: this .feature  <->  wav-render-quicksave.session.md  <->  those commits
+#
+# WATCH: WAV_BuildTimestampBasename WAV_Store2Dec Music_ToggleWAVRender Music_ImportRenderedPattern PE_OrderList_RightDispatch PE_OrderList_RenderDispatch PE_OrderList_RenderQuicksave PE_OrderList_GDispatch CopyFileName
+# RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
+#
+# IT.TXT source of truth: F10/F11 render docs; CLAUDE.md Ctrl-O / F11 tables.
 # =============================================================================
 
 Feature: WAV Quicksave render filename
