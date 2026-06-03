@@ -342,12 +342,14 @@ EndP            Glbl_F3
 
 ; Fork: Shift-F4 toggles the live multitimbral MIDI-in synth.
 ;   - OFF -> confirm, batch-create 16 MIDI-in instruments + enable the router,
-;            then fall through into Glbl_F4 so the instrument screen is shown.
+;            SWITCH Sample->Instrument mode, then jump into Glbl_F4 so the
+;            instrument screen is shown.
 ;   - ON  -> turn the router back OFF (instruments are left intact) so normal
 ;            sample/instrument MIDI preview works again. Without this the
 ;            enable flag was a one-way latch and there was no way to stop the
 ;            router hijacking every note on channels 1..16.
 ; FEATURE-CARD >> features/midi-in-multitimbral.feature (Shift-F4 3-state cycle dispatcher)
+; FEATURE-CARD >> features/shift-f4-enters-instrument-mode.feature (create -> Instrument mode + F4)
 Proc            Glbl_Shift_F4 Far
                                                 ; Multitimbral MIDI-in, 3-state
                                                 ; cycle.  No Instrument-mode
@@ -389,13 +391,42 @@ Glbl_Shift_F4_Create:
                 Mov     CX, 4
                 Call    M_Object1List
                 Test    DX, DX
-                JZ      Glbl_Shift_F4_Done
+                JZ      Glbl_Shift_F4_Done      ; "No" -> do nothing
 
                 Call    Music_CreateMIDIInInstruments
+
+                                                ; Fork: entering Multitimbral
+                                                ; mode IS entering Instrument
+                                                ; mode -- the 16 things just
+                                                ; created are instruments mapped
+                                                ; to samples 01-16. Flip the
+                                                ; song's Instrument-mode flag
+                                                ; (bit 2 of [songseg:2Ch], the
+                                                ; same flag F_SetControlInstrument
+                                                ; sets) so Sample mode becomes
+                                                ; Instrument mode. This is a
+                                                ; direct flag set -- it does NOT
+                                                ; go through the F12
+                                                ; F_SetControlInstrument
+                                                ; clear/remap path.
+                Call    Music_GetSongSegment
+                Mov     DS, AX
+                        Assume DS:Nothing
+                Or      Byte Ptr [DS:2Ch], 4
+
                 Push    CS
                 Pop     DS
                 Mov     SI, Offset MIDIMultiMadeMsg
                 Call    SetInfoLine
+
+                                                ; Show the Instrument List so the
+                                                ; mode change is visible. Glbl_F4
+                                                ; sets CurrentMode=4 and returns
+                                                ; AX=5 / instrument-screen to the
+                                                ; key dispatcher; its Far Ret
+                                                ; returns to our caller (same
+                                                ; tail-jump pattern as F2/F3).
+                Jmp     Glbl_F4
 
 Glbl_Shift_F4_Done:
                 Mov     AX, 1

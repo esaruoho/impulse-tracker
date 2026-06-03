@@ -33,6 +33,7 @@
 #
 # WATCH: Glbl_F4 Glbl_Ctrl_F4 I_SelectScreen InstrumentScreenTable InstrumentMIDIInChannel
 # RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
+#   2026-06-03  direct-commit  touched: Glbl_F4
 #
 # IT.TXT source of truth: lines 1816-1818 (Ctrl-F4 = Instrument library from anywhere).
 # =============================================================================

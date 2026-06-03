@@ -106,6 +106,11 @@ F12 Samples→Instruments back to upstream clear+remap; the envelope-retention f
 - `d8ec842` added envelope preserve → `b5a0c66` (PR#2) removed → `c2094e6`/`a44a607`/`9a1142c` (PR#3) re-added
 - *(this session)* reinstate PR#2's removal as de-facto: restored IT_F.ASM to b5a0c66, deleted Music_InstrumentIsReal
 
+### ✅ shift-f4-enters-instrument-mode.feature  (+ .session.md, full triad)
+Shift-F4 "Yes, enter Multitimbral Mode" now also flips Sample→Instrument mode (direct flag set, NOT the F12 path) and shows the Instrument List; the 16 instruments mapped to samples 01-16 were already built by Music_CreateMIDIInInstruments. Build-verified, runtime-untested.
+- `8c32fd2` Shift-F4 3-state cycle (dispatcher this extends)
+- *(this session)* create-confirm → Or [songseg:2Ch],4 + Jmp Glbl_F4
+
 ## Uncarded features (the work surface)
 
 > Status flipped in place 2026-06-03: entries below marked ✅ are now carded, and

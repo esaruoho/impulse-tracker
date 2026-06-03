@@ -54,6 +54,7 @@
 #
 # WATCH: F_SetControlInstrument Music_InstrumentIsReal Music_ClearAllInstruments
 # RESULT-LOG >> (auto-maintained by .githooks/post-merge)
+#   2026-06-03  direct-commit  touched: F_SetControlInstrument
 #   2026-06-03  direct-commit  touched: F_SetControlInstrument Music_InstrumentIsReal Music_ClearAllInstruments
 #
 # IT.TXT source of truth: F12 Initialise Instruments is documented stock IT.
