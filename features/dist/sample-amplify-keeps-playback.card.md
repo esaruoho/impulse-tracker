@@ -4,9 +4,9 @@
 
 **Intent:** As a musician tweaking a sample's level while a tune is running, I want pressing Alt-M (Amplify / normalize) and confirming it to scale the sample WITHOUT stopping playback, So that I can hear the change in context and keep my flow, instead of the whole song cutting out every time I amplify a sample.
 
-**Grades:** @build-verified × 8 · @runtime-untested × 2 · @shipped × 5 · @stock × 3
+**Grades:** @build-verified × 8 · @runtime-verified × 3 · @shipped × 5 · @stock × 3
 
-**Scenarios: 8**
+**Scenarios: 9**
 
 
 ---
@@ -14,7 +14,7 @@
 
 ## 1. Amplifying a sample mid-playback does not stop the song
 
-`@shipped @build-verified @runtime-untested`
+`@shipped @build-verified @runtime-verified`
 
 
 - Given a song is playing
@@ -28,7 +28,7 @@
 
 ## 2. Alt-M Maximize/Normalize during playback keeps playing through OK/Process
 
-`@shipped @build-verified @runtime-untested`
+`@shipped @build-verified @runtime-verified`
 
 
 - Given the user is playing a pattern or a song
@@ -40,7 +40,20 @@
 <sub>cite: IT_I.ASM I_AmplifySample10 runs the O1_SampleAmplificationList · commit e5e5c38</sub>
 
 
-## 3. Alt-M on the Sample List is the Amplify gesture
+## 3. REGRESSION (reported 2026-06-03) - Alt-M still stopped F6 playback
+
+`@bug @runtime-verified`
+
+
+- Given a song is playing (F6) on the Sample List
+- When the user presses Alt-M, sets the amount, and confirms
+- Then ONLY this sample is re-uploaded to the sound card (no Music_Stop)
+- And the song keeps playing
+
+<sub>cite: IT_MUSIC.ASM:10463 Music_SoundCardLoadAllSamples -> Call Music_Stop · IT_I.ASM:4103 I_AmplifySample15 now reloads ONLY this slot: · IT_MUSIC.ASM:10436 Music_SoundCardLoadSample has no Music_Stop/reset</sub>
+
+
+## 4. Alt-M on the Sample List is the Amplify gesture
 
 `@stock @build-verified`
 
@@ -52,7 +65,7 @@
 <sub>cite: IT_OBJ1.ASM:3471 sample-list keylist DW 3200h (Alt-'M', scancode</sub>
 
 
-## 4. The dialog pre-fills the no-clip (normalize) amplification
+## 5. The dialog pre-fills the no-clip (normalize) amplification
 
 `@stock @build-verified`
 
@@ -65,7 +78,7 @@
 <sub>cite: IT_I.ASM I_AmplifySample10: Amplification = (8000h/MaxDev)*100,</sub>
 
 
-## 5. Only the amplified sample's voices are silenced, not all channels
+## 6. Only the amplified sample's voices are silenced, not all channels
 
 `@shipped @build-verified`
 
@@ -78,7 +91,7 @@
 <sub>cite: IT_MUSIC.ASM Music_SilenceSampleVoices (9284): walks the slave table,</sub>
 
 
-## 6. The mixer never reads the sample while it is being rewritten
+## 7. The mixer never reads the sample while it is being rewritten
 
 `@shipped @build-verified`
 
@@ -90,7 +103,7 @@
 <sub>cite: the silence happens BEFORE the in-place scaling loop; a voice marked</sub>
 
 
-## 7. AX (the sample number) survives the silence call
+## 8. AX (the sample number) survives the silence call
 
 `@shipped @build-verified`
 
@@ -102,7 +115,7 @@
 <sub>cite: Music_SilenceSampleVoices is wrapped PushA..PopA, so AX is intact for</sub>
 
 
-## 8. Other Sample-List operations that still stop the song are untouched
+## 9. Other Sample-List operations that still stop the song are untouched
 
 `@stock @build-verified`
 

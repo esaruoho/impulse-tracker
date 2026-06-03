@@ -310,10 +310,11 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **What it does:** As a musician tweaking a sample's level while a tune is running, I want pressing Alt-M (Amplify / normalize) and confirming it to scale the sample WITHOUT stopping playback, So that I can hear the change in context and keep my flow, instead of the whole song cutting out every time I amplify a sample.
 
-**Behaviour (8 scenarios):**
+**Behaviour (9 scenarios):**
 
-- Amplifying a sample mid-playback does not stop the song — `@shipped @build-verified @runtime-untested`
-- Alt-M Maximize/Normalize during playback keeps playing through OK/Process — `@shipped @build-verified @runtime-untested`
+- Amplifying a sample mid-playback does not stop the song — `@shipped @build-verified @runtime-verified`
+- Alt-M Maximize/Normalize during playback keeps playing through OK/Process — `@shipped @build-verified @runtime-verified`
+- REGRESSION (reported 2026-06-03) - Alt-M still stopped F6 playback — `@runtime-verified`
 - Alt-M on the Sample List is the Amplify gesture — `@stock @build-verified`
 - The dialog pre-fills the no-clip (normalize) amplification — `@stock @build-verified`
 - Only the amplified sample's voices are silenced, not all channels — `@shipped @build-verified`
@@ -321,11 +322,11 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - AX (the sample number) survives the silence call — `@shipped @build-verified`
 - Other Sample-List operations that still stop the song are untouched — `@stock @build-verified`
 
-**How it does it:** **Key procs:** `I_AmplifySample`, `Music_SilenceSampleVoices`, `Music_Stop`, `Music_GetSampleLocation` · **Source files:** `IT_I.ASM`, `IT_MUSIC.ASM`
+**How it does it:** **Key procs:** `I_AmplifySample`, `Music_SilenceSampleVoices`, `Music_Stop`, `Music_GetSampleLocation`, `Music_SoundCardLoadSample`, `Music_SoundCardLoadAllSamples` · **Source files:** `IT_I.ASM`, `IT_MUSIC.ASM`
 
-**Grade:** @build-verified ×8 · @runtime-untested ×2 · @shipped ×5 · @stock ×3
+**Grade:** @build-verified ×8 · @runtime-verified ×3 · @shipped ×5 · @stock ×3
 
-**Commits:** `e5e5c38` Sample Amplify (Alt-M) no longer stops the song
+**Commits:** `e5e5c38` Sample Amplify (Alt-M) no longer stops the song (entry: Music_Stop
 
 
 <a id="scrolllock-follow-from-lists"></a>

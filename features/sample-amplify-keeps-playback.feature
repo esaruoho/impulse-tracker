@@ -23,9 +23,12 @@
 #   @shipped          - in esaruoho/main
 #   @build-verified   - assembles + links clean (TASM 4.1 / TLINK 3.01);
 #                       IT_I.asm Error/Warning = None, IT.EXE links
-#   @runtime-untested - NOT yet exercised by running IT.EXE: start a song, press
-#                       Alt-M on a playing sample, confirm OK amplifies the
-#                       sample AND the song keeps playing. Runnable in DOSBox-X.
+#   @runtime-verified - CONFIRMED on a running IT.EXE (2026-06-03): Esa started a
+#                       song, pressed Alt-M on a playing sample, set the amount,
+#                       confirmed -- the sample scaled AND playback kept going.
+#                       "the alt-m no longer stops playback fix is in and verified
+#                       as working." Covers both the entry fix and the exit-reload
+#                       regression fix.
 #   @stock            - upstream Impulse Tracker behaviour, not a fork addition
 #
 # Source files linked back to this card (grep "features/sample-amplify-keeps-playback"):
@@ -72,7 +75,7 @@ Feature: Sample Amplify keeps the song playing
 
   # --- The user-visible behaviour --------------------------------------------
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-verified
   Scenario: Amplifying a sample mid-playback does not stop the song
     # cite: IT_I.ASM I_AmplifySample apply path (~3997): Music_Stop replaced by
     #       Music_SilenceSampleVoices (AL = sample slot, 1..99)
@@ -83,7 +86,7 @@ Feature: Sample Amplify keeps the song playing
     Then the sample is amplified (scaled in place, clipped)
     And the song keeps playing -- only voices using THIS sample fall silent
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-verified
   Scenario: Alt-M Maximize/Normalize during playback keeps playing through OK/Process
     # The user-journey form (Esa's wantlist phrasing). "Amplify" IS IT's
     # Maximize/Normalize: the peak-scan pre-fills the no-clip slider value (see
@@ -100,7 +103,7 @@ Feature: Sample Amplify keeps the song playing
     Then the sample is scaled by that amount
     And the playback does not stop
 
-  @bug @fixed-pending-verify
+  @bug @runtime-verified
   Scenario: REGRESSION (reported 2026-06-03) - Alt-M still stopped F6 playback
     # Reported by Esa: "playback on (F6), i hit alt-M on a sample, and the
     # playback stopped." The e5e5c38 fix swapped the ENTRY Music_Stop for
@@ -117,7 +120,8 @@ Feature: Sample Amplify keeps the song playing
     When the user presses Alt-M, sets the amount, and confirms
     Then ONLY this sample is re-uploaded to the sound card (no Music_Stop)
     And the song keeps playing
-    # @fixed-pending-verify: build-verified; not yet confirmed on a running IT.EXE
+    # @runtime-verified 2026-06-03: Esa confirmed on a running IT.EXE -- "the
+    #   alt-m no longer stops playback fix is in and verified as working."
 
   # --- The trigger -----------------------------------------------------------
 

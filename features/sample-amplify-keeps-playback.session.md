@@ -84,9 +84,11 @@ voices touching this one sample.
 
 - `@build-verified` is real: full DOSBox-X BUILDALL, IT_I.asm Error/Warning =
   None, IT.EXE links (the Extrn resolved).
-- `@runtime-untested` is honest: I did **not** run IT.EXE, start a song, press
-  Alt-M on a playing sample and confirm both that it amplifies AND that the song
-  keeps going. That smoke test is owed. IT.EXE is built and runnable in DOSBox-X.
+- `@runtime-verified` (2026-06-03): Esa ran IT.EXE, started a song, pressed Alt-M
+  on a playing sample, set the amount, confirmed — the sample scaled AND playback
+  kept going. "the alt-m no longer stops playback fix is in and verified as
+  working." This covers the entry fix (e5e5c38) AND the exit-reload regression fix
+  (460a6e1) below — both needed before the behaviour was actually delivered.
 
 ## How to get back
 
@@ -116,8 +118,9 @@ NEITHER `Music_Stop` NOR the reset -- so the song keeps playing. Added
 `Extrn Music_SoundCardLoadSample:Far` to IT_I.ASM.
 
 Lesson logged: a "keeps playback" fix must check the WHOLE proc for transport-
-stopping calls, not just the obvious leading `Music_Stop`. Build-verified;
-`@fixed-pending-verify` until run live.
+stopping calls, not just the obvious leading `Music_Stop`. Build-verified, and
+**`@runtime-verified` 2026-06-03** — Esa confirmed live that Alt-M during playback
+now keeps the song going.
 
 SCOPE NOTE: ~13 OTHER sample-edit ops in IT_I.ASM (cut, resize, reverse, invert,
 center, convert, ...) also call `Music_SoundCardLoadAllSamples` and therefore
