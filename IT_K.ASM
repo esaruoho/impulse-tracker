@@ -1940,6 +1940,7 @@ Proc            MIDISend Far            ; Given AL = data byte.
                 Pop     DS
                         Assume DS:Keyboard
 
+; FEATURE-CARD >> features/midi-realtime-sync.feature (System Real-Time F8-FF dispatch: transport + clock + gates + monitor)
 ; System Real-Time messages (0F8h..0FFh) are transparent to running status
 ; and must be dispatched here without touching MIDIStatusByte/MIDIDataInput.
 ; FA = Start, FB = Continue, FC = Stop. F8 Clock / F9 / FD-FF are ignored.
