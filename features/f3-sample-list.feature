@@ -33,6 +33,9 @@
 #   This card authored: 8ca97e9 (cards) + 009dbab (session + back-links)
 #   Triad: this .feature  <->  fkey-report-cards.session.md  <->  those commits
 #
+# WATCH: Glbl_F3 Glbl_Ctrl_F3 MIDISyncLoaderSuppress MIDI_SetLoaderSuppress MIDI_ClearLoaderSuppress Music_SilenceSampleVoices D_PreLoadSampleWindow LSWindow_ShiftEnter
+# RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
+#
 # IT.TXT source of truth: lines 1815-1817 (Ctrl-F3 = Sample library from anywhere).
 # =============================================================================
 

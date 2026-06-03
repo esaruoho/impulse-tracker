@@ -44,6 +44,9 @@
 #   This card authored: 8ca97e9 (cards) + 009dbab (session + back-links)
 #   Triad: this .feature  <->  fkey-report-cards.session.md  <->  commits + PR #3
 #
+# WATCH: Glbl_F12 QuickSaveDirectoryInput D_PickModuleDir D_PickSampleDir D_PickInstrumentDir D_PickQuickSaveDir D_PickDir_Common F_SetControlInstrument Music_InstrumentIsReal
+# RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
+#
 # IT.TXT source of truth: lines 659 (Song Variables) and 1748 ("F12 for the variables").
 # =============================================================================
 

@@ -31,6 +31,9 @@
 #   Triad: this .feature  <->  fkey-report-cards.session.md  <->  commit 10c837b
 #          (live MIDI-In routing: see features/midi-in-multitimbral.feature)
 #
+# WATCH: Glbl_F4 Glbl_Ctrl_F4 I_SelectScreen InstrumentScreenTable InstrumentMIDIInChannel
+# RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
+#
 # IT.TXT source of truth: lines 1816-1818 (Ctrl-F4 = Instrument library from anywhere).
 # =============================================================================
 

@@ -28,6 +28,9 @@
 #   This card authored: 8ca97e9 (cards) + 009dbab (session + back-links)
 #   Triad: this .feature  <->  fkey-report-cards.session.md  <->  commit 068648f
 #
+# WATCH: Glbl_F2 NewPattern_ApplyDefaultLength DefaultNewPatternLength D_SaveDirectoryConfiguration O1_PEConfigList
+# RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
+#
 # IT.TXT source of truth: lines 426 ("2.2 Pattern editor (F2)") and 437
 #   ("pressing F2 when alredy in the Pattern Editor").
 # =============================================================================

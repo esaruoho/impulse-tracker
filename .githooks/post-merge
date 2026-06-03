@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# -----------------------------------------------------------------------------
+# post-merge — self-maintaining report-card wiki (the triad's third leg)
+#
+# After a merge (or a `git pull`), append a one-line RESULT-LOG entry to every
+# features/*.feature card whose WATCHed symbols were actually changed by the
+# merge. This closes the loop Esa described: .feature (spec) + .session (convo)
+# + RESULT (commits/PR/files) — and keeps the RESULT leg current straight from
+# git, with no hand-editing.
+#
+# How a card opts in (two header lines):
+#   # WATCH: Glbl_F11 PE_OrderList_ClonePattern Music_FindFreePattern ...
+#   # RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest below)
+#
+# Mapping is BY SYMBOL, not by filename: a card is logged only when one of its
+# WATCHed procs/symbols appears on a changed (+/-) line of the merge diff. So a
+# merge that only touches an unrelated part of a shared file (IT_G.ASM, etc.)
+# does NOT spuriously tag every card.
+#
+# This hook only edits the working tree; it never commits. Review the appended
+# lines and commit them yourself. It can never abort the merge (post-merge runs
+# after the merge already succeeded), so it stays defensive and quiet on error.
+#
+# Enable in a fresh clone (per-clone, not committable for security reasons):
+#   git config core.hooksPath .githooks
+# See .githooks/README.md.
+# -----------------------------------------------------------------------------
+
+# Defensive: a hook should never noisily fail a developer's merge.
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+FEAT_DIR="$REPO_ROOT/features"
+[ -d "$FEAT_DIR" ] || exit 0
+
+# ORIG_HEAD = pre-merge HEAD; HEAD = post-merge. No ORIG_HEAD => nothing to do.
+git rev-parse -q --verify ORIG_HEAD >/dev/null 2>&1 || exit 0
+RANGE="ORIG_HEAD..HEAD"
+
+HEAD_SHA="$(git rev-parse --short HEAD 2>/dev/null)" || exit 0
+HEAD_SUBJECT="$(git log -1 --format=%s HEAD 2>/dev/null)"
+MERGE_DATE="$(git log -1 --format=%cs HEAD 2>/dev/null)"   # YYYY-MM-DD
+
+# Parse "Merge pull request #N ..." without regex (ugrep-safe, no backtracking).
+PR_LABEL="direct-merge"
+case "$HEAD_SUBJECT" in
+  *"Merge pull request #"*)
+    rest="${HEAD_SUBJECT#*Merge pull request #}"
+    pr="${rest%% *}"
+    case "$pr" in
+      ''|*[!0-9]*) : ;;            # not a clean number, leave as direct-merge
+      *) PR_LABEL="PR #$pr" ;;
+    esac
+    ;;
+esac
+
+# Changed (+/-) lines of the whole merge range, once. `^[-+]` is anchored and
+# tiny — safe. We search these for each card's WATCHed symbols with grep -F.
+CHANGED_LINES="$(git diff "$RANGE" 2>/dev/null | grep -E '^[-+]' || true)"
+[ -n "$CHANGED_LINES" ] || exit 0
+
+logged_any=0
+for card in "$FEAT_DIR"/*.feature; do
+  [ -e "$card" ] || continue
+
+  watch_line="$(grep -m1 '# WATCH:' "$card" 2>/dev/null || true)"
+  [ -n "$watch_line" ] || continue                 # card not opted in
+  grep -Fq 'RESULT-LOG >>' "$card" || continue     # no append marker
+
+  # Already logged this merge to this card? (safe to re-run the hook.)
+  grep -Fq "merge $HEAD_SHA" "$card" && continue
+
+  tokens="${watch_line#*# WATCH:}"
+  matched=""
+  for tok in $tokens; do
+    [ -n "$tok" ] || continue
+    if printf '%s\n' "$CHANGED_LINES" | grep -Fq -- "$tok"; then
+      matched="$matched $tok"
+    fi
+  done
+  matched="${matched# }"
+  [ -n "$matched" ] || continue                    # none of this card's symbols changed
+
+  line="#   $MERGE_DATE  $PR_LABEL  merge $HEAD_SHA  touched: $matched"
+
+  tmp="$(mktemp)" || continue
+  awk -v m='RESULT-LOG >>' -v line="$line" '
+    { print }
+    (index($0, m) > 0 && !done) { print line; done = 1 }
+  ' "$card" > "$tmp" && mv "$tmp" "$card"
+
+  echo "[post-merge] report-card: logged $HEAD_SHA -> $(basename "$card") ($matched)"
+  logged_any=1
+done
+
+if [ "$logged_any" = 1 ]; then
+  echo "[post-merge] report-card RESULT-LOG updated in working tree — review & commit."
+fi
+exit 0
