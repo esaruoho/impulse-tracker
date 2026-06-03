@@ -66,8 +66,8 @@ External transport: FA/FB/FC Start/Stop/Continue, F8 Clock tempo sync, driver F8
 
 ### ✅ scrolllock-follow-from-lists.feature  (+ .session.md, full triad)
 Scroll Lock on F3 Sample List / F4 Instrument List force-enables Pattern Follow Mode and opens the Pattern Editor (= F2). Build-verified, runtime-untested.
-- *(uncommitted working tree as of 2026-06-03)* — IT_PE.ASM `PE_ScrollLockFollow` + IT_OBJ1.ASM two keylist entries (146h on Sample/Instrument lists)
-- Card + session authored same session; RESULT hash TBD on commit
+- `91dfc0b` Scroll Lock on F3/F4 lists → open Pattern Editor + force Follow Mode (IT_PE.ASM `PE_ScrollLockFollow` + IT_OBJ1.ASM two keylist entries, 146h on Sample/Instrument lists)
+- `8c85035` backfill RESULT hash 91dfc0b into the card + session
 
 ### ✅ shift-enter-bulk-load-from-module.feature  (+ .session.md, full triad)
 Sample-loader browser: Shift-Enter on a module row bulk-loads all its samples into
