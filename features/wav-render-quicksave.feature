@@ -27,6 +27,12 @@
 # Commit log (the ingest trail):
 #   be595b2  WAV render: .000 (3-digit pattern number) -> real .WAV extension
 #   74c3fe8  single-pattern Quicksave render named LL<HHMMSS>.WAV by the clock
+#
+# SESSION (the vibe record -- the conversation that spawned this card):
+#   features/wav-render-quicksave.session.md
+#   The card is incomplete without it. The session is the vibe-diff unit:
+#   future versions diff the dialogue (requests, refinements, corrections),
+#   not just the code and the card.
 # =============================================================================
 
 Feature: WAV Quicksave render filename
