@@ -93,31 +93,45 @@ Increasing the row count on the F2 Pattern-Edit-Config now DUPLICATES (tiles) th
 
 ## Uncarded features (the work surface)
 
+> Status flipped in place 2026-06-03: entries below marked ✅ are now carded, and
+> two are COVERED by an existing card. They'll migrate up to "Carded features" on
+> the next structural tidy; only ⬜ entries are still genuinely uncarded.
+
 ### ⬜ loader-keyjazz-hang.feature
 F3/F4 loader keyjazz no longer kills playback; Music_SilenceSampleVoices.
 - `a44c41b` Music_SilenceSampleVoices (keep playback alive across reloads)
 - `ec91331` F3 loader keyjazz hang VRAM markers
 - `64fa1ce` F3 loader keyjazz hang fix via MIDISyncLoaderSuppress
 
-### ⬜ alt-r-replicate.feature  (Paketti port)
+### ✅ alt-r-replicate.feature  (Paketti port; + .session.md, full triad)  [carded 2026-06-03]
+Alt-R = Replicate at Cursor (tile rows-above-cursor downward; row 0 tiles row 0 down);
+Shift-Alt-R keeps the original "clear track views". Build-verified; tiling runtime-untested.
 - `d506486` Alt-R = Replicate at Cursor
 - `aaada5e` Alt-R tile at row 0 + Shift-Alt-R = ClearViews
 
-### ⬜ f11-order-list-power-tools.feature
+### ✅ f11-order-list-power-tools — COVERED BY f11-order-list.feature  (stale duplicate)
+Already carded inside f11-order-list.feature, whose WATCH set is PE_OrderList_ClonePattern /
+ExtendPattern / ToggleMuteWipe / ApplyMuteWipe / RenderDispatch / RenderQuicksave / GDispatch /
+RightDispatch / LeftDispatch. No separate card needed; kept here as a pointer.
 Ctrl-O/Shift-Ctrl-O/Ctrl-G/Shift-G render, Alt-D clone+insert+advance, Alt-E extend, M toggle, cursor-key edge gestures.
 - `1a7aa16` render / clone / extend + mute-wipe toggle
 - `90cfd04` cursor-key edge gestures + note-cut at row 0
 - `6e15aa7` clone/extend crash fix
 - `4eee4f8` clone auto-insert + runtime status *(shared with f12-pickers)*
 
-### ⬜ f12-directory-pickers.feature
+### ✅ f12-directory-pickers — COVERED BY f12-song-variables.feature  (stale duplicate)
+Already carded inside f12-song-variables.feature, whose WATCH set is D_PickModuleDir /
+D_PickSampleDir / D_PickInstrumentDir / D_PickQuickSaveDir / D_PickDir_Common. No separate
+card needed; kept here as a pointer.
 Module/Sample/Instrument/Quicksave rows Enter-pickable via D_PickDir_Common.
 - `8ca7078` F12 Module Directory Enter opens F9 picker
 - `8f11aa6` translate '/' → '\' in F12 input fields
 - `4eee4f8` F12 dir pickers *(shared with f11)*
 
-### ⬜ multi-wav.feature
-Shift-Alt-M per-pattern; F10 WAV (whole-song single) + MWAV (per-channel) buttons; K_TranslateCondition11 for Shift+Alt.
+### ✅ multi-wav.feature  (+ .session.md, full triad — RUNTIME-UNTESTED, the card says so)  [carded 2026-06-03]
+Shift-Alt-M per-channel; F10 WAV (whole-song single) + MWAV (per-channel) buttons; K_TranslateCondition11 for Shift+Alt.
+NOT runtime-tested: every behaviour scenario is @runtime-untested and the card carries a READ-FIRST banner
+plus an explicit "what would verify this card" scenario. Only the K_TranslateCondition11 keymap fact is @build-verified.
 - `9fb5ac1` Multi-WAV + F10 MWAV + F10 WAV + Shift+Alt keymap condition
 
 ### ⬜ f2-pattern-editor-defaults.feature
@@ -155,13 +169,19 @@ F4 Instrument list ↔ F3 Sample list: carry the cursor selection across the two
 
 ---
 
-## Coverage today
-5 behaviour cards exist (multitimbral ✅, wav 🟡, midi-realtime-sync ✅ full triad,
-scrolllock-follow-from-lists ✅ full triad, shift-enter-bulk-load-from-module ✅
-full triad — the last carded while fixing a .MOD hard-hang);
-**6 fork features remain uncarded** and listed above with their commit sets ready to drop
-into card headers. Carding them is the remaining bookkeeping — at which point every
-behaviour-bearing commit resolves to exactly one card.
+## Coverage today (updated 2026-06-03 — shared working tree; counts move as the
+## parallel session cards more, so trust the ### markers above over this prose)
+This session's reconciliation:
+- **Newly carded:** ✅ alt-r-replicate (full triad) and ✅ multi-wav (full triad,
+  **RUNTIME-UNTESTED** — the card states it outright, per Esa's instruction).
+- **Reconciled as duplicates:** f11-order-list-power-tools is COVERED by
+  f11-order-list.feature; f12-directory-pickers is COVERED by
+  f12-song-variables.feature. No separate cards needed.
+- **Still 🟡 partial:** wav-render-quicksave (core behaviour carded, but not every
+  historical Ctrl-O commit has its own scenario, and it's runtime-untested).
+- **Genuinely still ⬜ uncarded:** loader-keyjazz-hang, f2-pattern-editor-defaults,
+  f4-f3-cursor-translate. Carding those three closes the audit (every
+  behaviour-bearing commit resolves to exactly one card).
 
 Reverse-lookup note: `rg`/ugrep skip untracked + git-ignored files by default, so a
 freshly-written card won't resolve until committed (or use `grep -rlF <hash> features/`
