@@ -44,6 +44,11 @@ Ctrl-O render → auto-import; Shift-Ctrl-O no-import; Quicksave routing; LL\<HH
 - `74c3fe8` LL\<HHMMSS\>.WAV naming *(carded)*
 - `34b725d` `054f1f0` gitignore rendered samples / repo-root IT.CFG
 
+### ✅ wav-render-reentry-guard.feature  (+ .session.md, full triad)
+A second render gesture mid-render (Right then Shift-Right at the F11 order-list right edge; or a second Ctrl-O/Ctrl-G/Shift-G) now early-stops like Esc and finalizes to Quicksave instead of re-entering the teardown and wedging IT. New `WAV_FinalizeRequest` discriminator. Build-verified, runtime-untested.
+- `c9ff6b9` guard re-entrant WAV render gesture; second press early-stops to Quicksave
+- Card + session authored same session; card-commit hash follows `c9ff6b9`
+
 ---
 
 ## Carded features (continued)
@@ -58,6 +63,11 @@ External transport: FA/FB/FC Start/Stop/Continue, F8 Clock tempo sync, driver F8
 - `78fb72d` GUSMIXDR + IWDRV stop filtering F8–FF (last 2 = 16 total)
 - `03b0a6d` `0a82cb3` MIDI Clock 0xF8 external tempo sync + enable flag
 - `731e168` MIDI Transport toggle (independent FA/FB/FC gate)
+
+### ✅ scrolllock-follow-from-lists.feature  (+ .session.md, full triad)
+Scroll Lock on F3 Sample List / F4 Instrument List force-enables Pattern Follow Mode and opens the Pattern Editor (= F2). Build-verified, runtime-untested.
+- *(uncommitted working tree as of 2026-06-03)* — IT_PE.ASM `PE_ScrollLockFollow` + IT_OBJ1.ASM two keylist entries (146h on Sample/Instrument lists)
+- Card + session authored same session; RESULT hash TBD on commit
 
 ## Uncarded features (the work surface)
 
@@ -88,22 +98,31 @@ Module/Sample/Instrument/Quicksave rows Enter-pickable via D_PickDir_Common.
 Shift-Alt-M per-pattern; F10 WAV (whole-song single) + MWAV (per-channel) buttons; K_TranslateCondition11 for Shift+Alt.
 - `9fb5ac1` Multi-WAV + F10 MWAV + F10 WAV + Shift+Alt keymap condition
 
-### ⬜ samples-to-instruments-envelope.feature  (REVERTED — parked in PR #3, DO NOT MERGE)
-- `d8ec842` F12 Samples→Instruments preserves drawn envelopes
-- `4e4eb9a` default prompt "No" to prevent dataloss
-- `f10e961` Shift-1..9 envelope presets
-- `ed10913` fix EMM386 #12 crash + map MIDI-In instruments to samples
-- `3d2412b` fix dialog crash (focus index 6→4)
-- `a44a607` gate envelope-preserve on IMPI magic
-- `9a1142c` always remap + keep envelopes; gate garbage-clear on IMPI
-- `c2094e6` WIP (do not merge) + notes
-- `b5a0c66` revert + Shift-F4 gate *(shared with multitimbral; gate later removed)*
-
-### ⬜ navigation-and-persist.feature  (small fork keys)
-- `f541198` Shift-Enter on module row = bulk-load all samples
+### ⬜ f2-pattern-editor-defaults.feature
+F2 Pattern Editor config (second F2): default pattern length + M flag, persisted in IT.CFG.
+One screen → one runnable scenario.
 - `068648f` F2-F2 default pattern length persists + M flag persists (IT.CFG ext block)
+
+### ⬜ f4-f3-cursor-translate.feature
+F4 Instrument list ↔ F3 Sample list: carry the cursor selection across the two screens.
 - `9d626b0` F4→F3 cursor translation
 - `672273b` F4→F3 translate: bounds + note-60-first then scan-all fallback
+
+### ⬜ f9-bulk-load-samples.feature
+F9 module loader: Shift-Enter on a module row bulk-loads all of its samples.
+- `f541198` Shift-Enter on module row = bulk-load all samples
+
+<!-- REMOVED: samples-to-instruments-envelope (reverted feature). A "here's what
+     was removed" bucket is a tombstone, not a behaviour card — the feature map
+     describes what works. The parked feature still lives in PR #3 + its project
+     memory; it does not belong in the runnable-feature index. -->
+
+<!-- SPLIT RULE (Esa, 2026-06-03): a feature must be small enough to be ONE
+     runnable, screenshot-checkable unit. "navigation-and-persist" was a grab-bag
+     of F2 / F3-F4 / F9 behaviours that can't be verified in a single screen, so
+     it is split per UI surface. F2 Pattern Editor is its own feature; F4↔F3 is
+     its own; F9 bulk-load is its own. Features may link to each other. -->
+
 
 ---
 
@@ -118,7 +137,8 @@ Shift-Alt-M per-pattern; F10 WAV (whole-song single) + MWAV (per-channel) button
 ---
 
 ## Coverage today
-3 behaviour cards exist (multitimbral ✅, wav 🟡, midi-realtime-sync ✅ full triad);
+4 behaviour cards exist (multitimbral ✅, wav 🟡, midi-realtime-sync ✅ full triad,
+scrolllock-follow-from-lists ✅ full triad — built + carded same session);
 **6 fork features remain uncarded** and listed above with their commit sets ready to drop
 into card headers. Carding them is the remaining bookkeeping — at which point every
 behaviour-bearing commit resolves to exactly one card.
