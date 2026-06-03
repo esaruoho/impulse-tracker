@@ -32,13 +32,15 @@
 #                  reuses TracePlayback (1053), TraceMsg (1033),
 #                  PEFunction_ToggleTrace (13298) as the toggle sibling.
 #   IT_OBJ1.ASM  - Extrn PE_ScrollLockFollow (192);
-#                  SampleGlobalKeyList:     DB 0 / DW 146h (Scroll Lock)
-#                                         + DB 1 / DW 6    (Ctrl-F) -> same handler;
-#                  InstrumentGlobalKeyList: DB 0 / DW 146h + DB 1 / DW 6 likewise.
-#                  NOTE: the Ctrl-F entry MUST use flag DB 1 (the Ctrl+letter
-#                  class, like every Ctrl-X in GlobalKeyList), NOT DB 0. First
-#                  cut shipped DB 0 (copied from the 146h special-key entry) and
-#                  Ctrl-F did nothing at runtime; fixed to DB 1.
+#                  Scroll Lock (146h): DB 0 entries in SampleGlobalKeyList +
+#                    InstrumentGlobalKeyList (F3/F4 only).
+#                  Ctrl-F (06h): a SINGLE DB 1 / DW 6 entry in GlobalKeyList, so
+#                    it works on EVERY screen that falls through there -- F2, F3,
+#                    F4, F11, F12, ... (a screen binding 06h itself would shadow
+#                    it). Two bugs fixed on the way: DB 0 (the 146h special-key
+#                    flag) made Ctrl-F do nothing at runtime -> must be DB 1 (the
+#                    Ctrl+letter class, like stock Ctrl-S/Q/R); and the per-screen
+#                    F3/F4 copies were collapsed into this one GlobalKeyList entry.
 #   IT_K.ASM     - keymap: Ctrl-F -> keyword 6 (405-406); 06h is otherwise unbound.
 #   IT_G.ASM     - Glbl_F2 (224): the screen-switch this handler tail-jumps into.
 #   IT_K.ASM     - K_SetScrollLock (1912): drives the keyboard Scroll Lock LED.
@@ -61,6 +63,7 @@
 #
 # WATCH: PE_ScrollLockFollow TracePlayback PEFunction_ToggleTrace Glbl_F2 K_SetScrollLock SampleGlobalKeyList InstrumentGlobalKeyList
 # RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
+#   2026-06-03  direct-commit  touched: PE_ScrollLockFollow
 #   2026-06-03  direct-commit  touched: PE_ScrollLockFollow
 #   2026-06-03  direct-commit  touched: PE_ScrollLockFollow
 #   2026-06-03  direct-commit  touched: Glbl_F2
@@ -108,6 +111,20 @@ Feature: User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument Li
     Given the user is on the Instrument List (CurrentMode 4)
     When the user presses Scroll Lock
     Then Pattern Follow Mode is forced ON, the LED lights, and the Pattern Editor opens
+
+  @shipped @build-verified @runtime-untested
+  Scenario: Ctrl-F on F2/F3/F4/F11/F12 does the same as Scroll Lock (global binding)
+    # cite: IT_OBJ1.ASM GlobalKeyList -- a single DB 1 / DW 6 / DD PE_ScrollLockFollow
+    #       entry. F2's keylist IS GlobalKeyList; F3/F4 (Sample/Instrument lists),
+    #       F11 (O1_OrderPanningList) and F12 (O1_ConfigureITList) all chain to it.
+    #       So Ctrl-F is handled on every screen that falls through to GlobalKeyList.
+    # 06h verified free: not in GlobalKeyList's Ctrl block, not in the PE keyword
+    #       table (only Ctrl-F7), not on any list. So it's an ADD, never a rebind.
+    Given the user is on the Pattern Editor (F2), Sample List (F3), Instrument
+      List (F4), Order List (F11), or Song Variables (F12)
+    When the user presses Ctrl-F
+    Then Pattern Follow Mode is forced ON, the LED lights, and the Pattern Editor opens
+    And on F2 it just re-asserts Follow (already there) -- harmless
 
   @shipped @build-verified @runtime-untested
   Scenario: Ctrl-F on the Sample or Instrument List does the same as Scroll Lock

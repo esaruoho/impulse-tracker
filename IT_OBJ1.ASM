@@ -3237,6 +3237,14 @@ OrderKeyValue           DW      157h
                         DW      7h              ; Ctrl 'G'
                         DD      DWord Ptr Music_SoundCardLoadAllSamples
 
+                        DB      1               ; Fork: Ctrl 'F' (06h, was free) ->
+                        DW      6               ;   force Pattern Follow ON + jump to
+                        DD      DWord Ptr PE_ScrollLockFollow ; the Pattern Editor.
+                                                ; In GlobalKeyList so it works on every
+                                                ; screen that falls through here
+                                                ; (F2/F3/F4/F11/F12, ...). A screen
+                                                ; that binds 06h itself would shadow it.
+
                         DB      1
                         DW      9               ; Ctrl 'I'
                         DD      DWord Ptr Music_ReinitSoundCard
@@ -3535,10 +3543,6 @@ ENDIF
                         DB      0               ; Fork: Scroll Lock ->
                         DW      146h            ;   open Pattern Editor with
                         DD      DWord Ptr PE_ScrollLockFollow ; Follow Mode ON
-
-                        DB      1               ; Fork: Ctrl-F = DB 1 (Ctrl+letter
-                        DW      6               ;   class, like every other Ctrl-X
-                        DD      DWord Ptr PE_ScrollLockFollow ; here) -> F2 + Follow ON
 
                         DB      5
                         DW      Offset GlobalKeyList
@@ -6669,10 +6673,6 @@ ENDIF
                         DB      0               ; Fork: Scroll Lock ->
                         DW      146h            ;   open Pattern Editor with
                         DD      DWord Ptr PE_ScrollLockFollow ; Follow Mode ON
-
-                        DB      1               ; Fork: Ctrl-F = DB 1 (Ctrl+letter
-                        DW      6               ;   class, like every other Ctrl-X
-                        DD      DWord Ptr PE_ScrollLockFollow ; here) -> F2 + Follow ON
 
                         DB      4               ; Always call function
                         DW      0
