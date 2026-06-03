@@ -12,7 +12,7 @@
 #
 # Report-card legend (tags):
 #   @stock          - upstream Impulse Tracker behaviour
-#   @shipped        - fork addition, in the working tree (commit pending)
+#   @shipped        - fork addition, in origin/main (commit 91dfc0b)
 #   @build-verified - assembles + links clean (TASM 4.1 / TLINK 3.01)
 #   @runtime-untested - not yet exercised against a running IT.EXE in DOSBox-X
 #
@@ -37,17 +37,18 @@
 #   IT_K.ASM     - K_SetScrollLock (1912): drives the keyboard Scroll Lock LED.
 #
 # Commit log (the ingest trail):
-#   (uncommitted working-tree change as of 2026-06-03 12:02 EEST)
+#   91dfc0b  Scroll Lock on F3/F4 lists -> Pattern Editor + Follow Mode
+#            (direct to esaruoho/main; INDEX.md enrolled in a prior commit)
 #
 # RESULT (third leg of the triad: .feature spec + .session convo + what shipped):
-#   Feature delivery : PENDING COMMIT. Working tree only.
-#                      Files changed: IT_PE.ASM, IT_OBJ1.ASM (+ this card,
-#                      its .session.md, features/INDEX.md).
-#   Build            : full BUILDALL via dosbox-x -conf buildall.conf
+#   Feature delivery : 91dfc0b (direct to esaruoho/main, no PR).
+#                      Files: IT_PE.ASM, IT_OBJ1.ASM, this card + .session.md.
+#                      Pushed to origin/main -> CI build.yml fires on the .ASM.
+#   Build (local)    : full BUILDALL via dosbox-x -conf buildall.conf
 #                      2026-06-03 12:01 EEST. IT_PE.asm + IT_OBJ1.asm assembled
 #                      "Error messages: None / Warning messages: None"; tlink
 #                      3.01 linked; IT.EXE 476298 -> 476375 bytes (+77).
-#   Triad: this .feature <-> scrolllock-follow-from-lists.session.md <-> (commit TBD)
+#   Triad: this .feature <-> scrolllock-follow-from-lists.session.md <-> 91dfc0b
 #
 # WATCH: PE_ScrollLockFollow TracePlayback PEFunction_ToggleTrace Glbl_F2 K_SetScrollLock SampleGlobalKeyList InstrumentGlobalKeyList
 # RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)

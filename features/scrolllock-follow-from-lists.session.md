@@ -80,8 +80,9 @@ Then: "remember, the report card rule applies."
 
 - Runtime-test in DOSBox-X: F3 -> Scroll Lock -> confirm Pattern Editor opens,
   Scroll Lock LED on, cursor follows during F5/F6 playback. Same from F4.
-- Commit is still pending — Esa had not asked to commit at the time of writing.
-  When committed, backfill the RESULT block hash in the card and INDEX.md.
+- COMMITTED 91dfc0b direct to esaruoho/main (Esa asked, fork convention is
+  direct-to-main). Pushed to origin -> CI build.yml fires on the .ASM changes.
+  RESULT hash backfilled into the card.
 
 ## How to get back
 
