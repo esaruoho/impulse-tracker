@@ -2800,6 +2800,7 @@ EndP            WAV_BuildChannelFilename
 ; WAV_Store2Dec -- write AL (0..99) as two ASCII decimal digits at [CS:BX],
 ; then advance BX by 2. Preserves AX and CX (so callers can keep the DOS clock
 ; in CX across calls). Uses 8-bit Div CL, which leaves DX untouched.
+; FEATURE-CARD >> features/wav-render-quicksave.feature (WAV_Store2Dec: 2-digit decimal helper for the LL<HHMMSS> name)
 ;-------------------------------------------------------------------------------
 Proc            WAV_Store2Dec Near
                 Push    AX
