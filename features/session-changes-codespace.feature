@@ -159,17 +159,31 @@ Feature: A session changes a codespace
     Then post-merge appends a dated PR/commit line under the card's marker
     And it touches the working tree only, never commits, never aborts the merge
 
-  @known-limit
-  Scenario: In practice the hook rarely fires -- this repo ships direct-to-main
-    # The hook only runs on a merge (or a non-ff pull). This fork ships via
-    # linear direct-to-main commits ("direct-push, no PR" in every RESULT block),
-    # which produce NO merge commit -- so the hook almost never fires in the
-    # normal workflow. That is why no card carried a real appended line until the
-    # 2026-06-03 demo forced a --no-ff merge. The machinery works; the trigger
-    # event is just rare here.
-    Given a workflow of linear direct-to-main commits
-    Then post-merge does not fire, and RESULT blocks must be kept by hand
-    And the auto-append is a safety net for the merge/PR case, not the common path
+  @shipped @demonstrated
+  Scenario: A DIRECT commit auto-stamps the card INTO the same commit
+    # The gap (post-merge only fires on merges; this fork ships direct-to-main,
+    # so it almost never fired) is closed by .githooks/pre-commit: it matches the
+    # STAGED diff and `git add`s the stamped card so the line rides into the same
+    # commit -- no second commit, ships + pushes with the code.
+    # cite: .githooks/pre-commit -> report-card-stamp.sh ("--cached", gitadd=1)
+    # DEMONSTRATED 2026-06-03 (isolated worktree): a direct commit touching
+    #       Music_ToggleWAVRender produced commit a9e6d98 with TWO files --
+    #       the source + wav-render-quicksave.feature -- carrying the line
+    #       "  2026-06-03  direct-commit  touched: Music_ToggleWAVRender".
+    #       Stdout: "[report-card] RESULT-LOG updated and staged into this commit."
+    Given core.hooksPath = .githooks and a staged diff touching a watched symbol
+    When the user makes a plain `git commit` (no merge, no PR)
+    Then pre-commit stamps the matching card and stages it into that same commit
+    And direct-commit lines carry no self-sha (recoverable via `git blame`)
+
+  @demonstrated
+  Scenario: The stamper is shared and re-entrancy-safe
+    # Both hooks call .githooks/report-card-stamp.sh (one matching engine). It
+    # excludes features/ + .githooks/, so a card-only or hook-only commit does
+    # NOT stamp -- DEMONSTRATED: a card-only edit committed as 1 file, no loop.
+    Given a commit that changes only features/ or only .githooks/
+    Then no stamp is produced (the engine excludes those paths)
+    And there is no stamp-loop
 
   @known-limit
   Scenario: A prose watch line trips the hook (caught + fixed in the same demo)

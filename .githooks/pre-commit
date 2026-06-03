@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# -----------------------------------------------------------------------------
+# pre-commit — RESULT-LOG stamp for the DIRECT-TO-MAIN path (the everyday one).
+#
+# This fork ships via linear direct commits, not PRs/merges, so post-merge
+# almost never fires. pre-commit closes that gap: it stamps each report card
+# whose WATCHed symbols are in the STAGED diff and `git add`s the card so the
+# stamp rides INTO the same commit -- no second commit, ships and pushes with
+# the code (matches the "edit -> commit -> push is one motion" workflow).
+#
+# Direct-commit lines carry no self-SHA (the commit doesn't exist yet); the
+# exact commit is always recoverable with `git blame`/`git log -L` on the line.
+# The merge path (post-merge) still records the merge sha.
+#
+# Defensive: always exits 0 so it can never abort a commit. Enable per clone:
+#   git config core.hooksPath .githooks
+# See .githooks/README.md.
+# -----------------------------------------------------------------------------
+GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)" || exit 0
+
+# Don't stamp while finalizing a merge (post-merge owns that) or replaying a
+# rebase (would stamp every replayed commit). Quiet no-ops.
+[ -f "$GIT_DIR/MERGE_HEAD" ]      && exit 0
+[ -d "$GIT_DIR/rebase-merge" ]    && exit 0
+[ -d "$GIT_DIR/rebase-apply" ]    && exit 0
+
+DATE="$(date +%F 2>/dev/null)"    # commit doesn't exist yet; use today
+
+DIR="$(dirname "$0")"
+"$DIR/report-card-stamp.sh" "--cached" "$DATE" "direct-commit" "" "1" || true
+exit 0
