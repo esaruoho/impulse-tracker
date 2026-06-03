@@ -3861,6 +3861,7 @@ O1_ConfirmClearMessage  DW      4
                         DW      0
 
 ; Fork: confirm dialog for Shift-F4 batch-create of 16 MIDI-in instruments.
+; FEATURE-CARD >> features/midi-in-multitimbral.feature ("Map current samples to MIDI-In 01-16?" dialog)
 O1_ConfirmCreateMIDIIn  DW      4
                         DW      Near Ptr IdleFunctionList
                         DW      Near Ptr OKCancelList
@@ -8788,6 +8789,7 @@ MIDITransportToggleButton DW    2
                         DB      0
                         DB      "  Toggle MIDI Transport (FA/FB/FC)", 0
 
+; FEATURE-CARD >> features/midi-in-multitimbral.feature (Shift-F1 "Toggle Multitimbral MIDI-In" button)
 MIDIMultiToggleButton   DW      2
                         DW      24, 0FFFFh, 0FFFFh, 0FFFFh
                         DW      0

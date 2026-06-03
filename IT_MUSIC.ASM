@@ -4083,6 +4083,7 @@ Music_ClearAllInstruments1:
 
 EndP            Music_ClearAllInstruments
 
+; FEATURE-CARD >> features/midi-in-multitimbral.feature (Shift-F4 create/expand/reset; router enable + banks state)
 ;=== Fork: multitimbral MIDI-in ============================================
 ; MIDIMultiEnable - master switch for the live MIDI-in multitimbral synth.
 ; 0 = off (classic note-entry), 1 = on (route note-on by MIDI channel to

@@ -325,6 +325,7 @@ EndP            Glbl_F3
 ;            sample/instrument MIDI preview works again. Without this the
 ;            enable flag was a one-way latch and there was no way to stop the
 ;            router hijacking every note on channels 1..16.
+; FEATURE-CARD >> features/midi-in-multitimbral.feature (Shift-F4 3-state cycle dispatcher)
 Proc            Glbl_Shift_F4 Far
                                                 ; Multitimbral MIDI-in, 3-state
                                                 ; cycle.  No Instrument-mode

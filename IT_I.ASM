@@ -8704,6 +8704,7 @@ MMR_Host        DB      0
 MMR_Inst        DB      0
 MMR_NoteData    DB      0FDh, 0, 0FFh, 0, 0
 
+; FEATURE-CARD >> features/midi-in-multitimbral.feature (live note router: incoming note -> matching instrument)
 Proc            MIDIMulti_Route Far
                 Push    BX
                 Push    CX

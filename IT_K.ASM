@@ -1795,6 +1795,7 @@ EndP            Glbl_MIDITransport_Toggle
 
 ; --- Fork: Glbl_MIDIMulti_Toggle - flip the live multitimbral MIDI-in router
 ; on/off from the Shift-F1 MIDI screen (sits beside Sync + Transport toggles).
+; FEATURE-CARD >> features/midi-in-multitimbral.feature (Shift-F1 router on/off toggle)
 Proc            Glbl_MIDIMulti_Toggle Far
                 Call    Music_GetMIDIMultiEnable
                 Xor     AL, 1
