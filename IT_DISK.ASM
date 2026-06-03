@@ -7757,6 +7757,8 @@ EndP            LSWindow_Enter
 ;
 ; Stops early without error when the destination slot would reach 99 (slot
 ; 99 is reserved for keyjazz preview).
+;
+; FEATURE-CARD >> features/shift-enter-bulk-load-from-module.feature
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 Proc            LSWindow_ShiftEnter Far
@@ -7833,6 +7835,33 @@ Proc            LSWindow_ShiftEnter Far
                 Push    CS
                 Pop     DS
                         Assume DS:Disk
+
+                                                ; FORK FIX (MOD hard-hang):
+                                                ; finalise the loader cache into
+                                                ; the SAME module-browse state
+                                                ; the stock single-load path
+                                                ; leaves (see LSViewWindow_Enter2).
+                                                ; Without this, entry 0 and the
+                                                ; module-browse globals are never
+                                                ; written, so the loader teardown
+                                                ; on the post-load Jmp Glbl_F3
+                                                ; (and the redraw on the no-sample
+                                                ; path) walks a malformed cache
+                                                ; and hard-hangs. ES is still
+                                                ; DiskDataArea from before the
+                                                ; LoadSamplesInModuleTable call.
+                Xor     DI, DI
+                Mov     SI, Offset ExitLibraryDirectory
+                Mov     CX, 89
+                Rep     MovsB
+                Mov     EAX, InSampleDateTime
+                Mov     [ES:DI-5], EAX
+                Mov     SampleCacheFileComplete, 1
+                Mov     SamplesInModule, 1
+                Mov     SampleInMemory, 0FFFFh
+                Mov     SampleCheck, 0FFFFh
+                Mov     AX, NumSamples
+                Mov     LoadSampleNameCount, AX
 
                 Cmp     NumSamples, 2           ; need at least one real sample
                 JB      LSWS_NoneLoaded

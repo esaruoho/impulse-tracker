@@ -35,6 +35,7 @@
 #
 # WATCH: Glbl_F3 Glbl_Ctrl_F3 MIDISyncLoaderSuppress MIDI_SetLoaderSuppress MIDI_ClearLoaderSuppress Music_SilenceSampleVoices D_PreLoadSampleWindow LSWindow_ShiftEnter
 # RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
+#   2026-06-03  direct-commit  touched: Glbl_F3
 #
 # IT.TXT source of truth: lines 1815-1817 (Ctrl-F3 = Sample library from anywhere).
 # =============================================================================

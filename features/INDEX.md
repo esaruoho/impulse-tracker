@@ -69,6 +69,13 @@ Scroll Lock on F3 Sample List / F4 Instrument List force-enables Pattern Follow 
 - *(uncommitted working tree as of 2026-06-03)* — IT_PE.ASM `PE_ScrollLockFollow` + IT_OBJ1.ASM two keylist entries (146h on Sample/Instrument lists)
 - Card + session authored same session; RESULT hash TBD on commit
 
+### ✅ shift-enter-bulk-load-from-module.feature  (+ .session.md, full triad)
+Sample-loader browser: Shift-Enter on a module row bulk-loads all its samples into
+consecutive slots (names + loop modes preserved). Carded while fixing a .MOD
+hard-hang (missing loader-cache finalisation). Build-verified, runtime-untested.
+- `f541198` Shift-Enter on module row = bulk-load all samples (original)
+- *(this session)* MOD hard-hang fix: finalise loader cache before loop/teardown
+
 ## Uncarded features (the work surface)
 
 ### ⬜ loader-keyjazz-hang.feature
@@ -108,9 +115,6 @@ F4 Instrument list ↔ F3 Sample list: carry the cursor selection across the two
 - `9d626b0` F4→F3 cursor translation
 - `672273b` F4→F3 translate: bounds + note-60-first then scan-all fallback
 
-### ⬜ f9-bulk-load-samples.feature
-F9 module loader: Shift-Enter on a module row bulk-loads all of its samples.
-- `f541198` Shift-Enter on module row = bulk-load all samples
 
 <!-- REMOVED: samples-to-instruments-envelope (reverted feature). A "here's what
      was removed" bucket is a tombstone, not a behaviour card — the feature map
@@ -137,8 +141,9 @@ F9 module loader: Shift-Enter on a module row bulk-loads all of its samples.
 ---
 
 ## Coverage today
-4 behaviour cards exist (multitimbral ✅, wav 🟡, midi-realtime-sync ✅ full triad,
-scrolllock-follow-from-lists ✅ full triad — built + carded same session);
+5 behaviour cards exist (multitimbral ✅, wav 🟡, midi-realtime-sync ✅ full triad,
+scrolllock-follow-from-lists ✅ full triad, shift-enter-bulk-load-from-module ✅
+full triad — the last carded while fixing a .MOD hard-hang);
 **6 fork features remain uncarded** and listed above with their commit sets ready to drop
 into card headers. Carding them is the remaining bookkeeping — at which point every
 behaviour-bearing commit resolves to exactly one card.
