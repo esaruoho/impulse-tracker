@@ -63,6 +63,10 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # The full-history checkout (fetch-tags) may have pulled this tag in
+          # locally; drop the local ref so the re-create below doesn't fail with
+          # "tag already exists" on a re-run after the remote tag was deleted.
+          git tag -d "$TAG" 2>/dev/null || true
           git tag -a "$TAG" -m "Impulse Tracker $TAG (esaruoho fork)"
           git push origin "$TAG"
           echo "RESOLVED_TAG=$TAG" >> "$GITHUB_ENV"
