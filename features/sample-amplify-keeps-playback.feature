@@ -30,13 +30,20 @@
 #
 # Source files linked back to this card (grep "features/sample-amplify-keeps-playback"):
 #   IT_I.ASM  - I_AmplifySample apply path: Music_SilenceSampleVoices swap
-#               (~line 3997) + the Extrn Music_SilenceSampleVoices import
+#               (~line 4010) + the Extrn Music_SilenceSampleVoices import
+#   IT_I.ASM  - I_AmplifySample15 EXIT (~line 4103): reload ONLY this slot via
+#               Music_SoundCardLoadSample, NOT Music_SoundCardLoadAllSamples
 #   IT_MUSIC.ASM - Music_SilenceSampleVoices (9284): sets [SI]=200h only on
 #               slaves whose [SI+36h] == AL (target slot); PushA/PopA preserves AX
+#   IT_MUSIC.ASM - Music_SoundCardLoadAllSamples (10458) CALLS Music_Stop +
+#               ResetSoundCardMemory (the song-killer); Music_SoundCardLoadSample
+#               (10436) reloads one slot and does NEITHER
 #   IT_OBJ1.ASM - sample-list keylist: Alt-M (3200h) -> I_AmplifySample (3471)
 #
 # Commit log (the ingest trail):
-#   e5e5c38  Sample Amplify (Alt-M) no longer stops the song
+#   e5e5c38  Sample Amplify (Alt-M) no longer stops the song (entry: Music_Stop
+#            -> Music_SilenceSampleVoices) -- INCOMPLETE: exit still stopped it
+#   (this commit) complete the fix: exit reloads ONLY this sample, not all
 #
 # SESSION (the vibe record -- the conversation that spawned this card):
 #   features/sample-amplify-keeps-playback.session.md
@@ -49,7 +56,7 @@
 #   This card authored: the card+session commit that follows e5e5c38
 #   Triad: this .feature  <->  sample-amplify-keeps-playback.session.md  <->  e5e5c38
 #
-# WATCH: I_AmplifySample Music_SilenceSampleVoices Music_Stop Music_GetSampleLocation
+# WATCH: I_AmplifySample Music_SilenceSampleVoices Music_Stop Music_GetSampleLocation Music_SoundCardLoadSample Music_SoundCardLoadAllSamples
 #
 # Sibling: features/loader-keyjazz-hang.feature (same Music_SilenceSampleVoices
 # pattern, applied to the F3 sample loader). "Don't stop the song to touch one
@@ -92,6 +99,25 @@ Feature: Sample Amplify keeps the song playing
     And they set the slider amount and press OK/Process
     Then the sample is scaled by that amount
     And the playback does not stop
+
+  @bug @fixed-pending-verify
+  Scenario: REGRESSION (reported 2026-06-03) - Alt-M still stopped F6 playback
+    # Reported by Esa: "playback on (F6), i hit alt-M on a sample, and the
+    # playback stopped." The e5e5c38 fix swapped the ENTRY Music_Stop for
+    # Music_SilenceSampleVoices, but the apply path's EXIT still called
+    # Music_SoundCardLoadAllSamples to re-upload samples -- and THAT proc calls
+    # Music_Stop + ResetSoundCardMemory unconditionally, killing the song. So the
+    # "keeps playing" claim was never actually delivered; only this commit makes
+    # it true.
+    # cite: IT_MUSIC.ASM:10463 Music_SoundCardLoadAllSamples -> Call Music_Stop
+    # cite: IT_I.ASM:4103 I_AmplifySample15 now reloads ONLY this slot:
+    #       PE_GetLastInstrument -> AX=slot+1 -> Music_SoundCardLoadSample
+    # cite: IT_MUSIC.ASM:10436 Music_SoundCardLoadSample has no Music_Stop/reset
+    Given a song is playing (F6) on the Sample List
+    When the user presses Alt-M, sets the amount, and confirms
+    Then ONLY this sample is re-uploaded to the sound card (no Music_Stop)
+    And the song keeps playing
+    # @fixed-pending-verify: build-verified; not yet confirmed on a running IT.EXE
 
   # --- The trigger -----------------------------------------------------------
 

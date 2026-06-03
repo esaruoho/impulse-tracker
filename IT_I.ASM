@@ -94,6 +94,7 @@ EndS
                 Extrn   Music_AllocateSample:Far
                 Extrn   Music_GetSlaveChannelInformationTable:Far
                 Extrn   Music_SoundCardLoadAllSamples:Far
+                Extrn   Music_SoundCardLoadSample:Far   ; reload ONE slot (no Music_Stop)
                 Extrn   Music_GetNumChannels:Far
 
                 Extrn   Music_RegetLoopInformation:Far
@@ -4102,7 +4103,27 @@ I_AmplifySample21:
 
 I_AmplifySample15:
                 Call    I_DrawWaveForm
-                Call    Music_SoundCardLoadAllSamples
+
+                                                ; FEATURE-CARD >> features/sample-amplify-keeps-playback.feature
+                                                ; Fork: reload ONLY the amplified
+                                                ; sample to the sound card -- NOT
+                                                ; Music_SoundCardLoadAllSamples,
+                                                ; which calls Music_Stop +
+                                                ; ResetSoundCardMemory and so
+                                                ; killed the playing song (the
+                                                ; bug behind "Alt-M stopped
+                                                ; playback"). Music_SoundCardLoad-
+                                                ; Sample re-uploads just this slot
+                                                ; (1-based) via [DriverLoadSample]
+                                                ; and does neither, so every other
+                                                ; channel keeps playing. Slot is
+                                                ; re-derived exactly as at proc
+                                                ; entry (the amplify math clobbers
+                                                ; AX).
+                Call    PE_GetLastInstrument    ; BX = slot (0-based)
+                Mov     AX, BX
+                Inc     AX                      ; AX = 1-based sample number
+                Call    Music_SoundCardLoadSample
 
 I_AmplifySampleEnd:
                 Mov     AX, 1

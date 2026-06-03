@@ -96,8 +96,36 @@ voices touching this one sample.
 - Session timestamp: 2026-06-03 ~13:49 EEST (run `date` to confirm)
 - CWD for this session: /Users/esaruoho/work/impulse-tracker (repo root)
 
+## Regression found + completed (2026-06-03, later session)
+
+Esa reported live: "playback on (F6), i hit alt-M on a sample, and the playback
+stopped." The `@runtime-untested` smoke test owed above would have caught it.
+
+Root cause: `e5e5c38` fixed the ENTRY (`Music_Stop` -> `Music_SilenceSampleVoices`)
+but the apply path's EXIT (`I_AmplifySample15`) still called
+`Music_SoundCardLoadAllSamples` to re-upload sample data -- and that proc
+(`IT_MUSIC.ASM:10463`) calls `Music_Stop` + `ResetSoundCardMemory` + draws a
+"Preparing samples" box, UNCONDITIONALLY. So the song was stopped on the way out;
+the "keeps playing" claim was never actually delivered.
+
+Fix (this commit): the exit now reloads ONLY the amplified slot via
+`Music_SoundCardLoadSample` (AX = 1-based slot, re-derived with
+`PE_GetLastInstrument` since the amplify math clobbers AX). That proc
+(`IT_MUSIC.ASM:10436`) re-uploads one sample via `[DriverLoadSample]` and calls
+NEITHER `Music_Stop` NOR the reset -- so the song keeps playing. Added
+`Extrn Music_SoundCardLoadSample:Far` to IT_I.ASM.
+
+Lesson logged: a "keeps playback" fix must check the WHOLE proc for transport-
+stopping calls, not just the obvious leading `Music_Stop`. Build-verified;
+`@fixed-pending-verify` until run live.
+
+SCOPE NOTE: ~13 OTHER sample-edit ops in IT_I.ASM (cut, resize, reverse, invert,
+center, convert, ...) also call `Music_SoundCardLoadAllSamples` and therefore
+also stop the song. Those are NOT claimed to keep playback by any card, so they
+are left as-is (out of scope). Revisit only if Esa wants them to keep playing too.
+
 ## Cross-links
 
 - Spec leg: `features/sample-amplify-keeps-playback.feature`
 - Sibling (same pattern, loader side): `features/loader-keyjazz-hang.feature`
-- Feature commit: `e5e5c38`
+- Feature commit: `e5e5c38` (entry fix); the exit-reload completion follows in this session

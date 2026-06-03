@@ -51,6 +51,7 @@
 #
 # WATCH: LSWindow_ShiftEnter LoadMODSamplesInModule LSViewWindow_Enter2 LoadSample ExitLibraryDirectory SamplesInModule SampleCacheFileComplete
 # RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
+#   2026-06-03  direct-commit  touched: LoadSample
 #   2026-06-03  direct-commit  touched: LSViewWindow_Enter2 LoadSample ExitLibraryDirectory SamplesInModule SampleCacheFileComplete
 #
 # IT.TXT source of truth: the sample loader and module browsing are documented;
