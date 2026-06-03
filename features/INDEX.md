@@ -91,6 +91,16 @@ Increasing the row count on the F2 Pattern-Edit-Config now DUPLICATES (tiles) th
 - `05c70c9` F2 pattern-length increase tiles content instead of blank rows
 - Card + session authored same session
 
+### ✅ f2-pattern-editor.feature
+F2 enters the Pattern Editor; a second F2 opens Pattern Edit Config; the chosen row count is remembered (DefaultNewPatternLength, persisted to IT.CFG). Stock navigation + fork default-length persistence. Build-verified.
+- `068648f` F2-F2 default pattern length persists + M flag (IT.CFG ext block)
+- Stock F2/F2 behaviour verified IT_G.ASM:224-298
+
+### ✅ shift-enter-load-from-sample-list.feature
+User-facing spec of Shift-Enter on a module row in the Sample List: samples load one per row with original names AND loop modes (+ instrument auto-assign in Instrument mode). Sibling impl/regression card: shift-enter-bulk-load-from-module.feature.
+- `f541198` Shift-Enter on module row = bulk-load all samples
+- `32e080c` .MOD hard-hang fix (loader-cache finalisation)
+
 ## Uncarded features (the work surface)
 
 > Status flipped in place 2026-06-03: entries below marked ✅ are now carded, and

@@ -6,6 +6,7 @@
 > [esaruoho/impulse-tracker](https://github.com/esaruoho/impulse-tracker).
 > Current version: **2.354** — `(C) 1995-2000 Jeffrey Lim, (C) 2026 Esa Juhani Ruoho`.
 > See [Changelog](#changelog) for week-by-week history and [Fork Changes](#fork-changes-v2354) for the v2.354 feature set.
+> For a per-feature reference — *what each feature does and how it does it*, generated from the Gherkin report cards — see [`features/README.md`](features/README.md).
 
 Full source code for Impulse Tracker, including sound drivers, network drivers,
 and some supporting documentation
