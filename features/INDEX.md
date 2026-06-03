@@ -76,6 +76,11 @@ hard-hang (missing loader-cache finalisation). Build-verified, runtime-untested.
 - `f541198` Shift-Enter on module row = bulk-load all samples (original)
 - *(this session)* MOD hard-hang fix: finalise loader cache before loop/teardown
 
+### ✅ sample-amplify-keeps-playback.feature  (+ .session.md, full triad)
+Sample Amplify (Alt-M, the "normalize" gesture) no longer stops the song — only the amplified sample's voices are silenced (Music_SilenceSampleVoices), every other channel keeps playing. Same pattern as loader-keyjazz-hang. Build-verified, runtime-untested.
+- `e5e5c38` Sample Amplify (Alt-M) no longer stops the song
+- Card + session authored same session
+
 ## Uncarded features (the work surface)
 
 ### ⬜ loader-keyjazz-hang.feature
