@@ -154,6 +154,7 @@ include network.inc
         Global  MIDIMultiEnable:Byte
         Global  Music_GetMIDIMultiEnable:Far
         Global  Music_SetMIDIMultiEnable:Far
+        Global  Music_InstrumentIsReal:Far
         Global  Music_GetHostChannelInformationTable:Far
         Global  Music_GetSlaveChannelInformationTable:Far
         Global  Music_SetGlobalVolume:Far
@@ -3958,12 +3959,57 @@ EndP            Music_ClearInstrument
                 Assume DS:Nothing
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
-; Music_InstrumentHasEnvelopes was removed. It existed only to gate the F12
-; Samples -> Instruments "preserve drawn envelopes" feature, which is reverted
-; to upstream behaviour (F_SetControlInstrument now always clears+re-inits via
-; Music_ClearAllInstruments). The feature shipped a string of crashes (EMM386
-; #12 from garbage instrument headers reaching the envelope renderer, plus a
-; wild-call from a bad dialog-focus index) and was pulled at the source.
+; Music_InstrumentIsReal -- AX = instrument number (0-based).
+;
+; Returns ZF=1 if the live instrument header starts with the "IMPI" magic --
+; i.e. a real, initialised instrument (cleared to the InstrumentHeader
+; template, or loaded from disk, both of which write "IMPI" at offset 0).
+; Returns ZF=0 if the magic is absent -- an uninitialised slot holding
+; leftover garbage (sample-only loads and Shift-Enter bulk-load never touch
+; the instrument region). Garbage practically never spells "IMPI" (four exact
+; bytes, ~1 in 4e9).
+;
+; F_SetControlInstrument uses this to decide, per slot, whether to clear
+; before mapping: real instruments are left in place so their drawn envelopes
+; survive the Samples->Instruments flip; garbage slots are cleared to the
+; valid template first, so the envelope renderer (I_MapEnvelope) never sees a
+; non-IMPI header. This is the definitive signal the old "envelope bytes
+; differ from template" test got wrong -- garbage passed that trivially.
+;-------------------------------------------------------------------------------
+
+Proc            Music_InstrumentIsReal Far          ; AX = instrument number
+
+                Push    AX
+                Push    CX
+                Push    DS
+                Push    SI
+                Push    ES
+                Push    DI
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+
+                Mov     DI, AX
+                Add     DI, DI
+                Mov     ES, SongDataArea
+                Mov     DI, [ES:DI+64712]   ; ES:DI -> live instrument header
+                Mov     SI, Offset InstrumentHeader  ; template[0..3] = "IMPI"
+                Mov     CX, 4
+
+                ClD
+                RepE    CmpsB               ; ZF=1 iff header[0..3] == "IMPI"
+                                            ; (Pops below do not touch flags)
+                Pop     DI
+                Pop     ES
+                Pop     SI
+                Pop     DS
+                Pop     CX
+                Pop     AX
+                Ret
+
+EndP            Music_InstrumentIsReal
+                Assume DS:Nothing
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
