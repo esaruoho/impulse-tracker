@@ -2,7 +2,7 @@
 
 > Fork of [jthlim/impulse-tracker](https://github.com/jthlim/impulse-tracker) at [esaruoho/impulse-tracker](https://github.com/esaruoho/impulse-tracker). Upstream is read-only ("no active development, and changes/fixes will not be merged other than issues preventing build" — README). Feature work happens on this fork.
 
-This file is a development guide for both human contributors and AI coding assistants working in this repository. It covers how to build `IT.EXE` and the sound drivers locally, the source-tree layout, the MIDI input architecture (including the MIDI System Real-Time start/stop sync added in this fork), and the contribution workflow.
+This file is a development guide for both human contributors and AI coding assistants working in this repository. It covers how to build `IT.EXE` and the sound drivers locally, the source-tree layout, the MIDI input architecture (including the MIDI System Real-Time start/stop sync added in this fork), and the contribution workflow. **Vendor-neutral agents (Codex, Cursor, Aider, …) should start at [`AGENTS.md`](AGENTS.md)**, which carries the same non-negotiables and points back here for detail.
 
 ## Repository Overview
 
@@ -13,6 +13,17 @@ Full Impulse Tracker 2.15 source, BSD-3-Clause. Originally released 2014 on Bitb
 This repo documents its own behaviour with **report cards** — Gherkin `.feature` files in `features/`, one per behaviour cluster (e.g. `f11-order-list.feature`, `midi-in-multitimbral.feature`). Each card is the durable understanding-store: Given/When/Then scenarios, each cited to its source proc + line + commit, graded with tags (`@stock` upstream / `@shipped` fork / `@build-verified` / `@hw-untested`). The schema is `GHERKIN-FEATURE-WIKI-PATTERN.md`. **When you change a documented behaviour, update its card in the same motion — don't let it drift.**
 
 Each card carries a **triad**: the `.feature` (the spec/claims), a sibling `*.session.md` (the conversation that spawned it — the "vibe diff"), and a `RESULT-LOG` (what actually shipped: dated commit/PR lines). The triad makes the wiki rebuildable straight from git.
+
+**Authoring loop when you build or change a behaviour** (do all of it in the same motion as the code — don't ask permission, don't defer):
+
+1. Edit code → build in DOSBox-X (`Error/Warning = None`, `IT.EXE` links).
+2. Commit + push the code (direct to `main`; the `pre-commit` hook stamps the RESULT-LOG of any card whose `# WATCH:` symbols you touched).
+3. Emit / update the **triad**: the `.feature` (graded Gherkin scenarios, each cited to proc + line + commit), the `<name>.session.md` (the spawning conversation, incl. wrong turns — faithful, not flattering, with a "How to get back" block), and a back-link comment `; FEATURE-CARD >> features/<name>.feature` at the innards.
+4. Enrol the card in `features/INDEX.md` (the commit ↔ card map).
+5. Regenerate the human-readable reference: `python3 features/print-card.py --readme` writes **`features/README.md`** (one section per card: *what it does* + *how it does it*), and `--all` refreshes the per-card `features/dist/` printouts. `features/README.md` is **generated — never hand-edit it**; edit the card and regenerate.
+6. Grade honestly: `@build-verified` once it assembles/links; only `@runtime-verified` after you (or the user) actually ran `IT.EXE` and watched it. Untested is `@runtime-untested` — never claim verified you didn't run.
+
+`features/print-card.py` is the tool: `--readme` (regenerate the README), `--all` (per-card dist outputs), or a path list (one card). No deps, Apple-native python3.
 
 The RESULT-LOG keeps itself current via **version-controlled git hooks in `.githooks/`**:
 
