@@ -31,6 +31,9 @@
 #   2dac7d5  Shift-F4 made a toggle (MIDIMultiEnable can be turned off)
 #   b5a0c66  Shift-F4 gated to Instrument mode      <- SUPERSEDED by 8c32fd2
 #   8c32fd2  3-state Shift-F4 cycle + Shift-F1 router toggle + gate removed
+#
+# WATCH: Music_CreateMIDIInInstruments Music_ExpandMIDIInTo96 Music_ResetMIDIInTo16 MCMI_BuildSlot Music_GetMIDIMultiBanks Music_GetMIDIMultiEnable Music_SetMIDIMultiEnable MIDIMultiEnable MIDIMultiBanks Glbl_Shift_F4 Glbl_MIDIMulti_Toggle MIDIMulti_Route MMR_FindInst MIDIMultiToggleButton O1_ConfirmCreateMIDIIn InstrumentMIDIInChannel
+# RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
 # =============================================================================
 
 Feature: Multitimbral MIDI-In
