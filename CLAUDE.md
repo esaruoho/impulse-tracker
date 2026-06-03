@@ -25,6 +25,39 @@ Each card carries a **triad**: the `.feature` (the spec/claims), a sibling `*.se
 
 `features/print-card.py` is the tool: `--readme` (regenerate the README), `--all` (per-card dist outputs), or a path list (one card). No deps, Apple-native python3.
 
+**The Gherkin `.feature` house style** — a `#`-comment banner (the report-card metadata), then standard Gherkin. Copy this skeleton; match an existing card (e.g. `sample-amplify-keeps-playback.feature`) for the full banner:
+
+```gherkin
+# =============================================================================
+# WIKI PAGE / REPORT CARD: <one-line title>
+# Convention: GHERKIN-FEATURE-WIKI-PATTERN.md
+#
+# WHAT THIS CARD SPAWNS:  codespace (files/procs) · thinkspace (the .session.md)
+#                         · areaspace (what it owns / must NOT touch)
+# Report-card legend (tags): @stock @shipped @build-verified @runtime-verified
+#                            @runtime-untested @hw-untested @todo
+# Source files linked back to this card (grep "features/<name>"):
+#   IT_X.ASM - <proc / what>
+# Commit log:   <hash>  <subject>
+# SESSION:      features/<name>.session.md
+# RESULT:       Feature delivery <hash> (direct to main, no PR); card authored <hash>
+# WATCH: Proc1 Proc2 Proc3      <- symbols the git hooks watch to auto-stamp this card
+# =============================================================================
+
+Feature: <behaviour title>
+  As a <role>, I want <capability>, So that <benefit>.
+
+  @shipped @build-verified @runtime-untested
+  Scenario: <ONE behaviour, ONE verifiable outcome>
+    # cite: IT_X.ASM SomeProc (~line NNN) — what satisfies the claim ; commit <hash>
+    Given <the starting state>
+    When <the single action>
+    Then <the concrete, verifiable outcome — not "it works">
+    And <a further outcome>
+```
+
+Rules of the style: **one Scenario = one behaviour** (no 10-`And` grab-bags); **every Scenario carries a grade tag**; **every claim cites proc + line + commit** in a `# cite:` line; the `Then` is a *strong* criterion you can verify and walk away from (`Then only the preview voice falls silent, song keeps playing` — not `Then it works`); keep step phrasing consistent across cards so the vocabulary stays cross-referenceable. The reasoning behind the style is in `GHERKIN-FEATURE-WIKI-PATTERN.md`.
+
 The RESULT-LOG keeps itself current via **version-controlled git hooks in `.githooks/`**:
 
 - `pre-commit` stamps cards whose WATCHed symbols are in the *staged* diff and `git add`s the card so the note rides into the same commit (the everyday direct-to-main path).

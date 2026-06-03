@@ -33,6 +33,24 @@ commit), `<name>.session.md` (the conversation that produced it), and a
 commit ↔ card: `features/INDEX.md`. Generated human reference:
 `features/README.md`.
 
+**The `.feature` house style** (a `#`-comment report-card banner, then plain Gherkin — copy an existing card like `features/sample-amplify-keeps-playback.feature` for the full banner):
+
+```gherkin
+# === REPORT CARD: <title> · WATCH: Proc1 Proc2 (symbols the hooks auto-stamp) ===
+Feature: <behaviour title>
+  As a <role>, I want <capability>, So that <benefit>.
+
+  @shipped @build-verified @runtime-untested
+  Scenario: <ONE behaviour, ONE verifiable outcome>
+    # cite: IT_X.ASM SomeProc (~line NNN) — what satisfies it ; commit <hash>
+    Given <starting state>
+    When <the single action>
+    Then <concrete verifiable outcome — never "it works">
+    And <further outcome>
+```
+
+Rules: one Scenario = one behaviour; every Scenario graded with a tag; every claim has a `# cite:` proc+line+commit; the `Then` is a strong, checkable criterion. Full skeleton + rationale in `CLAUDE.md` and `GHERKIN-FEATURE-WIKI-PATTERN.md`.
+
 **When you build or change a documented behaviour, in the same motion:**
 
 1. Build + verify (above), commit + push to `main`.
