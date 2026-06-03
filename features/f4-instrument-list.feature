@@ -1,6 +1,7 @@
 # =============================================================================
 # WIKI PAGE / REPORT CARD: User Presses F4 (Instrument List)
 # Convention: GHERKIN-FEATURE-WIKI-PATTERN.md
+# SESSION >> features/fkey-report-cards.session.md (the vibe diff that spawned this)
 #
 # Durable understanding-store for "what happens when the user presses F4".
 # Plain F4 + Ctrl-F4 + the F4-cycles-tabs behaviour live here. The Shift-F4

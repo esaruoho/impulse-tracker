@@ -1,6 +1,7 @@
 # =============================================================================
 # WIKI PAGE / REPORT CARD: User Presses F11 (Order List + power tools)
 # Convention: GHERKIN-FEATURE-WIKI-PATTERN.md
+# SESSION >> features/fkey-report-cards.session.md (the vibe diff that spawned this)
 #
 # Durable understanding-store for "what happens when the user presses F11":
 # the stock order-list / panning / volume screen, and the fork's order-list

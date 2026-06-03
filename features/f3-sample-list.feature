@@ -1,6 +1,7 @@
 # =============================================================================
 # WIKI PAGE / REPORT CARD: User Presses F3 (Sample List)
 # Convention: GHERKIN-FEATURE-WIKI-PATTERN.md
+# SESSION >> features/fkey-report-cards.session.md (the vibe diff that spawned this)
 #
 # Durable understanding-store for "what happens when the user presses F3" and
 # the sibling Ctrl-F3 sample library, plus the fork's loader-keyjazz hang fix

@@ -1,6 +1,7 @@
 # =============================================================================
 # WIKI PAGE / REPORT CARD: User Presses F12 (Song Variables & Directory Config)
 # Convention: GHERKIN-FEATURE-WIKI-PATTERN.md
+# SESSION >> features/fkey-report-cards.session.md (the vibe diff that spawned this)
 #
 # Durable understanding-store for "what happens when the user presses F12":
 # the stock song-variables / config screen, plus the fork's Quicksave directory

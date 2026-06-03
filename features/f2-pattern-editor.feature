@@ -1,6 +1,7 @@
 # =============================================================================
 # WIKI PAGE / REPORT CARD: User Presses F2 (Pattern Editor)
 # Convention: GHERKIN-FEATURE-WIKI-PATTERN.md
+# SESSION >> features/fkey-report-cards.session.md (the vibe diff that spawned this)
 #
 # This .feature is the durable understanding-store for "what happens when the
 # user presses F2". Each Scenario is a verified claim about behaviour, cited to
