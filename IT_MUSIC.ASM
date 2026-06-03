@@ -5965,6 +5965,7 @@ WAV_PlayDone:
                 Jmp     WAV_ToggleDone
 
 WAV_AlreadyActive:
+                ; FEATURE-CARD >> features/wav-render-reentry-guard.feature
                 ; A render is already in flight. Two distinct callers reach
                 ; here -- WAV_FinalizeRequest tells them apart:
                 ;
