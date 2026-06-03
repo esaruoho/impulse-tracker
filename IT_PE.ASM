@@ -2316,6 +2316,7 @@ EndP            PE_OrderList_LeftDispatch
 ; Both cases tail-jump to PE_OrderList_RenderDispatch which already implements
 ; the shift-aware import/no-import decision -- so the right-edge handler is
 ; really just "promote this cursor key into a Ctrl-O event".
+; FEATURE-CARD >> features/wav-render-quicksave.feature (Shift-Right at order-list right edge = render to Quicksave)
 ;-------------------------------------------------------------------------------
 Proc            PE_OrderList_RightDispatch Far
                                                 ; Marker debris removed

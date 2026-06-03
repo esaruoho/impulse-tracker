@@ -810,6 +810,7 @@ ENDIF
                 StosW
                 Jmp     Poll12
 
+; FEATURE-CARD >> features/wav-render-quicksave.feature (pattern renders write a real .WAV extension, not the 3-digit pattern number)
 Poll9:
                 Mov     DI, Offset OutputFileName
                 Call    CopyFileName

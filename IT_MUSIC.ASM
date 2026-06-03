@@ -2823,6 +2823,7 @@ EndP            WAV_Store2Dec
 ; WAVDRV's CopyFileName stop cleanly; the import / log builders copy up to it.
 ; "LL" is a static prefix (the user's project tag). 8 chars before the dot fit
 ; DOS 8.3 exactly. INT 21h AH=2Ch returns CH=hour, CL=minute, DH=second.
+; FEATURE-CARD >> features/wav-render-quicksave.feature (LL<HHMMSS>.WAV naming of single-pattern Quicksave renders)
 ;-------------------------------------------------------------------------------
 Proc            WAV_BuildTimestampBasename Near
                 Push    AX
