@@ -814,34 +814,29 @@ Poll9:
                 Mov     DI, Offset OutputFileName
                 Call    CopyFileName
 
-                Xor     DX, DX
-                Mov     AX, BX          ; AX = pattern
-                Mov     BX, 10
-                Div     BX
-                Mov     CL, DL
-                Xor     DX, DX
-                Div     BX
-                Mov     AH, AL
-                Mov     AL, '.'
-                Add     AH, '0'
+                ; Fork: pattern renders now write a real ".WAV" extension
+                ; instead of the 3-digit pattern number (e.g. .000). This makes
+                ; the rendered file -- F11 Shift-Right at the order-list edge,
+                ; Ctrl-O in the pattern editor, etc. -- land as PTN0003.WAV,
+                ; drag-and-drop ready into another app. BX (pattern) is no
+                ; longer consumed for the extension here. Mirrors the song-mode
+                ; path above.
+                Mov     AX, 'W.'
                 StosW
-                Mov     AL, DL
-                Mov     AH, CL
-                Add     AX, '00'
+                Mov     AX, 'VA'
                 StosW
 
                 ; Fork fix: OutputFileName was initialised with 46 spaces +
                 ; a trailing NULL. CopyFileName + the extension write above
-                ; together fill positions 0..10 with "RND<NNNN>.<PPP>"; the
-                ; remaining 35 bytes are still ASCII spaces. Int 21h AH=3Ch
+                ; together fill positions 0..10 with "RND<NNNN>.WAV"; the
+                ; remaining bytes are still ASCII spaces. Int 21h AH=3Ch
                 ; (Create) parses the filename as ASCIIZ up to the first
-                ; NULL, so it sees "RND0001.000                                       "
-                ; -- 35 trailing spaces. Some DOS versions either fail the
-                ; create or create a file with a mangled name; either way
-                ; the import-side open sees a 0-byte or absent file and
-                ; the WAV header validation rejects all-zero bytes (RIFF
-                ; magic check fires first). Write a NULL right after the
-                ; extension so the path is unambiguous.
+                ; NULL, so without a terminator it sees trailing spaces. Some
+                ; DOS versions either fail the create or create a file with a
+                ; mangled name; either way the import-side open sees a 0-byte
+                ; or absent file and the WAV header validation rejects all-zero
+                ; bytes (RIFF magic check fires first). Write a NULL right
+                ; after the extension so the path is unambiguous.
                 Mov     Byte Ptr [DI], 0
 
 Poll12:

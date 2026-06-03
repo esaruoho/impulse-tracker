@@ -2603,8 +2603,9 @@ EndP            Music_GetWaveForm
 ; channel until all 64 are done.
 ;
 ; Filename: each channel's render hijacks WAV_RenderCounter to be the channel
-; number (1..64), so files come out <PFX>0001.<PPP> through <PFX>0064.<PPP>
-; where <PFX> is the song-name-derived prefix and <PPP> is the pattern number.
+; number (1..64), so files come out <PFX>0001.WAV through <PFX>0064.WAV
+; where <PFX> is the song-name-derived prefix. (The extension used to be the
+; 3-digit pattern number; it's now a real ".WAV" so the stems are draggable.)
 ;
 ; Auto-import is suppressed for the whole sweep -- the user wants files on
 ; disk, not 64 sample-slot allocations.
@@ -5679,7 +5680,7 @@ WAV_UserFilenamePath:
 
 WAV_AfterBasenameCopy:
 
-                ; Build RenderedFilename (RND<NNNN>.<PPP>) now too so we
+                ; Build RenderedFilename (RND<NNNN>.WAV) now too so we
                 ; can log a START line before any audio teardown. Same code
                 ; as Music_ImportRenderedPattern's filename builder; OK to
                 ; duplicate -- both write the same bytes from the same
@@ -5696,46 +5697,24 @@ WAV_AfterBasenameCopy:
                 Rep     MovsB
                 Mov     AL, '.'
                 StosB
-                                                ; In song-mode the extension
-                                                ; is the literal ".WAV" --
-                                                ; there's no single pattern
-                                                ; number to encode, the
-                                                ; render contains the whole
-                                                ; song. Single-pattern mode
-                                                ; uses the 3-digit pattern
-                                                ; number as the extension
-                                                ; (preserves the existing
-                                                ; <PFX>NNNN.<PPP> traceback
-                                                ; story).
-                Cmp     Byte Ptr [CS:WAV_SongMode], 0
-                JE      WAV_FN_PatternExt
-
+                                                ; Fork: every render now ends in
+                                                ; a real ".WAV" extension. Song-
+                                                ; mode always did; pattern renders
+                                                ; used to encode the 3-digit
+                                                ; pattern number (e.g. .000), so
+                                                ; the file came out PTN0003.000.
+                                                ; Now it's PTN0003.WAV -- drag-
+                                                ; and-drop ready. WAVDRV writes
+                                                ; the same .WAV, so this rebuilt
+                                                ; name still matches the file on
+                                                ; disk for the import-side open.
                 Mov     AL, 'W'
                 StosB
                 Mov     AL, 'A'
                 StosB
                 Mov     AL, 'V'
                 StosB
-                Jmp     WAV_FN_Done
 
-WAV_FN_PatternExt:
-                Mov     AX, [CS:WAV_PendingPattern]
-                Mov     BX, 100
-                Xor     DX, DX
-                Div     BX
-                Add     AL, '0'
-                StosB
-                Mov     AX, DX
-                Mov     BX, 10
-                Xor     DX, DX
-                Div     BX
-                Add     AL, '0'
-                StosB
-                Mov     AL, DL
-                Add     AL, '0'
-                StosB
-
-WAV_FN_Done:
                 Xor     AL, AL
                 StosB
                 Pop     ES
@@ -6160,10 +6139,10 @@ Proc            Music_ImportRenderedPattern Far
                 Mov     AH, 'a'                 ; entered import
                 Call    WAV_DebugMark
 
-                ; --- Build filename REN<NNN>.<PPP> ---------------------------
+                ; --- Build filename <PFX><NNNN>.WAV --------------------------
                 ; Use the unique basename we wrote into FileName at enter-mode
-                ; (cached in WAV_RenderBasename) plus the rendered pattern's
-                ; 3-digit number as extension.
+                ; (cached in WAV_RenderBasename) plus a real ".WAV" extension
+                ; (was the rendered pattern's 3-digit number, e.g. .000).
                 Push    CS
                 Pop     DS
                 Push    CS
@@ -6175,21 +6154,14 @@ Proc            Music_ImportRenderedPattern Far
                 Mov     AL, '.'
                 StosB
 
-                ; Append 3-digit pattern number
-                Mov     AX, [CS:WAV_PendingPattern]
-                Mov     BX, 100
-                Xor     DX, DX
-                Div     BX
-                Add     AL, '0'
+                ; Append the ".WAV" extension. Must match what WAVDRV's Poll9
+                ; now writes (was the 3-digit pattern number, e.g. .000) so the
+                ; auto-import open below finds the file on disk -- PTN0003.WAV.
+                Mov     AL, 'W'
                 StosB
-                Mov     AX, DX
-                Mov     BX, 10
-                Xor     DX, DX
-                Div     BX
-                Add     AL, '0'
+                Mov     AL, 'A'
                 StosB
-                Mov     AL, DL
-                Add     AL, '0'
+                Mov     AL, 'V'
                 StosB
                 Xor     AL, AL
                 StosB
