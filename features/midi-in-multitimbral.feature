@@ -14,6 +14,10 @@
 #                       inject MIDI), so live note routing is unconfirmed
 #   @stock            - upstream Impulse Tracker behaviour, not a fork addition
 #
+# SESSION >> features/midi-in-multitimbral.session.md
+#   (the spawning conversation = the vibe diff; session 1fa213d0-83aa-4fc1-a8fb-
+#    b38dbcdee53d, 2026-06-03; "claude --resume 1fa213d0-83aa-4fc1-a8fb-b38dbcdee53d")
+#
 # Source files linked back to this card (grep "features/midi-in-multitimbral"):
 #   IT_MUSIC.ASM  - creator / expand / reset / build-slot / enable+banks flags
 #   IT_I.ASM      - MIDIMulti_Route live router + MMR_FindInst channel match
