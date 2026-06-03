@@ -76,6 +76,23 @@ Feature: Sample Amplify keeps the song playing
     Then the sample is amplified (scaled in place, clipped)
     And the song keeps playing -- only voices using THIS sample fall silent
 
+  @shipped @build-verified @runtime-untested
+  Scenario: Alt-M Maximize/Normalize during playback keeps playing through OK/Process
+    # The user-journey form (Esa's wantlist phrasing). "Amplify" IS IT's
+    # Maximize/Normalize: the peak-scan pre-fills the no-clip slider value (see
+    # the "no-clip (normalize) amplification" scenario below), so the default
+    # slider amount maximises without clipping. The whole flow -- slider adjust
+    # then Process -- no longer halts transport, for a pattern OR a full song.
+    # cite: IT_I.ASM I_AmplifySample10 runs the O1_SampleAmplificationList
+    #       dialog; on Process (DX != 0) the apply path silences only this
+    #       sample's voices (Music_SilenceSampleVoices) instead of Music_Stop
+    # cite: commit e5e5c38
+    Given the user is playing a pattern or a song
+    When they press Alt-M to Maximize/Normalize a sample
+    And they set the slider amount and press OK/Process
+    Then the sample is scaled by that amount
+    And the playback does not stop
+
   # --- The trigger -----------------------------------------------------------
 
   @stock @build-verified

@@ -17,10 +17,12 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - [External MIDI Real-Time Sync](#midi-realtime-sync) — `midi-realtime-sync.feature`
 - [Multi-WAV render](#multi-wav) — `multi-wav.feature`
 - [F4 instrument-list play dots in multitimbral Sample mode](#multitimbral-instrument-play-dots) — `multitimbral-instrument-play-dots.feature`
+- [F12 Samples->Instruments uses upstream clear+remap (no envelope retention)](#no-samples-to-instruments-envelope-retention) — `no-samples-to-instruments-envelope-retention.feature`
 - [Sample Amplify keeps the song playing](#sample-amplify-keeps-playback) — `sample-amplify-keeps-playback.feature`
 - [User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument List)](#scrolllock-follow-from-lists) — `scrolllock-follow-from-lists.feature`
 - [Shift-Enter Load from Sample List (bulk-load a module's samples)](#shift-enter-bulk-load-from-module) — `shift-enter-bulk-load-from-module.feature`
 - [Shift-Enter Load from Sample List](#shift-enter-load-from-sample-list) — `shift-enter-load-from-sample-list.feature`
+- [Shift-F4 to enable Multitimbral mode also switches Samples -> Instruments](#shift-f4-enters-instrument-mode) — `shift-f4-enters-instrument-mode.feature`
 - [WAV Quicksave render filename](#wav-render-quicksave) — `wav-render-quicksave.feature`
 - [WAV render re-entry guard -- a second render gesture mid-render stops cleanly](#wav-render-reentry-guard) — `wav-render-reentry-guard.feature`
 
@@ -279,6 +281,28 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **Commits:** `478b638` show F4 instrument-list play dots in multitimbral Sample mode
 
 
+<a id="no-samples-to-instruments-envelope-retention"></a>
+## F12 Samples->Instruments uses upstream clear+remap (no envelope retention)
+
+`features/no-samples-to-instruments-envelope-retention.feature` · [session](no-samples-to-instruments-envelope-retention.session.md)
+
+**What it does:** As someone who needs a NON-CRASHING tracker above all, I want F12 "Initialise Instruments? = YES" to do exactly what upstream IT2.15 does -- clear all instruments and rebuild a clean sample-name + 120-note keymap -- with NO attempt to preserve drawn envelopes across the flip, So that nothing in the load/convert path can ever feed garbage instrument slots to the envelope renderer and hard-crash IT (EMM386 #12).
+
+**Behaviour (5 scenarios):**
+
+- Initialise Instruments = YES does the upstream clear + remap — `@stock @build-verified @runtime-untested`
+- The envelope-retention feature and its IMPI checker are gone — `@build-verified`
+- Shift-Enter bulk-load can no longer feed the crash class — `@build-verified`
+- The I_MapEnvelope MaxNode<=25 clamp stays as defensive insurance — `@stock @build-verified`
+- (guardrail) Do not re-introduce envelope retention without HW verify — `@todo`
+
+**How it does it:** **Key procs:** `F_SetControlInstrument`, `Music_InstrumentIsReal`, `Music_ClearAllInstruments` · **Source files:** `IT_F.ASM`, `IT_DISK.ASM`, `IT_I.ASM`
+
+**Grade:** @build-verified ×4 · @runtime-untested ×1 · @stock ×2 · @todo ×1
+
+**Commits:** `d8ec842` (added) F12 Samples->Instruments preserves drawn envelopes · `b5a0c66` (PR #2, removed) revert envelope preservation -> upstream clear+remap · `c2094e6` a44a607 9a1142c (PR #3, re-added) IMPI-gated keep-envelopes policy
+
+
 <a id="sample-amplify-keeps-playback"></a>
 ## Sample Amplify keeps the song playing
 
@@ -286,9 +310,10 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **What it does:** As a musician tweaking a sample's level while a tune is running, I want pressing Alt-M (Amplify / normalize) and confirming it to scale the sample WITHOUT stopping playback, So that I can hear the change in context and keep my flow, instead of the whole song cutting out every time I amplify a sample.
 
-**Behaviour (7 scenarios):**
+**Behaviour (8 scenarios):**
 
 - Amplifying a sample mid-playback does not stop the song — `@shipped @build-verified @runtime-untested`
+- Alt-M Maximize/Normalize during playback keeps playing through OK/Process — `@shipped @build-verified @runtime-untested`
 - Alt-M on the Sample List is the Amplify gesture — `@stock @build-verified`
 - The dialog pre-fills the no-clip (normalize) amplification — `@stock @build-verified`
 - Only the amplified sample's voices are silenced, not all channels — `@shipped @build-verified`
@@ -298,7 +323,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **How it does it:** **Key procs:** `I_AmplifySample`, `Music_SilenceSampleVoices`, `Music_Stop`, `Music_GetSampleLocation` · **Source files:** `IT_I.ASM`, `IT_MUSIC.ASM`
 
-**Grade:** @build-verified ×7 · @runtime-untested ×1 · @shipped ×4 · @stock ×3
+**Grade:** @build-verified ×8 · @runtime-untested ×2 · @shipped ×5 · @stock ×3
 
 **Commits:** `e5e5c38` Sample Amplify (Alt-M) no longer stops the song
 
@@ -363,6 +388,27 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **How it does it:** **Source files:** `IT_DISK.ASM`, `IT_F.ASM`, `IT_MUSIC.ASM`
 
 **Grade:** @shipped ×4
+
+
+<a id="shift-f4-enters-instrument-mode"></a>
+## Shift-F4 to enable Multitimbral mode also switches Samples -> Instruments
+
+`features/shift-f4-enters-instrument-mode.feature` · [session](shift-f4-enters-instrument-mode.session.md)
+
+**What it does:** As someone enabling live multitimbral MIDI-in, I want confirming "Yes, enter Multitimbral Mode" to ALSO move me from Sample mode into Instrument mode (since the 16 things created are instruments), So that the instruments I just made are immediately the active, playable mode.
+
+**Behaviour (4 scenarios):**
+
+- From Sample mode, Shift-F4 + confirm enters Instrument mode with 16 instruments — `@shipped @build-verified @runtime-untested`
+- The mode switch is a direct flag set, NOT the F12 clear/remap path — `@shipped @build-verified`
+- Declining the prompt changes nothing — `@shipped @build-verified`
+- (verify live) cursor + playback survive the mode switch — `@runtime-untested`
+
+**How it does it:** **Key procs:** `Glbl_Shift_F4`, `Music_CreateMIDIInInstruments`, `Glbl_F4` · **Source files:** `IT_G.ASM`
+
+**Grade:** @build-verified ×3 · @runtime-untested ×2 · @shipped ×3
+
+**Commits:** `8c32fd2` Shift-F4 3-state cycle (the create dispatcher this extends)
 
 
 <a id="wav-render-quicksave"></a>
