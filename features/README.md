@@ -126,16 +126,16 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **Behaviour (6 scenarios):**
 
-- 64 -> 128 duplicates the 64 rows once — `@shipped @build-verified @runtime-untested`
-- 64 -> 192 duplicates the 64 rows twice — `@shipped @build-verified @runtime-untested`
-- Non-multiple lengths get a partial final copy ("until the end") — `@shipped @build-verified @runtime-untested`
+- 64 -> 128 duplicates the 64 rows once — `@shipped @build-verified @runtime-verified`
+- 64 -> 192 duplicates the 64 rows twice — `@shipped @build-verified @runtime-verified`
+- Non-multiple lengths get a partial final copy ("until the end") — `@shipped @build-verified @runtime-verified`
 - Shrinking the pattern does not tile — `@shipped @build-verified`
 - Scope is the F2 config path only — `@shipped @build-verified`
 - The tiled buffer persists via the working-copy model — `@shipped @build-verified`
 
 **How it does it:** **Key procs:** `PE_TilePatternToLength`, `Glbl_F2`, `PE_OrderList_ExtendPattern`, `NumberOfRows`, `MaxRow` · **Source files:** `IT_G.ASM`, `IT_PE.ASM`
 
-**Grade:** @build-verified ×6 · @runtime-untested ×3 · @shipped ×6
+**Grade:** @build-verified ×6 · @runtime-verified ×3 · @shipped ×6
 
 **Commits:** `05c70c9` F2 pattern-length increase tiles content instead of blank rows
 
@@ -336,18 +336,19 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **What it does:** As someone auditioning samples/instruments against a playing song, I want Scroll Lock on the list screens to drop me into the Pattern Editor with Pattern Follow Mode already on, So that one key takes me from "browsing a slot" to "watching the cursor follow playback" without a separate F2 then Scroll Lock.
 
-**Behaviour (6 scenarios):**
+**Behaviour (7 scenarios):**
 
 - Scroll Lock inside the Pattern Editor still just toggles Follow Mode — `@stock @build-verified`
 - Scroll Lock in the Sample List opens the Pattern Editor with Follow Mode on — `@shipped @build-verified @runtime-untested`
 - Scroll Lock in the Instrument List does the same — `@shipped @build-verified @runtime-untested`
+- Ctrl-F on the Sample or Instrument List does the same as Scroll Lock — `@shipped @build-verified @runtime-untested`
 - Follow Mode is forced ON, never toggled off, from the lists — `@shipped @build-verified`
 - The handler hands Glbl_F2 the dispatcher's own DS (no segment damage) — `@shipped @build-verified`
-- (not built) Scroll Lock from other screens (Order list F11, Song vars F12) — `@todo`
+- (not built) Scroll Lock / Ctrl-F from other screens (Order list F11, Song vars F12) — `@todo`
 
-**How it does it:** **Key procs:** `PE_ScrollLockFollow`, `TracePlayback`, `PEFunction_ToggleTrace`, `Glbl_F2`, `K_SetScrollLock`, `SampleGlobalKeyList`, `InstrumentGlobalKeyList`
+**How it does it:** **Key procs:** `PE_ScrollLockFollow`, `TracePlayback`, `PEFunction_ToggleTrace`, `Glbl_F2`, `K_SetScrollLock`, `SampleGlobalKeyList`, `InstrumentGlobalKeyList` · **Source files:** `IT_OBJ1.ASM`
 
-**Grade:** @build-verified ×5 · @runtime-untested ×2 · @shipped ×4 · @stock ×1 · @todo ×1
+**Grade:** @build-verified ×6 · @runtime-untested ×3 · @shipped ×5 · @stock ×1 · @todo ×1
 
 **Commits:** `91dfc0b` Scroll Lock on F3/F4 lists -> Pattern Editor + Follow Mode
 

@@ -71,10 +71,11 @@ The only place that DID tile was the F11 **Alt-E** gesture,
 
 - `@build-verified` is real: DOSBox-X BUILDALL, IT_PE.asm + IT_G.asm
   Error/Warning = None, IT.EXE links.
-- `@runtime-untested` is honest: not yet confirmed by running IT.EXE, growing a
-  64-row pattern to 128/192 on the F2 config, and eyeballing the duplicated rows.
-  IT.EXE is relaunched and ready. Watch specifically: the partial-copy case
-  (64->100) and that the tiled content survives a pattern switch (the store path).
+- `@runtime-verified` (2026-06-03): Esa confirmed on a running IT.EXE —
+  "F2 resize duplication works." The tiling scenarios (128/192/partial all share
+  one wrapping-copy loop, so verifying duplication verifies the mechanism) are now
+  `@runtime-verified`. The shrink/scope/persist scenarios stay `@build-verified`
+  (structural facts, not a watch-the-screen check).
 
 ## How to get back
 
