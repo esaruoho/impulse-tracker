@@ -81,6 +81,11 @@ Sample Amplify (Alt-M, the "normalize" gesture) no longer stops the song — onl
 - `e5e5c38` Sample Amplify (Alt-M) no longer stops the song
 - Card + session authored same session
 
+### ✅ multitimbral-instrument-play-dots.feature  (+ .session.md, full triad)
+F4 Instrument List now shows live play dots during multitimbral MIDI-in playback in Sample mode — I_ShowInstrumentPlay's instrument-mode gate now also proceeds when Music_GetMIDIMultiEnable is set, so F4 mirrors F3. Build-verified, runtime-untested.
+- `478b638` show F4 instrument-list play dots in multitimbral Sample mode
+- Card + session authored same session
+
 ## Uncarded features (the work surface)
 
 ### ⬜ loader-keyjazz-hang.feature
