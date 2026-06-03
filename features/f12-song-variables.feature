@@ -33,6 +33,17 @@
 #   9a1142c  Cleaner policy: always remap + keep envelopes; gate garbage-clear on IMPI
 #   9493101  Merge PR #3 -> envelope preservation re-lands in main
 #
+# RESULT (third leg of the triad: .feature spec + .session convo + what shipped):
+#   Feature delivery (dir rows): 7fd1abc, 8f11aa6, 4eee4f8  (direct to esaruoho/main, no PR)
+#   Feature delivery (envelope) : d8ec842 (attempt) -> b5a0c66 (revert, both direct)
+#                                 -> a44a607, 9a1142c (PR #3 branch)
+#                                 -> 9493101 MERGE PR #3 "WIP (DO NOT MERGE):
+#                                    Samples->Instruments retain drawn envelopes"
+#                                    (merged 2026-06-03; the only PR-delivered piece
+#                                    in this batch — everything else is direct-push)
+#   This card authored: 8ca97e9 (cards) + 009dbab (session + back-links)
+#   Triad: this .feature  <->  fkey-report-cards.session.md  <->  commits + PR #3
+#
 # IT.TXT source of truth: lines 659 (Song Variables) and 1748 ("F12 for the variables").
 # =============================================================================
 

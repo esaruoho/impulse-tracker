@@ -80,8 +80,47 @@ verify against the source before writing it down.
   in main; I cited commits, I did not re-assemble. (If a future change touches
   these procs, re-grade against a fresh build.)
 
+## The result (third leg of the triad)
+
+Esa's framing: the report card needs the **PR + commits** too, so that the
+`.feature` (spec/claims) + `.session` (the conversation) + the **result**
+(commits / PR / files-changed) are all linked — *described it, tested for it,
+developed it, then chuck the session + the commit + the PR + the files-changed
+in together*. That makes a self-reorganizing wiki of *what the code is*, rebuildable
+straight from git.
+
+So each card now carries a `RESULT` header block. The accurate delivery map
+(verified by first-parent ancestry, not guessed):
+
+| Card | Feature commits | Delivery |
+|------|-----------------|----------|
+| F2   | `068648f` | direct to main, no PR |
+| F3   | `a44c41b`, `64fa1ce`, `ec91331` | direct to main, no PR |
+| F4   | `10c837b` | direct to main, no PR |
+| F11  | `1a7aa16`, `4eee4f8`, `90cfd04`, `74c3fe8` | direct to main, no PR |
+| F12  | dir rows `7fd1abc`/`8f11aa6`/`4eee4f8` (direct); envelope `d8ec842`→`b5a0c66` (direct) → `a44a607`/`9a1142c` **via PR #3**, merge `9493101` | mixed |
+
+Card-authoring result (this session): `8ca97e9` (the five cards) + `009dbab`
+(this session file + `SESSION >>` back-links) + the commit adding these RESULT
+blocks. Note: there are two "PR #3"s in history — `f50e519` is **cs127**'s, the
+envelope one is **esaruoho**'s `9493101`. Easy to conflate; don't.
+
+## Why this helps an agent write better code (Esa's question)
+
+The triad makes git itself a queryable knowledge base: `.feature` answers *what
+should be true*, `.session` answers *why we decided that and what we got wrong*,
+and the RESULT/commits answer *what actually shipped and where*. An agent landing
+cold can load one card and reconstruct the spec, the rationale, and the diff
+without re-reading thousands of lines of TASM — and can diff all three across
+versions (a "vibe diff": code + claims + the dialogue that drove the change). The
+honest grade (`@stock`/`@shipped`/`@build-verified`) is the anti-drift check; the
+back-links keep it two-way so the wiki can be regenerated mechanically. A hook that,
+on each merge, appends the PR/commit/files-changed to the matching card's RESULT
+block would make it fully self-maintaining — the natural next step.
+
 ## Back-links
 
 - Cards → this session: `SESSION >>` line in each card header.
+- Cards → result: `RESULT` block in each card header (commits + PR #3 where applicable).
 - Innards: the procs cited in each card's header `Source files` block.
 - Memory: [[feedback_report_card_pattern]], [[project_samples_to_instruments_envelope_reverted]].

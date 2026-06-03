@@ -28,6 +28,11 @@
 #   64fa1ce  F3 loader keyjazz hang fix: suppress MIDI sync during LoadSample
 #   ec91331  F3 loader keyjazz: instrument LoadSample + PlaySample w/ VRAM markers
 #
+# RESULT (third leg of the triad: .feature spec + .session convo + what shipped):
+#   Feature delivery : a44c41b, 64fa1ce, ec91331  (direct to esaruoho/main, no PR)
+#   This card authored: 8ca97e9 (cards) + 009dbab (session + back-links)
+#   Triad: this .feature  <->  fkey-report-cards.session.md  <->  those commits
+#
 # IT.TXT source of truth: lines 1815-1817 (Ctrl-F3 = Sample library from anywhere).
 # =============================================================================
 

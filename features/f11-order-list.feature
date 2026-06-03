@@ -38,6 +38,11 @@
 #   90cfd04  cursor-key edge gestures (note-cut at row 0 for mute-wipe clone)
 #   74c3fe8  Shift-Right single-pattern Quicksave render -> LL<HHMMSS>.WAV
 #
+# RESULT (third leg of the triad: .feature spec + .session convo + what shipped):
+#   Feature delivery : 1a7aa16, 4eee4f8, 90cfd04, 74c3fe8  (direct to esaruoho/main, no PR)
+#   This card authored: 8ca97e9 (cards) + 009dbab (session + back-links)
+#   Triad: this .feature  <->  fkey-report-cards.session.md  <->  those commits
+#
 # IT.TXT source of truth: lines 1221-1241 ("2.3 Order List ... (F11)") and 1747.
 # =============================================================================
 

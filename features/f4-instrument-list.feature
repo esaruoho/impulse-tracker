@@ -25,6 +25,12 @@
 #   fb47b32  Import code (upstream base: F4 instrument list + tab cycle)
 #   10c837b  per-instrument MIDI-In channel field (hdr 1Fh) on the Pitch tab
 #
+# RESULT (third leg of the triad: .feature spec + .session convo + what shipped):
+#   Feature delivery : 10c837b  (direct to esaruoho/main, no PR)
+#   This card authored: 8ca97e9 (cards) + 009dbab (session + back-links)
+#   Triad: this .feature  <->  fkey-report-cards.session.md  <->  commit 10c837b
+#          (live MIDI-In routing: see features/midi-in-multitimbral.feature)
+#
 # IT.TXT source of truth: lines 1816-1818 (Ctrl-F4 = Instrument library from anywhere).
 # =============================================================================
 

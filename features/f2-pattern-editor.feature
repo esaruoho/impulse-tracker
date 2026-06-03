@@ -23,6 +23,11 @@
 #   fb47b32  Import code (upstream base: F2 + F2-F2 config)
 #   068648f  F2-F2 pattern length persists; M flag persists; IT.CFG ext block
 #
+# RESULT (third leg of the triad: .feature spec + .session convo + what shipped):
+#   Feature delivery : 068648f  (pushed direct to esaruoho/main, no PR)
+#   This card authored: 8ca97e9 (cards) + 009dbab (session + back-links)
+#   Triad: this .feature  <->  fkey-report-cards.session.md  <->  commit 068648f
+#
 # IT.TXT source of truth: lines 426 ("2.2 Pattern editor (F2)") and 437
 #   ("pressing F2 when alredy in the Pattern Editor").
 # =============================================================================
