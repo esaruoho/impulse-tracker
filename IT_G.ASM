@@ -64,6 +64,7 @@ EndS
 
                 Extrn   PE_GetCurrentPattern:Far
                 Extrn   PE_SetPatternModified:far
+                Extrn   PE_TilePatternToLength:Far
 
                 Extrn   O1_InstrumentListGeneral:Far
                 Extrn   O1_InstrumentListVolume:Far
@@ -201,6 +202,9 @@ CurrentMode             DB      0               ; 2 = Pattern edit
 CurrentMode2    DB      0
 CurrentList     DW      0
 CurrentListSegment DW   0
+F2_OldRowCount  DW      0       ; row count captured entering the F2 Pattern-Edit
+                                ; Config, so the leave path can TILE the content
+                                ; when the length is increased (fork feature).
 
 TempoSetMsg     DB      "Tempo set to ", 0FDh, "D beats per minute", 0
 SpeedSetMsg     DB      "Speed set to ", 0FDh, "D frames per row", 0
@@ -250,6 +254,7 @@ Glbl_F2_1:
                 Mov     AX, MaxRow
                 Inc     AX
                 Mov     NumberOfRows, AX
+                Mov     CS:F2_OldRowCount, AX   ; remember length before the edit
 
                 Mov     DI, Offset O1_PEConfigList
                 Mov     CX, 0FFFFh
@@ -259,6 +264,23 @@ Glbl_F2_1:
                 Mov     AX, Pattern
                 Mov     DS, AX
                         Assume DS:Pattern
+
+                                                ; Fork: if the row count was
+                                                ; INCREASED on the config screen,
+                                                ; DUPLICATE (tile) the existing
+                                                ; content into the new rows
+                                                ; instead of leaving them blank.
+                                                ; (e.g. 64 -> 128 = two copies,
+                                                ; 64 -> 192 = three.) Tiling the
+                                                ; decoded editor buffer is enough;
+                                                ; PE_SetPatternModified above marks
+                                                ; it dirty so it persists on store.
+                Mov     AX, CS:F2_OldRowCount
+                Mov     BX, NumberOfRows
+                Cmp     BX, AX
+                JBE     Glbl_F2_NoTile
+                Call    PE_TilePatternToLength  ; AX=old rows, BX=new rows
+Glbl_F2_NoTile:
 
                 Mov     BX, NumberOfRows
                 Dec     BX

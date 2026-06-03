@@ -155,6 +155,7 @@ ENDIF
                 Global  PE_FillSpeedTempo:Far
 
                 Global  PE_SetPatternModified:Far
+                Global  PE_TilePatternToLength:Far
                 Global  PE_GetLastInstrument:Far
                 Global  PE_ChannelIsEmpty:Far
                 Global  PE_SetLastInstrument:Far
@@ -3334,6 +3335,81 @@ PE_OrdX_NoPat:
                 Mov     AX, 1
                 Ret
 EndP            PE_OrderList_ExtendPattern
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+; PE_TilePatternToLength -- tile the existing pattern content to fill a LONGER
+; pattern, in the decoded editor buffer (PatternDataArea, 320 bytes/row).
+;
+; Fork: when the F2 Pattern-Edit-Config row count is INCREASED (e.g. 64 -> 128
+; or 64 -> 192), the original rows are DUPLICATED to fill the new length rather
+; than appending blank rows. Repeats rows 0..OLD-1 across rows OLD..NEW-1, with a
+; partial final copy when NEW isn't an exact multiple of OLD ("...duplicated
+; until the end of the pattern"). Re-uses the row word-copy idiom from
+; PE_OrderList_ExtendPattern, generalised from a single 2x double to N rows.
+;
+;   In:  AX = OLD row count (the source block = rows 0..AX-1)
+;        BX = NEW row count (fills rows AX..BX-1)
+; No-op unless 1 <= OLD < NEW <= 200. Caller-saves everything (PushA + DS/ES).
+; FEATURE-CARD >> features/f2-resize-tiles-pattern.feature
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+Proc            PE_TilePatternToLength Far
+                PushA
+                Push    DS
+                Push    ES
+
+                Cmp     AX, 1
+                JB      PTTL_Done               ; need >= 1 source row
+                Cmp     BX, AX
+                JBE     PTTL_Done               ; new must exceed old
+                Cmp     BX, 200
+                JA      PTTL_Done               ; never write past the 200-row buf
+
+                Mov     CX, CS:PatternDataArea
+                Mov     DS, CX
+                Mov     ES, CX
+                        Assume DS:Nothing
+
+                Mov     BP, AX                  ; BP = OLD (for source wrap reset)
+                Mov     CX, BX
+                Sub     CX, AX                  ; CX = dest rows to fill (NEW-OLD)
+
+                                                ; DI = dest offset = OLD * 320
+                Push    AX
+                Mov     SI, 320
+                Mul     SI                      ; DX:AX = OLD*320 (fits in AX)
+                Mov     DI, AX
+                Pop     AX                      ; AX = OLD
+
+                Xor     SI, SI                  ; source = row 0 offset
+                Mov     DX, AX                  ; DX = source rows left before wrap
+
+PTTL_RowLoop:
+                Push    CX                      ; save dest-rows-left
+                Push    SI
+                Push    DI
+                Mov     CX, 160                 ; 320 bytes = 160 words / row
+                ClD
+                Rep     MovsW
+                Pop     DI
+                Pop     SI
+
+                Add     SI, 320                 ; advance source row
+                Dec     DX                      ; source rows left--
+                JNZ     PTTL_NoWrap
+                Xor     SI, SI                  ; wrap source back to row 0
+                Mov     DX, BP                  ; reset count = OLD
+PTTL_NoWrap:
+                Add     DI, 320                 ; advance dest row
+                Pop     CX
+                Loop    PTTL_RowLoop
+
+PTTL_Done:
+                Pop     ES
+                Pop     DS
+                PopA
+                Ret
+                        Assume DS:Nothing
+EndP            PE_TilePatternToLength
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
