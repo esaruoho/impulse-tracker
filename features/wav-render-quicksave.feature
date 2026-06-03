@@ -7,6 +7,22 @@
 # folder. Each Scenario is a verified claim about behaviour, cited to its source
 # proc and the commit that shipped it. Tags are the report-card grade.
 #
+# WHAT THIS CARD SPAWNS (the card is a generative SEED, not a description):
+# This card + its .session.md is, by itself, enough to re-spawn the feature's
+# three spaces. That is the whole point -- the report card comes first; code,
+# dialogue, and domain flow back out of it.
+#   - CODESPACE  (the file structure): this .feature + the .session.md sibling,
+#                PLUS the innards layout in "Source files" below -- which files,
+#                which procs, the order they run (gesture -> name -> extension ->
+#                import). From this you can scaffold or re-derive the code.
+#   - THINKSPACE (the reasoning / vibe): the .session.md -- the dialogue that
+#                produced every decision, including the wrong turns. Load it and
+#                skip re-deriving the WHY.
+#   - AREASPACE  (the domain boundary): the Feature narrative + the "keeps the
+#                counter naming" scenario -- what this OWNS, and just as
+#                important what it must NOT touch (multi-WAV / full-song /
+#                user-named names; MIDI; the mixer).
+#
 # Report-card legend (tags):
 #   @shipped          - in origin/main
 #   @build-verified   - assembles + links clean (TASM 4.1 / TLINK 3.01), full

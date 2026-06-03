@@ -72,6 +72,31 @@ built this way), and the command (what success looks like for any change). The
 `.feature` is the durable, compounding artifact; each session adds to it rather than
 re-discovering it.
 
+## The card is a generative SEED: codespace / thinkspace / areaspace
+
+The deepest version of "the .feature is a command" (2026-06-03, Esa): the report
+card is not a *description* of work already done — it is the **seed the work is
+spawned from**. The card comes first; everything else flows back out of it. Given
+the card plus its session, you can re-spawn all three spaces:
+
+- **Codespace** — the file structure. Not only the card's own two files
+  (`<name>.feature` + `<name>.session.md`), but the innards layout the card cites:
+  which source files, which procs, the order they run. From the card you can
+  scaffold the files or re-derive the code; the card *is* the build instruction.
+- **Thinkspace** — the reasoning. The **session** (`<name>.session.md`) holds the
+  dialogue that produced every decision, the wrong turns included. Load it and you
+  have the WHY without re-deriving it. This is also what the **vibe diff** diffs.
+- **Areaspace** — the domain boundary. The `Feature:` narrative plus the
+  "what-keeps-the-old-behaviour" scenarios mark what this unit OWNS and what it
+  must NOT touch. The boundary is part of the seed: re-spawning stays in-bounds.
+
+So the pair `{card, session}` is a closed seed. `card` ⇒ codespace + areaspace;
+`session` ⇒ thinkspace. A card without its session can spawn the code but not the
+vibe — that is why a card alone is INCOMPLETE. Whitelabeled (see the report-card
+memory): a circuit block's card spawns its netlist (codespace), its design
+conversation (thinkspace), and its interface contract / what-it-must-not-load
+(areaspace) the same way.
+
 ## How the wiki stays current (the compounding bit)
 
 - **Ingest** = a commit changes behavior. You update the affected scenario and note the
