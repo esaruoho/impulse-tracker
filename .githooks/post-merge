@@ -52,9 +52,12 @@ case "$HEAD_SUBJECT" in
     ;;
 esac
 
-# Changed (+/-) lines of the whole merge range, once. `^[-+]` is anchored and
-# tiny — safe. We search these for each card's WATCHed symbols with grep -F.
-CHANGED_LINES="$(git diff "$RANGE" 2>/dev/null | grep -E '^[-+]' || true)"
+# Changed (+/-) lines of the merge range, once. We EXCLUDE features/ and
+# .githooks/ so the cards can't match themselves: a card's own `# WATCH:` and
+# `cite:` lines contain the symbol names, so scanning a card edit would tag the
+# card spuriously. We only want SOURCE changes to trigger a RESULT-LOG entry.
+# `^[-+]` is anchored and tiny — safe, no backtracking.
+CHANGED_LINES="$(git diff "$RANGE" -- . ':(exclude)features/' ':(exclude).githooks/' 2>/dev/null | grep -E '^[-+]' || true)"
 [ -n "$CHANGED_LINES" ] || exit 0
 
 logged_any=0
