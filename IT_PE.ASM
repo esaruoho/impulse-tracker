@@ -167,6 +167,8 @@ ENDIF
 
                 Global  PE_F7:Far
 
+                Global  PE_ScrollLockFollow:Far ; Scroll Lock from F3/F4 lists
+
                 Global  PE_GetPatternConfigOffset:Far
                 Global  PE_GetForkExtConfigOffset:Far
                 Global  DefaultNewPatternLength:Word
@@ -13315,6 +13317,47 @@ PEFunction_ToggleTrace1:
 
 EndP            PEFunction_ToggleTrace
                 Assume DS:Nothing
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
+; Fork: Scroll Lock pressed while on the F3 Sample List or F4 Instrument List.
+;   Stock Scroll Lock toggles Playback Tracing (Pattern Follow Mode), but the
+;   binding lives ONLY in the Pattern Editor keylist -- on the sample and
+;   instrument screens Scroll Lock did nothing.  This handler force-ENABLES
+;   Follow Mode (not a toggle) and then drops the user straight into the
+;   Pattern Editor, exactly as if F2 had been pressed, so the edit cursor
+;   immediately follows playback.
+;
+;   Reached from SampleGlobalKeyList / InstrumentGlobalKeyList (IT_OBJ1.ASM)
+;   via  DB 0 / DW 146h / DD PE_ScrollLockFollow.
+;
+;   DS handling mirrors Glbl_Shift_F4: SetInfoLine reads the message at DS:SI,
+;   so DS must point at this (Pattern) code segment where TraceMsg lives.  We
+;   save the dispatcher's DS first and restore it before tail-jumping into
+;   Glbl_F2, so Glbl_F2 runs with exactly the DS a real F2 press would give it.
+; FEATURE-CARD >> features/scrolllock-follow-from-lists.feature
+Proc            PE_ScrollLockFollow Far
+                Assume DS:Pattern
+
+                Push    DS                      ; preserve dispatcher DS for F2
+                Push    CS                      ; DS=CS(Pattern): TraceMsg +
+                Pop     DS                      ;   TracePlayback live here
+
+                Mov     TracePlayback, 1        ; force Follow Mode ON
+                Mov     SI, Offset TraceMsg
+                Call    SetInfoLine             ; preserves DS
+
+                Mov     AL, TracePlayback
+                Call    K_SetScrollLock         ; light the Scroll Lock LED
+
+                Pop     DS                      ; restore for Glbl_F2
+                Assume DS:Nothing
+
+                Jmp     Glbl_F2                 ; enter Pattern Editor; Glbl_F2's
+                                                ; Far Ret hands AX=5 / DX=Offset
+                                                ; O1_PatternEditList back to the
+                                                ; key dispatcher (same as F2)
+EndP            PE_ScrollLockFollow
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 

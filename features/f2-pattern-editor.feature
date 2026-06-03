@@ -30,6 +30,7 @@
 #
 # WATCH: Glbl_F2 NewPattern_ApplyDefaultLength DefaultNewPatternLength D_SaveDirectoryConfiguration O1_PEConfigList
 # RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
+#   2026-06-03  direct-commit  touched: Glbl_F2
 #
 # IT.TXT source of truth: lines 426 ("2.2 Pattern editor (F2)") and 437
 #   ("pressing F2 when alredy in the Pattern Editor").

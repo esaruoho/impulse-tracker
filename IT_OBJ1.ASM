@@ -190,6 +190,8 @@ ENDIF
                 Extrn   Glbl_MIDIMulti_Toggle:Far
                 Extrn   Glbl_LoadSample:Far
                 Extrn   Glbl_LoadInstrument:Far
+                Extrn   PE_ScrollLockFollow:Far ; Scroll Lock on F3/F4 -> F2+Follow
+                                                ; FEATURE-CARD >> features/scrolllock-follow-from-lists.feature
                 Extrn   Glbl_LeftBrace:Far
                 Extrn   Glbl_RightBrace:Far
                 Extrn   Glbl_LeftSquareBracket:Far
@@ -3530,6 +3532,10 @@ ENDIF
                         DW      11Ch
                         DD      DWord Ptr Glbl_LoadSample
 
+                        DB      0               ; Fork: Scroll Lock ->
+                        DW      146h            ;   open Pattern Editor with
+                        DD      DWord Ptr PE_ScrollLockFollow ; Follow Mode ON
+
                         DB      5
                         DW      Offset GlobalKeyList
 
@@ -6655,6 +6661,10 @@ ENDIF
                         DB      0               ; Enter... to load sample!
                         DW      11Ch
                         DD      DWord Ptr Glbl_LoadInstrument
+
+                        DB      0               ; Fork: Scroll Lock ->
+                        DW      146h            ;   open Pattern Editor with
+                        DD      DWord Ptr PE_ScrollLockFollow ; Follow Mode ON
 
                         DB      4               ; Always call function
                         DW      0
