@@ -13,6 +13,17 @@
 - **Date:** 2026-06-03
 - **Convention:** `GHERKIN-FEATURE-WIKI-PATTERN.md`; prior instance `features/midi-in-multitimbral.feature`
 
+## How to get back (the seed is clickable, not just summarized)
+
+- **Transcript:** [227bcb50-c2eb-4f4e-8c73-116ad86c5e2f.jsonl](file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/227bcb50-c2eb-4f4e-8c73-116ad86c5e2f.jsonl)
+- **Session ID:** `227bcb50-c2eb-4f4e-8c73-116ad86c5e2f`
+  (identified by content, not guessed: this transcript carries 65 F-key-card
+  references / 30 "order-list" hits — the decisive match among the day's sessions)
+- **Resume:** `claude --resume 227bcb50-c2eb-4f4e-8c73-116ad86c5e2f`
+- **Window:** 2026-06-03 07:29:37Z … 07:59:12Z (UTC; 10:29 … 10:59 EEST).
+- **Backfilled:** 2026-06-03 (this block added retroactively per the click-back
+  requirement; the card+session predate the requirement).
+
 ## The request
 
 Esa: *"base on the gherkin style formatting of a feature, i want you to study
