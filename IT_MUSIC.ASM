@@ -3198,9 +3198,13 @@ Music_Poll_NoMultiEsc:
                 Cmp     Byte Ptr [CS:WAV_FinalizeDelay], 3
                 JB      Music_Poll_Drive
 
-                ; Disarm and run leave + import (re-enters Toggle proc)
+                ; Disarm and run leave + import (re-enters Toggle proc).
+                ; Flag this as the genuine finalize so Toggle's re-entry guard
+                ; (WAV_AlreadyActive) takes the real leave path rather than the
+                ; user-re-toggle early-stop path.
                 Mov     Byte Ptr [CS:WAV_AutoFinalize], 0
                 Mov     Byte Ptr [CS:WAV_FinalizeDelay], 0
+                Mov     Byte Ptr [CS:WAV_FinalizeRequest], 1
                 Xor     AX, AX
                 Call    Music_ToggleWAVRender
 
@@ -4679,6 +4683,12 @@ WAV_DriverName          DB      "ITWAV.DRV", 0
 WAV_RenderMode          DB      0
 WAV_AutoFinalize        DB      0       ; 1 = single-press flow armed
 WAV_FinalizeDelay       DB      0       ; frame counter after PlayMode=0
+WAV_FinalizeRequest     DB      0       ; 1 = Music_Poll asked for the genuine
+                                        ; leave (auto-finalize). 0 when the
+                                        ; re-entry is a user re-pressing a
+                                        ; render gesture mid-render -- that path
+                                        ; must early-STOP, not tear down the
+                                        ; driver re-entrantly. See WAV_AlreadyActive.
 
 ; Song-mode flag: when 1, the WAV render plays the WHOLE SONG (Music_PlaySong
 ; from order 0) instead of a single pattern. Set by D_FormatWAV / D_FormatMWAV
@@ -5591,7 +5601,7 @@ Proc            Music_ToggleWAVRender Far       ; AX = pattern (on enter)
                 Push    ES
 
                 Cmp     Byte Ptr [CS:WAV_RenderMode], 0
-                JNE     WAV_LeaveMode
+                JNE     WAV_AlreadyActive
 
                 ; --- Enter WAV render mode -----------------------------------
                 ; Capture the pattern number passed in by the caller. The leave
@@ -5954,10 +5964,49 @@ WAV_PlayDone:
 
                 Jmp     WAV_ToggleDone
 
+WAV_AlreadyActive:
+                ; A render is already in flight. Two distinct callers reach
+                ; here -- WAV_FinalizeRequest tells them apart:
+                ;
+                ;   1. Music_Poll's auto-finalize sets WAV_FinalizeRequest=1
+                ;      just before calling us with AX=0. That is the legitimate
+                ;      "playback ended, WAVDRV closed its file, now close +
+                ;      import/diskwrite" path -> fall through to WAV_LeaveMode.
+                ;
+                ;   2. The user pressing a render gesture AGAIN while the first
+                ;      render is still playing -- Right-then-Shift-Right at the
+                ;      order-list right edge, a second Ctrl-O, Ctrl-G, Shift-G.
+                ;      WAV_FinalizeRequest is 0 here. Doing the heavyweight
+                ;      WAV_LeaveMode swap (Music_Stop / UnInit / Unload /
+                ;      AutoDetect / LoadAllSamples + import) RE-ENTRANTLY on top
+                ;      of a live play engine -- before WAVDRV ever gets its
+                ;      Poll(AX=0) file-close window -- is exactly what wedged
+                ;      IT.EXE with no Esc out. Instead, behave like Esc: stop
+                ;      playback so the in-flight render finalizes cleanly through
+                ;      Music_Poll, writing the file to the Quicksave folder.
+                Cmp     Byte Ptr [CS:WAV_FinalizeRequest], 0
+                JNE     WAV_LeaveMode
+
+                Call    Music_Stop                      ; PlayMode -> 0
+                Mov     Byte Ptr [CS:WAV_AutoFinalize], 1
+                Mov     Byte Ptr [CS:WAV_FinalizeDelay], 0
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+                Mov     SI, Offset WAV_RenderStopMsg
+                Xor     AX, AX
+                Mov     BX, 500
+                Call    SetInfoLine2
+                        Assume DS:Nothing
+
+                Jmp     WAV_ToggleDone
+
 WAV_LeaveMode:
                 ; --- Leave WAV render mode -----------------------------------
                 ; Markers stamp row-0 cols 1..N as we progress; whichever is
                 ; the last visible char on hang reveals which call wedged.
+                Mov     Byte Ptr [CS:WAV_FinalizeRequest], 0    ; consume request
 
                 Mov     AL, 1
                 Mov     AH, '0'                 ; entered leave
@@ -6273,6 +6322,7 @@ WAV_TargetInst          DW      0       ; instrument slot the new sample was
                                         ; 0 = sample mode / no inst created
 WAV_RenderDirCdFailMsg  DB      "Import failed: lost render folder (cd before open)", 0
 WAV_RenderingMsg        DB      "Rendering pattern to WAV ...", 0
+WAV_RenderStopMsg       DB      "Render halted -- finalizing to Quicksave ...", 0
 
 Proc            Music_ImportRenderedPattern Far
 
