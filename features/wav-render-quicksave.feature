@@ -59,6 +59,7 @@
 #
 # WATCH: WAV_BuildTimestampBasename WAV_Store2Dec Music_ToggleWAVRender Music_ImportRenderedPattern PE_OrderList_RightDispatch PE_OrderList_RenderDispatch PE_OrderList_RenderQuicksave PE_OrderList_GDispatch CopyFileName
 # RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
+#   2026-06-03  direct-merge  merge 6de8cd0  touched: WAV_Store2Dec
 #
 # IT.TXT source of truth: F10/F11 render docs; CLAUDE.md Ctrl-O / F11 tables.
 # =============================================================================

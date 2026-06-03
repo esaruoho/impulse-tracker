@@ -52,11 +52,12 @@
 #   This card authored: see RESULT-LOG / git log for this file
 #   Triad: this .feature <-> session-changes-codespace.session.md <-> those commits
 #
-# WATCH: (none scannable) -- this card's innards live in ~/.claude (outside the
-#   repo) and in features/ + .githooks/ (which post-merge EXCLUDES so cards can't
-#   self-tag). Consequence: the auto-hook CANNOT maintain this meta-card; it is
-#   HAND-maintained. That is itself one of the @known-limit scenarios below.
-# RESULT-LOG >> (hand-maintained for this meta-card; see WATCH note)
+# (Deliberately NO machine WATCH line: this card's innards live in ~/.claude
+#   (outside the repo) and in features/ + .githooks/ which post-merge EXCLUDES,
+#   so the auto-hook CANNOT maintain this meta-card -- it is HAND-maintained.
+#   A prose "watch" line was removed after it tokenized to junk words like "the"
+#   and made the hook spuriously self-tag this card -- a bug the live hook demo
+#   on 2026-06-03 caught. See the @known-limit scenarios below.)
 # =============================================================================
 
 Feature: A session changes a codespace
@@ -142,18 +143,45 @@ Feature: A session changes a codespace
 
   # --- Staying current by itself (the honest one) ----------------------------
 
-  @shipped @wired-untriggered
-  Scenario: A future merge auto-appends RESULT-LOG to the cards it touched
-    # cite: .githooks/post-merge -- maps a merge diff's changed lines to each card's
-    #       "# WATCH:" symbols, appends a dated line under "RESULT-LOG >>", working
-    #       tree only, by symbol not filename, excluding features/ + .githooks/
-    # status: HONEST -- the hook is committed, executable, and core.hooksPath is set
-    #         to .githooks, BUT no RESULT-LOG line has EVER been observed appended.
-    #         (Apparent ones were IT.TXT "lines NNNN-NNNN" citations, not hook output.)
-    Given core.hooksPath = .githooks and a card with a WATCH line + RESULT-LOG marker
-    When a later merge or pull changes one of that card's WATCHed source symbols
-    Then post-merge should append a dated PR/commit line under the card's marker
-    And it should touch the working tree only, never commit, never abort the merge
+  @shipped @demonstrated
+  Scenario: A merge auto-appends RESULT-LOG to the cards it touched
+    # cite: .githooks/post-merge -- maps a merge diff's changed lines to each
+    #       card's watch-header symbols, appends a dated line under the
+    #       RESULT-LOG marker, working tree only, by symbol not filename,
+    #       excluding features/ + .githooks/
+    # DEMONSTRATED 2026-06-03: a --no-ff merge (6de8cd0) that touched
+    #       WAV_Store2Dec made the hook append exactly
+    #       "  2026-06-03  direct-merge  merge 6de8cd0  touched: WAV_Store2Dec"
+    #       to wav-render-quicksave.feature. Live stdout:
+    #       "[post-merge] report-card: logged 6de8cd0 -> wav-render-quicksave.feature"
+    Given core.hooksPath = .githooks and a card with a watch header + RESULT-LOG marker
+    When a later merge or pull changes one of that card's watched source symbols
+    Then post-merge appends a dated PR/commit line under the card's marker
+    And it touches the working tree only, never commits, never aborts the merge
+
+  @known-limit
+  Scenario: In practice the hook rarely fires -- this repo ships direct-to-main
+    # The hook only runs on a merge (or a non-ff pull). This fork ships via
+    # linear direct-to-main commits ("direct-push, no PR" in every RESULT block),
+    # which produce NO merge commit -- so the hook almost never fires in the
+    # normal workflow. That is why no card carried a real appended line until the
+    # 2026-06-03 demo forced a --no-ff merge. The machinery works; the trigger
+    # event is just rare here.
+    Given a workflow of linear direct-to-main commits
+    Then post-merge does not fire, and RESULT blocks must be kept by hand
+    And the auto-append is a safety net for the merge/PR case, not the common path
+
+  @known-limit
+  Scenario: A prose watch line trips the hook (caught + fixed in the same demo)
+    # The hook tokenizes everything after "# WATCH:" and matches each token as a
+    # substring of the diff. A card that wrote PROSE there tokenized to words like
+    # "the", which matched the demo diff and spuriously self-tagged the meta-card
+    # ("touched: -- the"). Fix: a watch header must be ONLY symbol tokens, or be
+    # absent. This meta-card now has none.
+    Given a card whose watch header contains prose, not bare symbols
+    When any merge happens
+    Then common words match and the card is tagged spuriously
+    And the fix is: watch headers carry symbols only (or omit the header)
 
   # --- Known limits carried forward ------------------------------------------
 
