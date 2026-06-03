@@ -46,6 +46,7 @@
 #
 # WATCH: Glbl_F12 QuickSaveDirectoryInput D_PickModuleDir D_PickSampleDir D_PickInstrumentDir D_PickQuickSaveDir D_PickDir_Common F_SetControlInstrument Music_InstrumentIsReal
 # RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
+#   2026-06-03  direct-commit  touched: F_SetControlInstrument Music_InstrumentIsReal
 #
 # IT.TXT source of truth: lines 659 (Song Variables) and 1748 ("F12 for the variables").
 # =============================================================================

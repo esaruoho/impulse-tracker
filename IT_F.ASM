@@ -128,9 +128,7 @@ EndS
                 Extrn   Music_GetSongSegment:Far
                 Extrn   Music_InitMixTable:Far
                 Extrn   Music_InitMuteTable:Far
-                Extrn   Music_ClearInstrument:Far
                 Extrn   Music_ClearAllInstruments:Far
-                Extrn   Music_InstrumentIsReal:Far
                 Extrn   Music_SetGlobalVolume:Far
                 Extrn   Music_InitStereo:Far
                 Extrn   Music_Stop:Far
@@ -4840,37 +4838,7 @@ Proc            F_SetControlInstrument Far
                 Push    DS
 
                 Mov     DI, Offset O1_InitialiseInstrumentList
-                                                ; Default focus on the "No"
-                                                ; button so accidentally
-                                                ; pressing Enter on this
-                                                ; prompt does NOT wipe every
-                                                ; instrument header (and the
-                                                ; envelopes the user drew in
-                                                ; Sample mode).
-                                                ;
-                                                ; M_Object1List writes CX into
-                                                ; the list's header word; the
-                                                ; framework then locates the
-                                                ; focused object at
-                                                ; list+CX*2+6 (IT_M.ASM:463).
-                                                ; The +6 skips the idle-list
-                                                ; and key-list pointers, so
-                                                ; the focusable array is
-                                                ; 0-based from EmptyObject:
-                                                ;   3 = OK button
-                                                ;   4 = No button
-                                                ;   5 = list terminator (0)
-                                                ; A value of 6 ran two slots
-                                                ; PAST the terminator into the
-                                                ; next list's bytes -> garbage
-                                                ; object pointer -> wild Call
-                                                ; -> crash the instant the
-                                                ; dialog opened (and "nothing"
-                                                ; appeared selected). The "No"
-                                                ; button is index 4 -- exactly
-                                                ; where O1_ConfirmDelete puts
-                                                ; its default Cancel button.
-                Mov     CX, 4
+                Mov     CX, 3
                 Call    M_Object1List
                                                 ; DX = 0 -> don't initialise
                                                 ; DX = 1 -> initialise
@@ -4881,58 +4849,18 @@ Proc            F_SetControlInstrument Far
                 Test    DX, DX
                 JZ      F_SetControlInstrument3
 
-                                                ; Always-remap, keep-envelopes
-                                                ; init (see PR #3 notes).
-                                                ;
-                                                ; Upstream did an unconditional
-                                                ; Music_ClearAllInstruments then
-                                                ; walked 0..99 copying sample
-                                                ; names + filling the 120-note
-                                                ; keymap -- which wiped every
-                                                ; Vol/Pan/Pitch/Filter envelope
-                                                ; the user drew in Sample mode.
-                                                ;
-                                                ; New policy: for each slot,
-                                                ; clear ONLY if it is not a real
-                                                ; instrument -- i.e. it lacks the
-                                                ; "IMPI" magic, so it holds
-                                                ; uninitialised garbage. Real
-                                                ; instruments are left in place.
-                                                ; Then, for every slot whose
-                                                ; matching sample exists, write
-                                                ; the instrument name + 120-note
-                                                ; keymap so it is valid and
-                                                ; playable. The envelope section
-                                                ; (130h+) is NEVER touched, so
-                                                ; drawn envelopes always survive
-                                                ; AND every instrument still ends
-                                                ; up mapped. Garbage can never
-                                                ; reach the envelope renderer
-                                                ; because non-IMPI slots are
-                                                ; cleared to a valid blank
-                                                ; template first.
+                Call    Music_ClearAllInstruments
 
+                                                ; OK.. for samples 1..99
+                                                ; check if sample exists.
+                                                ; if so, copy name&set all
+                                                ; notes of instrument.
                 Push    DS
                 Pop     ES                      ; ES = SongDataSegment
 
                 Xor     DX, DX
 
 F_SetControlInstrument1:
-                Mov     AX, DX
-                Call    Music_InstrumentIsReal  ; ZF=1 -> "IMPI" present (real
-                                                ; instrument): keep it, do NOT
-                                                ; clear, so its drawn envelope
-                                                ; survives. ZF=0 -> garbage slot.
-                JZ      F_SetControlInstrumentMap
-
-                Mov     AX, DX                  ; garbage -> clear to a valid
-                Call    Music_ClearInstrument   ; blank template (IMPI + 0-node
-                                                ; envelopes) before mapping. This
-                                                ; is what keeps the envelope
-                                                ; renderer from ever seeing a
-                                                ; non-IMPI header.
-
-F_SetControlInstrumentMap:
                 Mov     BX, DX
                 Add     BX, BX
                 Mov     SI, [DS:BX+64912]       ; SI points to sample
@@ -4940,17 +4868,9 @@ F_SetControlInstrumentMap:
 
                 Test    Byte Ptr [DS:SI+12h], 1
                 JZ      F_SetControlInstrument2
-                                                ; No matching sample -> nothing
-                                                ; to map; a real instrument here
-                                                ; is left fully intact.
+                                                ; No sample there!
 
-                                                ; Copy sample name -> instrument
-                                                ; name (offset 20h) and fill the
-                                                ; 120-note keymap (offset 41h).
-                                                ; Both sit well before the
-                                                ; envelope section (130h), so
-                                                ; mapping NEVER disturbs a drawn
-                                                ; envelope.
+                                                ; Copy name
                 Mov     CX, 26
                 Add     SI, 14h
                 Add     DI, 20h

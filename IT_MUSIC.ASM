@@ -157,7 +157,6 @@ include network.inc
         Global  Music_GetMIDIMultiBanks:Far
         Global  Music_ExpandMIDIInTo96:Far
         Global  Music_ResetMIDIInTo16:Far
-        Global  Music_InstrumentIsReal:Far
         Global  Music_GetHostChannelInformationTable:Far
         Global  Music_GetSlaveChannelInformationTable:Far
         Global  Music_SetGlobalVolume:Far
@@ -4023,57 +4022,24 @@ EndP            Music_ClearInstrument
                 Assume DS:Nothing
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
-; Music_InstrumentIsReal -- AX = instrument number (0-based).
+; Music_InstrumentIsReal -- REMOVED (2026-06-03).
 ;
-; Returns ZF=1 if the live instrument header starts with the "IMPI" magic --
-; i.e. a real, initialised instrument (cleared to the InstrumentHeader
-; template, or loaded from disk, both of which write "IMPI" at offset 0).
-; Returns ZF=0 if the magic is absent -- an uninitialised slot holding
-; leftover garbage (sample-only loads and Shift-Enter bulk-load never touch
-; the instrument region). Garbage practically never spells "IMPI" (four exact
-; bytes, ~1 in 4e9).
+; This IMPI-magic check existed ONLY to drive F_SetControlInstrument's
+; "keep drawn envelopes across the Samples->Instruments flip" feature (PR #3).
+; That whole envelope-retention path was the brittlest thing in the tree: it
+; re-coupled the F12 conversion to the loaders and was the EMM386 #12 hard-crash
+; class (garbage instrument slots left by Shift-Enter bulk-load fed to the
+; envelope renderer). Per Esa's instruction, PR #2's removal is reinstated as
+; the DE-FACTO behaviour -- F_SetControlInstrument is back to the upstream
+; unconditional Music_ClearAllInstruments + clean 0..99 sample-name/keymap
+; remap. Envelope-retention across the flip is intentionally given up; a
+; non-crashing IT.EXE is the hard requirement.
 ;
-; F_SetControlInstrument uses this to decide, per slot, whether to clear
-; before mapping: real instruments are left in place so their drawn envelopes
-; survive the Samples->Instruments flip; garbage slots are cleared to the
-; valid template first, so the envelope renderer (I_MapEnvelope) never sees a
-; non-IMPI header. This is the definitive signal the old "envelope bytes
-; differ from template" test got wrong -- garbage passed that trivially.
-;-------------------------------------------------------------------------------
-
-Proc            Music_InstrumentIsReal Far          ; AX = instrument number
-
-                Push    AX
-                Push    CX
-                Push    DS
-                Push    SI
-                Push    ES
-                Push    DI
-
-                Push    CS
-                Pop     DS
-                        Assume DS:Music
-
-                Mov     DI, AX
-                Add     DI, DI
-                Mov     ES, SongDataArea
-                Mov     DI, [ES:DI+64712]   ; ES:DI -> live instrument header
-                Mov     SI, Offset InstrumentHeader  ; template[0..3] = "IMPI"
-                Mov     CX, 4
-
-                ClD
-                RepE    CmpsB               ; ZF=1 iff header[0..3] == "IMPI"
-                                            ; (Pops below do not touch flags)
-                Pop     DI
-                Pop     ES
-                Pop     SI
-                Pop     DS
-                Pop     CX
-                Pop     AX
-                Ret
-
-EndP            Music_InstrumentIsReal
-                Assume DS:Nothing
+; DO NOT re-introduce this helper or the envelope-preserve loop without real-
+; hardware EMM386 verification. See:
+;   features/no-samples-to-instruments-envelope-retention.feature
+; (The InstrumentHeader template still carries the "IMPI" magic for normal
+;  instrument init -- only this dead checker is gone.)
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 

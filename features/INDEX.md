@@ -101,6 +101,11 @@ User-facing spec of Shift-Enter on a module row in the Sample List: samples load
 - `f541198` Shift-Enter on module row = bulk-load all samples
 - `32e080c` .MOD hard-hang fix (loader-cache finalisation)
 
+### ✅ no-samples-to-instruments-envelope-retention.feature  (+ .session.md, full triad) — a REMOVAL card
+F12 Samples→Instruments back to upstream clear+remap; the envelope-retention feature (added → PR#2 removed → PR#3 re-added) is reinstated-removed for good. Brittlest feature / EMM386 #12 crash class. Build-verified.
+- `d8ec842` added envelope preserve → `b5a0c66` (PR#2) removed → `c2094e6`/`a44a607`/`9a1142c` (PR#3) re-added
+- *(this session)* reinstate PR#2's removal as de-facto: restored IT_F.ASM to b5a0c66, deleted Music_InstrumentIsReal
+
 ## Uncarded features (the work surface)
 
 > Status flipped in place 2026-06-03: entries below marked ✅ are now carded, and
