@@ -33,8 +33,12 @@
 #                  PEFunction_ToggleTrace (13298) as the toggle sibling.
 #   IT_OBJ1.ASM  - Extrn PE_ScrollLockFollow (192);
 #                  SampleGlobalKeyList:     DB 0 / DW 146h (Scroll Lock)
-#                                         + DB 0 / DW 6    (Ctrl-F) -> same handler;
-#                  InstrumentGlobalKeyList: DB 0 / DW 146h + DB 0 / DW 6 likewise.
+#                                         + DB 1 / DW 6    (Ctrl-F) -> same handler;
+#                  InstrumentGlobalKeyList: DB 0 / DW 146h + DB 1 / DW 6 likewise.
+#                  NOTE: the Ctrl-F entry MUST use flag DB 1 (the Ctrl+letter
+#                  class, like every Ctrl-X in GlobalKeyList), NOT DB 0. First
+#                  cut shipped DB 0 (copied from the 146h special-key entry) and
+#                  Ctrl-F did nothing at runtime; fixed to DB 1.
 #   IT_K.ASM     - keymap: Ctrl-F -> keyword 6 (405-406); 06h is otherwise unbound.
 #   IT_G.ASM     - Glbl_F2 (224): the screen-switch this handler tail-jumps into.
 #   IT_K.ASM     - K_SetScrollLock (1912): drives the keyboard Scroll Lock LED.
@@ -57,6 +61,7 @@
 #
 # WATCH: PE_ScrollLockFollow TracePlayback PEFunction_ToggleTrace Glbl_F2 K_SetScrollLock SampleGlobalKeyList InstrumentGlobalKeyList
 # RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
+#   2026-06-03  direct-commit  touched: PE_ScrollLockFollow
 #   2026-06-03  direct-commit  touched: PE_ScrollLockFollow
 #   2026-06-03  direct-commit  touched: Glbl_F2
 #   2026-06-03  direct-commit  touched: PE_ScrollLockFollow TracePlayback Glbl_F2 K_SetScrollLock SampleGlobalKeyList InstrumentGlobalKeyList
@@ -112,8 +117,11 @@ Feature: User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument Li
     # in GlobalKeyList's Ctrl block (Ctrl-R/L/W/D/E/S/Q/M/N/G/I/P only) nor on
     # either list. So it's added as a second trigger, NOT a re-binding.
     # cite: IT_OBJ1.ASM SampleGlobalKeyList + InstrumentGlobalKeyList each get a
-    #       DB 0 / DW 6 / DD PE_ScrollLockFollow entry beside the 146h one --
+    #       DB 1 / DW 6 / DD PE_ScrollLockFollow entry beside the 146h one --
     #       SAME handler, so the behaviour is byte-identical to Scroll Lock.
+    # REGRESSION FIXED: first cut used DB 0 (the special-key flag, copied from
+    #       the 146h entry) and Ctrl-F did NOTHING at runtime. Ctrl+letter keys
+    #       are flag DB 1 (proven by stock Ctrl-S/Ctrl-Q/Ctrl-R in GlobalKeyList).
     Given the user is on the Sample List (F3) or Instrument List (F4)
     When the user presses Ctrl-F
     Then Pattern Follow Mode is forced ON, the LED lights, and the Pattern Editor opens

@@ -3536,9 +3536,9 @@ ENDIF
                         DW      146h            ;   open Pattern Editor with
                         DD      DWord Ptr PE_ScrollLockFollow ; Follow Mode ON
 
-                        DB      0               ; Fork: Ctrl-F (06h) = same
-                        DW      6               ;   as Scroll Lock here --
-                        DD      DWord Ptr PE_ScrollLockFollow ; F2 + Follow ON
+                        DB      1               ; Fork: Ctrl-F = DB 1 (Ctrl+letter
+                        DW      6               ;   class, like every other Ctrl-X
+                        DD      DWord Ptr PE_ScrollLockFollow ; here) -> F2 + Follow ON
 
                         DB      5
                         DW      Offset GlobalKeyList
@@ -6670,9 +6670,9 @@ ENDIF
                         DW      146h            ;   open Pattern Editor with
                         DD      DWord Ptr PE_ScrollLockFollow ; Follow Mode ON
 
-                        DB      0               ; Fork: Ctrl-F (06h) = same
-                        DW      6               ;   as Scroll Lock here --
-                        DD      DWord Ptr PE_ScrollLockFollow ; F2 + Follow ON
+                        DB      1               ; Fork: Ctrl-F = DB 1 (Ctrl+letter
+                        DW      6               ;   class, like every other Ctrl-X
+                        DD      DWord Ptr PE_ScrollLockFollow ; here) -> F2 + Follow ON
 
                         DB      4               ; Always call function
                         DW      0
