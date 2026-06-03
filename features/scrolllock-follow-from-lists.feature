@@ -21,24 +21,29 @@
 #               + two keylist entries in IT_OBJ1.ASM (Sample + Instrument lists).
 #   Thinkspace: scrolllock-follow-from-lists.session.md (why F2-reuse over a
 #               re-implementation; why force-ON not toggle; the DS save/restore).
-#   Areaspace : OWNS the Scroll Lock (146h) binding on the F3 + F4 list screens.
-#               MUST NOT touch the Pattern Editor's own Scroll Lock binding
-#               (IT_PE.ASM PEFunction_ToggleTrace, key 146h) or Alt-Scroll-Lock
-#               (MIDIInputToggle). Those remain stock/fork as-is.
+#   Areaspace : OWNS the Scroll Lock (146h) AND Ctrl-F (06h) bindings on the F3 +
+#               F4 list screens (both route to PE_ScrollLockFollow). MUST NOT
+#               touch the Pattern Editor's own Scroll Lock binding (IT_PE.ASM
+#               PEFunction_ToggleTrace, key 146h) or Alt-Scroll-Lock
+#               (MIDIInputToggle). F11/F12 deliberately NOT bound (see @todo).
 #
 # Source files linked back to this card:
 #   IT_PE.ASM    - PE_ScrollLockFollow proc (13339); Global decl (170);
 #                  reuses TracePlayback (1053), TraceMsg (1033),
 #                  PEFunction_ToggleTrace (13298) as the toggle sibling.
 #   IT_OBJ1.ASM  - Extrn PE_ScrollLockFollow (192);
-#                  SampleGlobalKeyList entry  DB 0 / DW 146h (3536);
-#                  InstrumentGlobalKeyList entry DB 0 / DW 146h (6666).
+#                  SampleGlobalKeyList:     DB 0 / DW 146h (Scroll Lock)
+#                                         + DB 0 / DW 6    (Ctrl-F) -> same handler;
+#                  InstrumentGlobalKeyList: DB 0 / DW 146h + DB 0 / DW 6 likewise.
+#   IT_K.ASM     - keymap: Ctrl-F -> keyword 6 (405-406); 06h is otherwise unbound.
 #   IT_G.ASM     - Glbl_F2 (224): the screen-switch this handler tail-jumps into.
 #   IT_K.ASM     - K_SetScrollLock (1912): drives the keyboard Scroll Lock LED.
 #
 # Commit log (the ingest trail):
 #   91dfc0b  Scroll Lock on F3/F4 lists -> Pattern Editor + Follow Mode
 #            (direct to esaruoho/main; INDEX.md enrolled in a prior commit)
+#   (this session)  Ctrl-F (06h) added as a SECOND trigger on F3/F4, same handler
+#                   (IT_OBJ1.ASM SampleGlobalKeyList + InstrumentGlobalKeyList)
 #
 # RESULT (third leg of the triad: .feature spec + .session convo + what shipped):
 #   Feature delivery : 91dfc0b (direct to esaruoho/main, no PR).
@@ -52,6 +57,7 @@
 #
 # WATCH: PE_ScrollLockFollow TracePlayback PEFunction_ToggleTrace Glbl_F2 K_SetScrollLock SampleGlobalKeyList InstrumentGlobalKeyList
 # RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
+#   2026-06-03  direct-commit  touched: PE_ScrollLockFollow
 #   2026-06-03  direct-commit  touched: Glbl_F2
 #   2026-06-03  direct-commit  touched: PE_ScrollLockFollow TracePlayback Glbl_F2 K_SetScrollLock SampleGlobalKeyList InstrumentGlobalKeyList
 #
@@ -98,6 +104,21 @@ Feature: User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument Li
     When the user presses Scroll Lock
     Then Pattern Follow Mode is forced ON, the LED lights, and the Pattern Editor opens
 
+  @shipped @build-verified @runtime-untested
+  Scenario: Ctrl-F on the Sample or Instrument List does the same as Scroll Lock
+    # Esa 2026-06-03: "Ctrl-F (if free in F3 or F4) should also enable Scroll Lock
+    # (follow pattern) and go to pattern editor." Ctrl-F IS free: the keymap maps
+    # it to keyword 06h (IT_K.ASM:405-406 "Ctrl-F -> 6"), and 06h is bound nowhere
+    # in GlobalKeyList's Ctrl block (Ctrl-R/L/W/D/E/S/Q/M/N/G/I/P only) nor on
+    # either list. So it's added as a second trigger, NOT a re-binding.
+    # cite: IT_OBJ1.ASM SampleGlobalKeyList + InstrumentGlobalKeyList each get a
+    #       DB 0 / DW 6 / DD PE_ScrollLockFollow entry beside the 146h one --
+    #       SAME handler, so the behaviour is byte-identical to Scroll Lock.
+    Given the user is on the Sample List (F3) or Instrument List (F4)
+    When the user presses Ctrl-F
+    Then Pattern Follow Mode is forced ON, the LED lights, and the Pattern Editor opens
+    And it behaves exactly as Scroll Lock on those screens (shared handler)
+
   @shipped @build-verified
   Scenario: Follow Mode is forced ON, never toggled off, from the lists
     # cite: IT_PE.ASM:13339 uses "Mov TracePlayback, 1" (set), NOT "Xor ...,1" (toggle)
@@ -123,10 +144,14 @@ Feature: User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument Li
     Then DS is the Pattern segment only across SetInfoLine, then restored for Glbl_F2
 
   @todo
-  Scenario: (not built) Scroll Lock from other screens (Order list F11, Song vars F12)
-    # Deliberately OUT OF SCOPE. The binding was added to SampleGlobalKeyList and
-    # InstrumentGlobalKeyList only, NOT to GlobalKeyList, to avoid yanking the user
-    # into the Pattern Editor from every screen that chains to GlobalKeyList.
-    Given the user is on the Order List or Song Variables screen
-    When the user presses Scroll Lock
-    Then nothing happens (no binding) — this is intentional, revisit only if asked
+  Scenario: (not built) Scroll Lock / Ctrl-F from other screens (Order list F11, Song vars F12)
+    # Deliberately OUT OF SCOPE for now. Both 146h and 06h were added to
+    # SampleGlobalKeyList + InstrumentGlobalKeyList only, NOT to GlobalKeyList, to
+    # avoid yanking the user into the Pattern Editor from every screen.
+    # F11 specifically is harder: its keys run through IT_PE.ASM OrderListKeyChain,
+    # not a simple IT_OBJ1.ASM keylist, so adding Ctrl-F there is a separate change.
+    # Esa's first ask included "F11 if free"; the refined Gherkin scoped it to F3/F4,
+    # so F11 is parked here as the next step if wanted.
+    Given the user is on the Order List (F11) or Song Variables (F12) screen
+    When the user presses Scroll Lock or Ctrl-F
+    Then nothing happens (no binding) — intentional; F11 is the pending follow-up
