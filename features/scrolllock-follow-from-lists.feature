@@ -14,6 +14,7 @@
 #   @stock          - upstream Impulse Tracker behaviour
 #   @shipped        - fork addition, in origin/main (commit 91dfc0b)
 #   @build-verified - assembles + links clean (TASM 4.1 / TLINK 3.01)
+#   @runtime-verified - confirmed working on a live IT.EXE in DOSBox-X
 #   @runtime-untested - not yet exercised against a running IT.EXE in DOSBox-X
 #
 # WHAT THIS CARD SPAWNS (generative seed)
@@ -112,37 +113,33 @@ Feature: User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument Li
     When the user presses Scroll Lock
     Then Pattern Follow Mode is forced ON, the LED lights, and the Pattern Editor opens
 
-  @shipped @build-verified @runtime-untested
-  Scenario: Ctrl-F on F2/F3/F4/F11/F12 does the same as Scroll Lock (global binding)
-    # cite: IT_OBJ1.ASM GlobalKeyList -- a single DB 1 / DW 6 / DD PE_ScrollLockFollow
-    #       entry. F2's keylist IS GlobalKeyList; F3/F4 (Sample/Instrument lists),
-    #       F11 (O1_OrderPanningList) and F12 (O1_ConfigureITList) all chain to it.
-    #       So Ctrl-F is handled on every screen that falls through to GlobalKeyList.
-    # 06h verified free: not in GlobalKeyList's Ctrl block, not in the PE keyword
-    #       table (only Ctrl-F7), not on any list. So it's an ADD, never a rebind.
-    Given the user is on the Pattern Editor (F2), Sample List (F3), Instrument
-      List (F4), Order List (F11), or Song Variables (F12)
-    When the user presses Ctrl-F
-    Then Pattern Follow Mode is forced ON, the LED lights, and the Pattern Editor opens
-    And on F2 it just re-asserts Follow (already there) -- harmless
-
-  @shipped @build-verified @runtime-untested
-  Scenario: Ctrl-F on the Sample or Instrument List does the same as Scroll Lock
-    # Esa 2026-06-03: "Ctrl-F (if free in F3 or F4) should also enable Scroll Lock
-    # (follow pattern) and go to pattern editor." Ctrl-F IS free: the keymap maps
-    # it to keyword 06h (IT_K.ASM:405-406 "Ctrl-F -> 6"), and 06h is bound nowhere
-    # in GlobalKeyList's Ctrl block (Ctrl-R/L/W/D/E/S/Q/M/N/G/I/P only) nor on
-    # either list. So it's added as a second trigger, NOT a re-binding.
-    # cite: IT_OBJ1.ASM SampleGlobalKeyList + InstrumentGlobalKeyList each get a
-    #       DB 1 / DW 6 / DD PE_ScrollLockFollow entry beside the 146h one --
-    #       SAME handler, so the behaviour is byte-identical to Scroll Lock.
-    # REGRESSION FIXED: first cut used DB 0 (the special-key flag, copied from
-    #       the 146h entry) and Ctrl-F did NOTHING at runtime. Ctrl+letter keys
-    #       are flag DB 1 (proven by stock Ctrl-S/Ctrl-Q/Ctrl-R in GlobalKeyList).
+  # Ctrl-F = the Scroll-Lock action, bound ONCE in GlobalKeyList so it works on
+  # every screen that falls through there. cite: IT_OBJ1.ASM GlobalKeyList
+  # DB 1 / DW 6 / DD PE_ScrollLockFollow. 06h verified free (not in GlobalKeyList's
+  # Ctrl block, not in the PE keyword table -- only Ctrl-F7, not on any list) -> a
+  # pure ADD, never a rebind. Two bugs found+fixed getting here: DB 0 (the 146h
+  # special-key flag) made Ctrl-F do NOTHING at runtime -> must be DB 1 (the
+  # Ctrl+letter class, like stock Ctrl-S/Q/R); and a first cut with per-screen
+  # F3/F4 copies was collapsed into this one entry.
+  @shipped @build-verified @runtime-verified
+  Scenario: Ctrl-F in the Sample List (F3) or Instrument List (F4)
+    # RUNTIME-VERIFIED 2026-06-03: Esa confirmed on a live IT.EXE (DOSBox-X) that
+    # Ctrl-F works in both F3 and F4. (I drove F3 then Ctrl-F via the GUI; Esa
+    # confirmed the result.)
     Given the user is on the Sample List (F3) or Instrument List (F4)
     When the user presses Ctrl-F
     Then Pattern Follow Mode is forced ON, the LED lights, and the Pattern Editor opens
-    And it behaves exactly as Scroll Lock on those screens (shared handler)
+
+  @shipped @build-verified @runtime-untested
+  Scenario: Ctrl-F in the Pattern Editor (F2), Order List (F11), or Song Variables (F12)
+    # Same single GlobalKeyList entry + same handler as the F3/F4 case above, and
+    # all three screens' keylists fall through to GlobalKeyList (F2's keylist IS
+    # GlobalKeyList; F11=O1_OrderPanningList, F12=O1_ConfigureITList both chain to
+    # it). Expected to work, but NOT yet each key-pressed -> stays untested until
+    # confirmed. On F2 it just re-asserts Follow (already there) -- harmless.
+    Given the user is on the Pattern Editor (F2), Order List (F11), or Song Variables (F12)
+    When the user presses Ctrl-F
+    Then Pattern Follow Mode is forced ON, the LED lights, and the Pattern Editor opens
 
   @shipped @build-verified
   Scenario: Follow Mode is forced ON, never toggled off, from the lists
