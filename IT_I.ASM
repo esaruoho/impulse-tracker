@@ -8540,12 +8540,26 @@ EndP            I_ShowSamplePlay
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
+; FEATURE-CARD >> features/multitimbral-instrument-play-dots.feature
 Proc            I_ShowInstrumentPlay Far
                                         ; Clear table first.
 
                 Call    Music_GetInstrumentMode
+                JNZ     I_ShowInstrumentPlayProceed
+
+                ; Fork: the live multitimbral MIDI-in router (MIDIMulti_Route)
+                ; runs with the song in SAMPLE mode -- instruments carry the
+                ; routing channel at header byte 1Fh, but instrument mode itself
+                ; is off. Stock IT bails here when not in instrument mode, so the
+                ; F4 Instrument List shows no play dots even while voices sound
+                ; (the F3 Sample List does, because I_ShowSamplePlay has no such
+                ; gate). When the router is enabled, proceed anyway so F4 mirrors
+                ; F3 -- the play dots track the matched instrument ([SI+33h]).
+                Call    Music_GetMIDIMultiEnable        ; AL = master flag
+                Test    AL, AL
                 JZ      I_ShowInstrumentPlayEnd
 
+I_ShowInstrumentPlayProceed:
                 Push    CS
                 Pop     DS
                                         ; DS = Inst
