@@ -32,6 +32,7 @@ EndS
                 Extrn   E_GetEMSPageFrame:Far
 
                 Extrn   Glbl_F2:Far, Glbl_F6:Far
+                Extrn   Glbl_GetCurrentMode:Far
                 Extrn   Glbl_GetHeaderMode:Far
                 Extrn   Glbl_LeftBrace:Far, Glbl_RightBrace:Far
                 Extrn   Glbl_LeftSquareBracket:Far, Glbl_RightSquareBracket:Far
@@ -13415,6 +13416,16 @@ EndP            PEFunction_ToggleTrace
 Proc            PE_ScrollLockFollow Far
                 Assume DS:Pattern
 
+                ; Are we ALREADY in the Pattern Editor (CurrentMode == 2)?
+                ; If so, Ctrl-F must behave like stock Scroll Lock there: TOGGLE
+                ; Follow Mode -- NOT re-enter via Glbl_F2, which on a second F2
+                ; opens the Pattern Edit Config dialog (the reported bug). Only
+                ; from a list / other screen do we force Follow ON and jump in.
+                Call    Glbl_GetCurrentMode     ; AL = CurrentMode
+                Cmp     AL, 2
+                JE      PE_SLF_Toggle
+
+                ; --- From elsewhere: force Follow Mode ON + enter the editor ---
                 Push    DS                      ; preserve dispatcher DS for F2
                 Push    CS                      ; DS=CS(Pattern): TraceMsg +
                 Pop     DS                      ;   TracePlayback live here
@@ -13433,6 +13444,27 @@ Proc            PE_ScrollLockFollow Far
                                                 ; Far Ret hands AX=5 / DX=Offset
                                                 ; O1_PatternEditList back to the
                                                 ; key dispatcher (same as F2)
+
+PE_SLF_Toggle:
+                ; --- Already in the editor: toggle Follow Mode (mirrors
+                ; PEFunction_ToggleTrace) with DS save/restore so it is safe on
+                ; the GlobalKeyList path where DS is the dispatcher's, not ours.
+                Push    DS
+                Push    CS
+                Pop     DS
+                Assume DS:Pattern
+                Mov     SI, Offset NoTraceMsg
+                Xor     TracePlayback, 1
+                JZ      PE_SLF_Toggle1
+                Mov     SI, Offset TraceMsg
+PE_SLF_Toggle1:
+                Call    SetInfoLine
+                Mov     AL, TracePlayback
+                Call    K_SetScrollLock
+                Pop     DS
+                Assume DS:Nothing
+                Mov     AX, 1                   ; AX=1 -> dispatcher redraws screen
+                Ret
 EndP            PE_ScrollLockFollow
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
