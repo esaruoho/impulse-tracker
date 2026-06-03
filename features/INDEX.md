@@ -86,6 +86,11 @@ F4 Instrument List now shows live play dots during multitimbral MIDI-in playback
 - `478b638` show F4 instrument-list play dots in multitimbral Sample mode
 - Card + session authored same session
 
+### ✅ f2-resize-tiles-pattern.feature  (+ .session.md, full triad)
+Increasing the row count on the F2 Pattern-Edit-Config now DUPLICATES (tiles) the existing rows to fill the new length (64→128 = 2 copies, 64→192 = 3, partial final copy on non-multiples) instead of appending blank rows. New PE_TilePatternToLength helper. Build-verified, runtime-untested.
+- `05c70c9` F2 pattern-length increase tiles content instead of blank rows
+- Card + session authored same session
+
 ## Uncarded features (the work surface)
 
 ### ⬜ loader-keyjazz-hang.feature
