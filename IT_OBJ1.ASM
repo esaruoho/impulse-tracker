@@ -187,6 +187,7 @@ ENDIF
                 Extrn   Glbl_Alt_W:Far
                 Extrn   Glbl_Alt_F12:Far
                 Extrn   Glbl_MIDITransport_Toggle:Far
+                Extrn   Glbl_MIDIMulti_Toggle:Far
                 Extrn   Glbl_LoadSample:Far
                 Extrn   Glbl_LoadInstrument:Far
                 Extrn   Glbl_LeftBrace:Far
@@ -3877,7 +3878,7 @@ CreateMIDIInBox         DW      0       ; Box Object
 CreateMIDIInText        DW      1
                         DB      25, 27
                         DB      20h
-                        DB      "Create 16 MIDI-In instruments?", 0
+                        DB      "Map current samples to MIDI-In 01-16?", 0
 
 O1_ConfirmNoSave        DW      4
                         DW      Near Ptr IdleFunctionList
@@ -8710,6 +8711,7 @@ O1_MIDIScreen           DW      7
                         DW      NEar Ptr MIDIEmbedToggle
                         DW      Near Ptr MIDISyncToggleButton           ; 23
                         DW      Near Ptr MIDITransportToggleButton      ; 24
+                        DW      Near Ptr MIDIMultiToggleButton          ; 25
                         DW      Near Ptr SetHelpContext13
                         DW      0
 
@@ -8775,7 +8777,7 @@ MIDISyncToggleButton    DW      2
                         DB      "  Toggle MIDI Sync (F8 Clock)", 0
 
 MIDITransportToggleButton DW    2
-                        DW      23, 0FFFFh, 0FFFFh, 0FFFFh
+                        DW      23, 25, 0FFFFh, 0FFFFh
                         DW      0
                         DW      0, 0
                         DW      2
@@ -8785,6 +8787,18 @@ MIDITransportToggleButton DW    2
                         DB      8
                         DB      0
                         DB      "  Toggle MIDI Transport (FA/FB/FC)", 0
+
+MIDIMultiToggleButton   DW      2
+                        DW      24, 0FFFFh, 0FFFFh, 0FFFFh
+                        DW      0
+                        DW      0, 0
+                        DW      2
+                        DD      DWord Ptr Glbl_MIDIMulti_Toggle
+                        DW      0, 0, 0
+                        DB      2, 46, 32, 48
+                        DB      8
+                        DB      0
+                        DB      "  Toggle Multitimbral MIDI-In", 0
 
 ShowMIDIInput           DW      8
 MIDIIdleList            DD      DWord Ptr K_ShowMIDIInput

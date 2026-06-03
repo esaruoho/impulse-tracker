@@ -23,6 +23,8 @@ include switch.inc
                 Extrn   Music_DecreaseVolume:Far
                 Extrn   S_DrawString:Far
                 Extrn   SetInfoLine:Far
+                Extrn   Music_GetMIDIMultiEnable:Far
+                Extrn   Music_SetMIDIMultiEnable:Far
                 Extrn   CrashRecovery:Far
 
                 Extrn   IsStartupKeyList:Far
@@ -37,6 +39,7 @@ include switch.inc
                 Global  MIDISyncLoaderSuppress:Byte
                 Global  Glbl_MIDITransport_Toggle:Far
                 Global  Glbl_Alt_F12:Far
+                Global  Glbl_MIDIMulti_Toggle:Far
 
                 Global  K_DrawTables:Far
                 Global  K_InitKeyBoard:Far
@@ -132,6 +135,8 @@ MIDIMonCntMsg           DB      "Counters  FA:", 0FDh, "D  FB:", 0FDh, "D  FC:",
 MIDIMonRTMsg            DB      "Last RT byte: ", 0FDh, "X  tick=", 0FDh, "D       ", 0
 MIDISyncOnMsg           DB      "MIDI Sync (F8 Clock): ON", 0
 MIDISyncOffMsg          DB      "MIDI Sync (F8 Clock): OFF", 0
+MIDIMultiPanelOnMsg     DB      "Multitimbral MIDI-In: ON", 0
+MIDIMultiPanelOffMsg    DB      "Multitimbral MIDI-In: OFF", 0
 MIDITransportOnMsg      DB      "MIDI Transport (FA/FB/FC): ON", 0
 MIDITransportOffMsg     DB      "MIDI Transport (FA/FB/FC): OFF", 0
 
@@ -1786,6 +1791,29 @@ Glbl_MIDITransport_Toggle_Off:
                 Ret
 
 EndP            Glbl_MIDITransport_Toggle
+                Assume DS:Nothing
+
+; --- Fork: Glbl_MIDIMulti_Toggle - flip the live multitimbral MIDI-in router
+; on/off from the Shift-F1 MIDI screen (sits beside Sync + Transport toggles).
+Proc            Glbl_MIDIMulti_Toggle Far
+                Call    Music_GetMIDIMultiEnable
+                Xor     AL, 1
+                Call    Music_SetMIDIMultiEnable
+                Push    CS
+                Pop     DS
+                Assume DS:Keyboard
+                Test    AL, AL
+                JZ      Glbl_MIDIMulti_Toggle_Off
+                Mov     SI, Offset MIDIMultiPanelOnMsg
+                Call    SetInfoLine
+                Mov     AX, 1
+                Ret
+Glbl_MIDIMulti_Toggle_Off:
+                Mov     SI, Offset MIDIMultiPanelOffMsg
+                Call    SetInfoLine
+                Mov     AX, 1
+                Ret
+EndP            Glbl_MIDIMulti_Toggle
                 Assume DS:Nothing
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½

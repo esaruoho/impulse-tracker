@@ -40,6 +40,9 @@ EndS
                 Extrn   Music_CreateMIDIInInstruments:Far
                 Extrn   Music_GetMIDIMultiEnable:Far
                 Extrn   Music_SetMIDIMultiEnable:Far
+                Extrn   Music_GetMIDIMultiBanks:Far
+                Extrn   Music_ExpandMIDIInTo96:Far
+                Extrn   Music_ResetMIDIInTo16:Far
 
                 Extrn   I_ClearTables:Far
 
@@ -204,6 +207,9 @@ SpeedSetMsg     DB      "Speed set to ", 0FDh, "D frames per row", 0
 VolumeSetMsg    DB      "Global Volume set to ", 0FDh, "D", 0
 MIDIMultiOffMsg DB      "MIDI multitimbral input OFF - normal MIDI restored", 0
 ShiftF4NeedInstrMsg DB  "Enable Instruments mode first (F12) to use Shift-F4", 0
+MIDIMultiMadeMsg    DB      "Multitimbral: instruments 01-16 mapped to MIDI-In 01-16", 0
+MIDIMultiExpandMsg  DB      "Multitimbral: 96 instruments created (01-16 x 6 banks)", 0
+MIDIMultiResetMsg   DB      "Multitimbral: reset to instruments 01-16", 0
 
 InstrumentScreenTable   Label
         DW      Offset O1_InstrumentListGeneral
@@ -320,41 +326,37 @@ EndP            Glbl_F3
 ;            enable flag was a one-way latch and there was no way to stop the
 ;            router hijacking every note on channels 1..16.
 Proc            Glbl_Shift_F4 Far
+                                                ; Multitimbral MIDI-in, 3-state
+                                                ; cycle.  No Instrument-mode
+                                                ; gate: instruments are written
+                                                ; into the song regardless of the
+                                                ; editor view and play sample N
+                                                ; either way.
+                                                ;   banks 0 -> confirm, build the
+                                                ;     01-16 set, enable router.
+                                                ;   banks 1 -> expand to 96
+                                                ;     (6 x 01-16).
+                                                ;   banks 6 -> reset to 01-16.
+                                                ; Router on/off is on Shift-F1.
+                Call    Music_GetMIDIMultiBanks
+                Cmp     AL, 0
+                JE      Glbl_Shift_F4_Create
+                Cmp     AL, 1
+                JE      Glbl_Shift_F4_Expand
 
-                                                ; Shift-F4 (multitimbral MIDI-in
-                                                ; batch-create / toggle) only
-                                                ; makes sense in Instrument
-                                                ; mode -- the 16 things it
-                                                ; creates ARE instruments.
-                                                ; Running it in Sample mode is
-                                                ; confusing, so gate it: bail
-                                                ; with an info-line hint when
-                                                ; bit 2 of the song flags
-                                                ; (Instrument mode) is clear.
-                Call    Music_GetSongSegment
-                Mov     DS, AX
-                        Assume DS:Nothing
-                Test    Byte Ptr [DS:2Ch], 4
-                JNZ     Glbl_Shift_F4_InstrMode
-
+                Call    Music_ResetMIDIInTo16
                 Push    CS
                 Pop     DS
-                Mov     SI, Offset ShiftF4NeedInstrMsg
+                Mov     SI, Offset MIDIMultiResetMsg
                 Call    SetInfoLine
                 Mov     AX, 1
                 Ret
 
-Glbl_Shift_F4_InstrMode:
-                Call    Music_GetMIDIMultiEnable
-                Test    AL, AL
-                JZ      Glbl_Shift_F4_Create    ; currently off -> create+enable
-
-                                                ; currently on -> disable
-                Xor     AL, AL
-                Call    Music_SetMIDIMultiEnable
+Glbl_Shift_F4_Expand:
+                Call    Music_ExpandMIDIInTo96
                 Push    CS
                 Pop     DS
-                Mov     SI, Offset MIDIMultiOffMsg
+                Mov     SI, Offset MIDIMultiExpandMsg
                 Call    SetInfoLine
                 Mov     AX, 1
                 Ret
@@ -362,14 +364,19 @@ Glbl_Shift_F4_InstrMode:
 Glbl_Shift_F4_Create:
                 Mov     DI, Offset O1_ConfirmCreateMIDIIn
                 Mov     CX, 4
-                Call    M_Object1List           ; DX = 1 (OK) / 0 (Cancel)
-
+                Call    M_Object1List
                 Test    DX, DX
-                JZ      Glbl_Shift_F4_Done      ; cancelled
+                JZ      Glbl_Shift_F4_Done
 
                 Call    Music_CreateMIDIInInstruments
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset MIDIMultiMadeMsg
+                Call    SetInfoLine
 
 Glbl_Shift_F4_Done:
+                Mov     AX, 1
+                Ret
 
 EndP            Glbl_Shift_F4
 

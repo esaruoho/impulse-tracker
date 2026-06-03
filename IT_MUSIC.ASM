@@ -154,6 +154,9 @@ include network.inc
         Global  MIDIMultiEnable:Byte
         Global  Music_GetMIDIMultiEnable:Far
         Global  Music_SetMIDIMultiEnable:Far
+        Global  Music_GetMIDIMultiBanks:Far
+        Global  Music_ExpandMIDIInTo96:Far
+        Global  Music_ResetMIDIInTo16:Far
         Global  Music_InstrumentIsReal:Far
         Global  Music_GetHostChannelInformationTable:Far
         Global  Music_GetSlaveChannelInformationTable:Far
@@ -4085,117 +4088,175 @@ EndP            Music_ClearAllInstruments
 ; 0 = off (classic note-entry), 1 = on (route note-on by MIDI channel to
 ; the instrument whose header byte 1Fh matches the channel).
 MIDIMultiEnable DB      0
+MIDIMultiBanks  DB      0
 
 MCMI_Count      DB      0       ; scratch: channels assigned this run
 MCMI_Name       DB      'MIDI In Ch 01' ; 13 chars; digits patched per slot
+MCMI_Chan       DB      0
 
-; Music_CreateMIDIInInstruments - fill the first 16 EMPTY instrument slots
-; (1..99) with instruments set to respond to MIDI-in channels 1..16 (stored
-; at header byte 1Fh), named 'MIDI In Ch NN'.  Turns MIDIMultiEnable on.
-; A slot counts as empty when its name byte [hdr+20h] = 0.
-; Returns AX = number of instruments created.
+; Music_CreateMIDIInInstruments - build instruments 1..16 directly so they
+; line up with samples 1..16: instrument N gets MIDI-in channel N (header
+; byte 1Fh), name 'MIDI In Ch NN', and all notes mapped to sample N. Sets
+; MIDIMultiBanks=1 and turns MIDIMultiEnable on. Returns AX = 16.
 Proc            Music_CreateMIDIInInstruments Far
+                Push    BX
+                Push    DS
+                Push    CS
+                Pop     DS
+                Assume DS:Music
+                Mov     BX, 1
+MCMI_Loop:
+                Cmp     BX, 16
+                JA      MCMI_Done
+                Call    MCMI_BuildSlot
+                Inc     BX
+                Jmp     MCMI_Loop
+MCMI_Done:
+                Mov     Byte Ptr [MIDIMultiBanks], 1
+                Mov     Byte Ptr [MIDIMultiEnable], 1
+                Mov     AX, 16
+                Pop     DS
+                Assume DS:Nothing
+                Pop     BX
+                Ret
+EndP            Music_CreateMIDIInInstruments
 
+; Music_ExpandMIDIInTo96 - replicate the 01-16 channel map across 6 banks to
+; fill instruments 1..96 (largest multiple of 16 under the 99 cap). Instrument
+; K responds to MIDI-in channel ((K-1) mod 16)+1 and plays the same-numbered
+; sample, so every bank is a copy of the 01-16 set. Banks=6.
+Proc            Music_ExpandMIDIInTo96 Far
+                Push    BX
+                Push    DS
+                Push    CS
+                Pop     DS
+                Assume DS:Music
+                Mov     BX, 1
+MEXP_Loop:
+                Cmp     BX, 96
+                JA      MEXP_Done
+                Call    MCMI_BuildSlot
+                Inc     BX
+                Jmp     MEXP_Loop
+MEXP_Done:
+                Mov     Byte Ptr [MIDIMultiBanks], 6
+                Mov     Byte Ptr [MIDIMultiEnable], 1
+                Pop     DS
+                Assume DS:Nothing
+                Pop     BX
+                Ret
+EndP            Music_ExpandMIDIInTo96
+
+; Music_ResetMIDIInTo16 - empty instruments 17..96 (zero each 554-byte header
+; so the slot reads as unused) and drop back to a single 01-16 bank. Leaves
+; 1..16 and MIDIMultiEnable untouched. Banks=1.
+Proc            Music_ResetMIDIInTo16 Far
+                Push    AX
+                Push    BX
+                Push    CX
+                Push    DI
+                Push    DS
+                Push    ES
+                Push    CS
+                Pop     DS
+                Assume DS:Music
+                Mov     BX, 17
+MRST_Loop:
+                Cmp     BX, 96
+                JA      MRST_Done
+                Mov     DI, BX
+                Add     DI, DI
+                Mov     ES, SongDataArea
+                Mov     DI, [ES:DI+64712]
+                Xor     AL, AL
+                Mov     CX, 554
+                ClD
+                Rep     StosB
+                Inc     BX
+                Jmp     MRST_Loop
+MRST_Done:
+                Mov     Byte Ptr [MIDIMultiBanks], 1
+                Pop     ES
+                Pop     DS
+                Assume DS:Nothing
+                Pop     DI
+                Pop     CX
+                Pop     BX
+                Pop     AX
+                Ret
+EndP            Music_ResetMIDIInTo16
+
+; MCMI_BuildSlot - Near helper. BX = instrument slot 1..96. channel =
+; ((BX-1) mod 16)+1; clear slot to template; set MIDI-in channel at 1Fh;
+; name 'MIDI In Ch NN'; map all 120 notes to sample = channel. Preserves BX.
+; Caller must have DS = Music.
+Proc            MCMI_BuildSlot Near
+                Push    AX
                 Push    BX
                 Push    CX
                 Push    DX
                 Push    SI
                 Push    DI
-                Push    DS
                 Push    ES
-
-                Push    CS
-                Pop     DS
-                        Assume DS:Music
-
-                Mov     Byte Ptr [MCMI_Count], 0
-                Mov     BX, 1                   ; BX = instrument slot 1..99
-
-MCMI_Loop:
-                Cmp     Byte Ptr [MCMI_Count], 16
-                JAE     MCMI_Done
-                Cmp     BX, 99
-                JA      MCMI_Done
-
-                ; ES:DI -> this instrument's header
-                Mov     DI, BX
-                Add     DI, DI
-                Mov     ES, SongDataArea
-                Mov     DI, [ES:DI+64712]
-
-                Cmp     Byte Ptr [ES:DI+20h], 0 ; name byte 0 => empty
-                JNE     MCMI_Next               ; slot in use, skip
-
-                Mov     AX, BX                  ; init slot from template
+                Mov     AX, BX
+                Dec     AX
+                Xor     DX, DX
+                Mov     CX, 16
+                Div     CX
+                Inc     DX
+                Mov     [MCMI_Chan], DL
+                Mov     AX, BX
                 Call    Music_ClearInstrument
-
-                ; re-fetch header (registers safe, but pointer is local)
                 Mov     DI, BX
                 Add     DI, DI
                 Mov     ES, SongDataArea
                 Mov     DI, [ES:DI+64712]
-
-                Mov     AL, [MCMI_Count]
-                Inc     AL                      ; AL = channel 1..16
-                Mov     [ES:DI+1Fh], AL         ; per-instrument MIDI-in ch
-
-                ; copy the 13-char name template to [hdr+20h]
+                Mov     AL, [MCMI_Chan]
+                Mov     [ES:DI+1Fh], AL
                 Push    DI
                 Add     DI, 20h
                 Mov     SI, Offset MCMI_Name
                 Mov     CX, 13
-                Rep     MovsB                   ; DS:SI(Music) -> ES:DI
+                Rep     MovsB
                 Pop     DI
-
-                ; patch the two-digit channel number into the name
-                Mov     AL, [ES:DI+1Fh]         ; AL = channel 1..16
+                Mov     AL, [MCMI_Chan]
                 Xor     AH, AH
                 Mov     CL, 10
-                Div     CL                      ; AL=tens, AH=units
+                Div     CL
                 Add     AL, '0'
                 Add     AH, '0'
                 Mov     [ES:DI+20h+11], AL
                 Mov     [ES:DI+20h+12], AH
-
-                ; Fork: map every note to the same-numbered sample (this slot,
-                ; BX = 1..99) so the instrument makes sound the moment it is
-                ; created -- previously the template's empty keymap left every
-                ; MIDI-In instrument silent until the user mapped a sample by
-                ; hand. The keyboard table at hdr+40h is 120 (note,sample)
-                ; pairs; we write the sample byte at each odd offset (41h,43h,
-                ; ...) and leave the template's chromatic note bytes intact.
-                ; Mirrors F_SetControlInstrument's keymap fill.
                 Push    DI
                 Add     DI, 41h
-                Mov     AL, BL                  ; AL = sample number = slot
+                Mov     AL, [MCMI_Chan]
                 Mov     CX, 120
-MCMI_KeyMap:
+MCMI_BS_Map:
                 Mov     [ES:DI], AL
                 Add     DI, 2
-                Loop    MCMI_KeyMap
+                Loop    MCMI_BS_Map
                 Pop     DI
-
-                Inc     Byte Ptr [MCMI_Count]
-
-MCMI_Next:
-                Inc     BX
-                Jmp     MCMI_Loop
-
-MCMI_Done:
-                Mov     Byte Ptr [MIDIMultiEnable], 1
-                Mov     AL, [MCMI_Count]
-                Xor     AH, AH                  ; AX = count created
-
                 Pop     ES
-                Pop     DS
                 Pop     DI
                 Pop     SI
                 Pop     DX
                 Pop     CX
                 Pop     BX
+                Pop     AX
                 Ret
+EndP            MCMI_BuildSlot
 
-EndP            Music_CreateMIDIInInstruments
+; Music_GetMIDIMultiBanks - Far getter, AL = MIDIMultiBanks (0/1/6).
+Proc            Music_GetMIDIMultiBanks Far
+                Push    DS
+                Push    CS
+                Pop     DS
+                Assume DS:Music
+                Mov     AL, [MIDIMultiBanks]
+                Pop     DS
+                Assume DS:Nothing
+                Ret
+EndP            Music_GetMIDIMultiBanks
                 Assume DS:Nothing
 
 ; Far getter so the Inst-segment live router can read MIDIMultiEnable
