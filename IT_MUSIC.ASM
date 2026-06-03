@@ -2794,6 +2794,59 @@ WAV_BCF_ExtDone:
 EndP            WAV_BuildChannelFilename
 
 ;-------------------------------------------------------------------------------
+; WAV_Store2Dec -- write AL (0..99) as two ASCII decimal digits at [CS:BX],
+; then advance BX by 2. Preserves AX and CX (so callers can keep the DOS clock
+; in CX across calls). Uses 8-bit Div CL, which leaves DX untouched.
+;-------------------------------------------------------------------------------
+Proc            WAV_Store2Dec Near
+                Push    AX
+                Push    CX
+                Xor     AH, AH
+                Mov     CL, 10
+                Div     CL                      ; AL = tens, AH = units
+                Add     AL, '0'
+                Mov     [CS:BX], AL
+                Add     AH, '0'
+                Mov     [CS:BX+1], AH
+                Add     BX, 2
+                Pop     CX
+                Pop     AX
+                Ret
+EndP            WAV_Store2Dec
+
+;-------------------------------------------------------------------------------
+; WAV_BuildTimestampBasename -- fill WAV_RenderBasename with "LL"+HHMMSS+"."
+; from the DOS wall clock, e.g. "LL163422." at 16:34:22. The trailing '.' lets
+; WAVDRV's CopyFileName stop cleanly; the import / log builders copy up to it.
+; "LL" is a static prefix (the user's project tag). 8 chars before the dot fit
+; DOS 8.3 exactly. INT 21h AH=2Ch returns CH=hour, CL=minute, DH=second.
+;-------------------------------------------------------------------------------
+Proc            WAV_BuildTimestampBasename Near
+                Push    AX
+                Push    BX
+                Push    CX
+                Push    DX
+                Mov     AH, 2Ch
+                Int     21h                     ; CH=hr, CL=min, DH=sec
+                Mov     Byte Ptr [CS:WAV_RenderBasename], 'L'
+                Mov     Byte Ptr [CS:WAV_RenderBasename+1], 'L'
+                Mov     BX, Offset WAV_RenderBasename + 2
+                Mov     AL, CH                  ; hour
+                Call    WAV_Store2Dec
+                Mov     AL, CL                  ; minute
+                Call    WAV_Store2Dec
+                Mov     AL, DH                  ; second
+                Call    WAV_Store2Dec
+                Mov     Byte Ptr [CS:BX], '.'
+                Mov     Byte Ptr [CS:BX+1], 0
+                Pop     DX
+                Pop     CX
+                Pop     BX
+                Pop     AX
+                Ret
+EndP            WAV_BuildTimestampBasename
+
+;-------------------------------------------------------------------------------
 ; Music_StartFullSongMWAV -- F10 "MWAV" button. Renders the WHOLE song,
 ; one WAV per non-empty / non-muted channel, by combining song-mode with
 ; the existing multi-WAV state machine.
@@ -5517,6 +5570,24 @@ Proc            Music_ToggleWAVRender Far       ; AX = pattern (on enter)
 
                 Mov     Byte Ptr [CS:WAV_RenderMode], 1
 
+                ; Fork: the single-pattern Quicksave render (F11 Shift-Right at
+                ; the order-list right edge, Ctrl-O, Ctrl-G, Shift-G, etc. --
+                ; i.e. NOT the multi-WAV sweep, NOT a full-song render, NOT a
+                ; user-typed name) names the file by wall-clock time: a static
+                ; "LL" prefix + HHMMSS, e.g. LL163422.WAV for 16:34:22. That
+                ; lands time-sorted in the Quicksave folder, ready to drag
+                ; straight into another app. The <PFX><NNNN> counter naming
+                ; below is kept for the multi-WAV / song / user-named paths.
+                Cmp     Byte Ptr [CS:WAV_MultiMode], 0
+                JNE     WAV_BuildCounterName
+                Cmp     Byte Ptr [CS:WAV_SongMode], 0
+                JNE     WAV_BuildCounterName
+                Cmp     Byte Ptr [CS:WAV_UserFilenameSet], 0
+                JNE     WAV_BuildCounterName
+                Call    WAV_BuildTimestampBasename
+                Jmp     WAV_BasenameReady
+WAV_BuildCounterName:
+
                 ; Build a unique basename <PFX><NNNN> for this render and
                 ; copy it into the song's FileName buffer so WAVDRV's
                 ; CopyFileName picks it up. This guarantees each Ctrl-O
@@ -5620,6 +5691,7 @@ WAV_PrefixDone:
                 Add     AL, '0'
                 Mov     [CS:WAV_RenderBasename+6], AL
 
+WAV_BasenameReady:
                 ; Copy basename into FileName buffer (in DiskDataArea segment)
                                                 ; Only overwrite IT's
                                                 ; FileName with the auto-
@@ -5648,7 +5720,10 @@ WAV_PrefixDone:
                 Push    CS
                 Pop     DS
                 Mov     SI, Offset WAV_RenderBasename
-                Mov     CX, 9                   ; copy 8 chars (RND0000.) + null
+                Mov     CX, 10                  ; copy basename + '.' + null
+                                                ; (timestamp "LL163422." is 9
+                                                ; chars; counter "RND0000." is
+                                                ; 8 -- 10 covers both incl null)
                 Rep     MovsB
                 Pop     ES
                 Pop     DS
@@ -5693,21 +5768,28 @@ WAV_AfterBasenameCopy:
                 Pop     ES
                 Mov     SI, Offset WAV_RenderBasename
                 Mov     DI, Offset RenderedFilename
-                Mov     CX, 7
-                Rep     MovsB
+                                                ; Copy the basename up to (not
+                                                ; including) its '.'. Length
+                                                ; varies: 8 for the timestamp
+                                                ; name "LL"+HHMMSS, 7 for the
+                                                ; counter name <PFX><NNNN>.
+WAV_FNa_Copy:
+                LodsB
+                Cmp     AL, '.'
+                JE      WAV_FNa_Ext
+                Or      AL, AL
+                JZ      WAV_FNa_Ext
+                StosB
+                Jmp     WAV_FNa_Copy
+WAV_FNa_Ext:
+                                                ; Real ".WAV" extension. WAVDRV
+                                                ; writes the same .WAV, so this
+                                                ; rebuilt name matches the file
+                                                ; on disk for the import-side
+                                                ; open (was the 3-digit pattern
+                                                ; number, e.g. .000).
                 Mov     AL, '.'
                 StosB
-                                                ; Fork: every render now ends in
-                                                ; a real ".WAV" extension. Song-
-                                                ; mode always did; pattern renders
-                                                ; used to encode the 3-digit
-                                                ; pattern number (e.g. .000), so
-                                                ; the file came out PTN0003.000.
-                                                ; Now it's PTN0003.WAV -- drag-
-                                                ; and-drop ready. WAVDRV writes
-                                                ; the same .WAV, so this rebuilt
-                                                ; name still matches the file on
-                                                ; disk for the import-side open.
                 Mov     AL, 'W'
                 StosB
                 Mov     AL, 'A'
@@ -6056,7 +6138,11 @@ RenderedFilename        DB      14 Dup (0)
 PatternNamePrefix       DB      "Pattern "
 WAV_OutputName          DB      "OUTPUT"
 WAV_RenderCounter       DW      0
-WAV_RenderBasename      DB      "RND0000.", 0
+                                        ; Counter name <PFX><NNNN>. uses bytes
+                                        ; 0..8 (8 chars + null). The timestamp
+                                        ; name "LL"+HHMMSS+'.' uses bytes 0..9
+                                        ; (9 chars + null), so keep slack.
+WAV_RenderBasename      DB      "RND0000.", 0, 0, 0
 WAV_ImportedMsg         DB      "Pattern imported as sample ", 0FDh, "D", 0
 WAV_ImportFailedMsg     DB      "Could not import rendered pattern", 0
 WAV_FailNoSlot          DB      "Import failed: no free sample slot", 0
@@ -6149,14 +6235,26 @@ Proc            Music_ImportRenderedPattern Far
                 Pop     ES
                 Mov     SI, Offset WAV_RenderBasename
                 Mov     DI, Offset RenderedFilename
-                Mov     CX, 7
-                Rep     MovsB                   ; copy 7 chars (e.g. "RND0001")
-                Mov     AL, '.'
+                                                ; Copy the basename up to (not
+                                                ; including) its '.'. Length
+                                                ; varies: 8 for the timestamp
+                                                ; name "LL"+HHMMSS, 7 for the
+                                                ; counter name <PFX><NNNN>.
+WAVI_FN_Copy:
+                LodsB
+                Cmp     AL, '.'
+                JE      WAVI_FN_Ext
+                Or      AL, AL
+                JZ      WAVI_FN_Ext
                 StosB
-
+                Jmp     WAVI_FN_Copy
+WAVI_FN_Ext:
                 ; Append the ".WAV" extension. Must match what WAVDRV's Poll9
                 ; now writes (was the 3-digit pattern number, e.g. .000) so the
-                ; auto-import open below finds the file on disk -- PTN0003.WAV.
+                ; auto-import open below finds the file on disk -- e.g.
+                ; LL163422.WAV.
+                Mov     AL, '.'
+                StosB
                 Mov     AL, 'W'
                 StosB
                 Mov     AL, 'A'
