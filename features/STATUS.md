@@ -25,6 +25,7 @@
 | multitimbral-instrument-play-dots | 5 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped @stock |
 | no-samples-to-instruments-envelope-retention | 5 | ✓ | ✗ | — | @build-verified @removed @runtime-untested @stock @todo |
 | note-cut-toggle | 3 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped @stock |
+| pattern-length-beyond-200 | 5 | ✗ | — | — | @analysis-verified @blocked-by-architecture @stock |
 | sample-amplify-keeps-playback | 9 | ✓ | ✓ | ✗ | @bug @build-verified @hw-untested @runtime-verified @shipped @stock |
 | scrolllock-follow-from-lists | 9 | ✓ | ~ partial | ✗ | @bug @build-verified @hw-untested @runtime-untested @runtime-verified @shipped @stock @todo |
 | shift-enter-bulk-load-from-module | 4 | ✓ | ✗ | ✗ | @bug @build-verified @fixed-pending-verify @hw-untested @runtime-untested @shipped |
@@ -35,7 +36,7 @@
 | wav-render-reentry-guard | 7 | ✓ | ✓ | ✗ | @build-verified @hw-untested @runtime-verified @shipped |
 
 ## Tally (computed)
-- Cards: 22
+- Cards: 23
 - Build-verified: 22
 - Runtime-verified in DOSBox-X: 3 full + 3 partial
 - **Hardware-verified: 1**  ·  hardware-untested: 20

@@ -21,6 +21,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - [F4 instrument-list play dots in multitimbral Sample mode](#multitimbral-instrument-play-dots) — `multitimbral-instrument-play-dots.feature`
 - [F12 Samples->Instruments uses upstream clear+remap (no envelope retention)](#no-samples-to-instruments-envelope-retention) — `no-samples-to-instruments-envelope-retention.feature`
 - ['1' toggles the note cut under the cursor](#note-cut-toggle) — `note-cut-toggle.feature`
+- [Pattern length beyond 200 rows (256 / 512)](#pattern-length-beyond-200) — `pattern-length-beyond-200.feature`
 - [Impulse Tracker fork — what got baked in 2026-06-03 → 04](#recent-features-2026-06-03_to_04) — `recent-features-2026-06-03_to_04.feature`
 - [Sample Amplify keeps the song playing](#sample-amplify-keeps-playback) — `sample-amplify-keeps-playback.feature`
 - [User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument List)](#scrolllock-follow-from-lists) — `scrolllock-follow-from-lists.feature`
@@ -372,6 +373,26 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **Grade:** @build-verified ×3 · @runtime-untested ×2 · @shipped ×2 · @stock ×1
 
 **Commits:** `81e4819` '1' on a note cut toggles it off (NoteCutToggle)
+
+
+<a id="pattern-length-beyond-200"></a>
+## Pattern length beyond 200 rows (256 / 512)
+
+`features/pattern-length-beyond-200.feature` · [session](pattern-length-beyond-200.session.md)
+
+**What it does:** As a user, I want 256- or 512-row patterns, So that I can write longer phrases in a single pattern.
+
+**Behaviour (5 scenarios):**
+
+- The unpacked editor buffer is a single 64,000-byte segment = 200 rows exactly
+- Row offsets are computed with 16-bit math that wraps past ~64KB
+- Block and network ops pack the row index into a byte (cap 255)
+- The on-disk .IT Rows field is a WORD, but the spec defines 32..200 — `@stock`
+- What it would actually take (NOT done — recorded for honesty)
+
+**How it does it:** **Key procs:** `PatternData`, `DecodePattern`, `EncodePattern`, `NewPattern`
+
+**Grade:** @stock ×1
 
 
 <a id="recent-features-2026-06-03_to_04"></a>
