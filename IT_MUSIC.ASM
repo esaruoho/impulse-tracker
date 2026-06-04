@@ -4756,8 +4756,19 @@ WAV_FinalizeRequest     DB      0       ; 1 = Music_Poll asked for the genuine
 ; restarts playback in place.
 ; FEATURE-CARD >> features/wav-render-keep-playback.feature
 WAV_ResumeArmed         DB      0       ; 1 = was playing at render enter
-WAV_ResumeOrder         DW      0       ; CurrentOrder snapshot
-WAV_ResumeRow           DW      0       ; CurrentRow snapshot
+WAV_ResumeOrder         DW      0       ; CurrentOrder snapshot (song mode)
+WAV_ResumeRow           DW      0       ; CurrentRow snapshot (both modes)
+; Fork: the resume must match the play MODE that was active at render enter.
+; PlayMode 2 = song play (F5 / F6-from-order): CurrentOrder is valid -> resume
+; via Music_PlayPartSong(order,row). PlayMode 1 = single-pattern play/loop
+; (F6 loops the order's pattern, Ctrl-F6, etc.): Music_PlayPattern does NOT set
+; CurrentOrder, so CurrentOrder is stale (typically 0) -> resuming via order
+; would jump to the top of the order list. Capture the pattern + row + rowcount
+; and resume via Music_PlayPattern(pattern,rows,row) instead.
+; FEATURE-CARD >> features/wav-render-keep-playback.feature (mode-aware resume)
+WAV_ResumePlayMode      DW      0       ; PlayMode snapshot (1=pattern, 2=song)
+WAV_ResumePattern       DW      0       ; CurrentPattern snapshot (pattern mode)
+WAV_ResumeRows          DW      0       ; NumberOfRows snapshot (pattern mode)
 ; Fork: one-shot decision latched at WAV_LeaveMode entry. 1 = this render is a
 ; plain single-pattern Ctrl-O (NOT multi-WAV, NOT whole-song) that was armed, so
 ; resume should fire at leave-time WITHOUT waiting for an external MIDI clock.
@@ -5690,13 +5701,20 @@ Proc            Music_ToggleWAVRender Far       ; AX = pattern (on enter)
                 ; it was playing, arm Music_ResumeAfterRender so the next incoming
                 ; MIDI transport/clock (handled in IT_K) restarts it in place.
                 Mov     Byte Ptr [CS:WAV_ResumeArmed], 0
-                Cmp     Word Ptr [CS:PlayMode], 0
-                JE      WAV_NoResumeArm
+                Mov     AX, [CS:PlayMode]
+                Test    AX, AX
+                JZ      WAV_NoResumeArm
                 Mov     Byte Ptr [CS:WAV_ResumeArmed], 1
-                Mov     AX, [CS:CurrentOrder]
-                Mov     [CS:WAV_ResumeOrder], AX
+                Mov     [CS:WAV_ResumePlayMode], AX     ; 1=pattern, 2=song
+                ; Capture BOTH modes' position; the resume picks by mode.
                 Mov     AX, [CS:CurrentRow]
-                Mov     [CS:WAV_ResumeRow], AX
+                Mov     [CS:WAV_ResumeRow], AX          ; common to both modes
+                Mov     AX, [CS:CurrentOrder]
+                Mov     [CS:WAV_ResumeOrder], AX        ; song mode
+                Mov     AX, [CS:CurrentPattern]
+                Mov     [CS:WAV_ResumePattern], AX      ; pattern mode
+                Mov     AX, [CS:NumberOfRows]
+                Mov     [CS:WAV_ResumeRows], AX         ; pattern mode
                 Mov     AX, [CS:WAV_PendingPattern]     ; restore AX for below
 WAV_NoResumeArm:
 
@@ -9377,9 +9395,23 @@ Proc            Music_ResumeAfterRender Far
                 JNE     MRAR_Clear              ; already playing -> just disarm
                 Push    AX
                 Push    BX
+                Push    CX
+                Cmp     Word Ptr [CS:WAV_ResumePlayMode], 1
+                JNE     MRAR_Song
+                                                ; pattern play/loop: CurrentOrder
+                                                ; was never valid in this mode, so
+                                                ; resume the PATTERN at its row.
+                Mov     AX, [CS:WAV_ResumePattern]
+                Mov     BX, [CS:WAV_ResumeRows]
+                Mov     CX, [CS:WAV_ResumeRow]
+                Call    Music_PlayPattern        ; AX=pattern, BX=rows, CX=row
+                Jmp     MRAR_PopClear
+MRAR_Song:
                 Mov     AX, [CS:WAV_ResumeOrder]
                 Mov     BX, [CS:WAV_ResumeRow]
                 Call    Music_PlayPartSong       ; resume from saved order + row
+MRAR_PopClear:
+                Pop     CX
                 Pop     BX
                 Pop     AX
 MRAR_Clear:
