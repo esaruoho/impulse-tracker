@@ -2,7 +2,7 @@
 
 > **GENERATED** from the `.feature` cards by `features/gen-hwtest.py`. Do not hand-edit. A scenario is **🔴 RED-LINED** until its card is graded `@hw-verified`; flip the card tag (runtime→hardware) and regenerate.
 
-**Build under test:** `v2.354-2026-06-04 @702727c`  ·  put this IT.EXE on the DOS machine and work the 🔴 list.
+**Build under test:** `(unspecified build)`  ·  put this IT.EXE on the DOS machine and work the 🔴 list.
 
 **Record results without burning chat:** run `./test-impulse-tracker` from the repo (works from any dir) — the TUI walks these, takes works/failed/notes, flips passes to `@hw-verified`, and writes `features/HW-FAILURES.md` (the only thing to send back).
 
@@ -10,8 +10,8 @@
 
 | | Count |
 |---|---:|
-| Total scenarios | 157 |
-| 🔴 Need hardware test | 154 |
+| Total scenarios | 159 |
+| 🔴 Need hardware test | 156 |
 | ✅ Hardware-verified | 3 |
 
 
@@ -25,7 +25,7 @@
 - ✅ OK [x] Cursor above row 0 tiles the rows-above-cursor chunk downward  — _DOSBox ✓ (quick re-confirm on metal)_
 - ✅ OK [x] Cursor on row 0 tiles row 0 down the whole channel  — _DOSBox ✓ (quick re-confirm on metal)_
 - 🔴 [ ] No-op at the pattern edges
-- 🔴 [ ] Shift-Alt-R replicates the whole PATTERN at cursor  — _DOSBox ✗ — UNTESTED even in emulation_
+- 🔴 [ ] Shift-Alt-R replicates the whole PATTERN at cursor  — _DOSBox ✓ (quick re-confirm on metal)_
 - 🔴 [ ] Both replicate ops are undoable and show a correct label in the undo list  — _DOSBox ✗ — UNTESTED even in emulation_
 
 ### `convey-gardener`
@@ -129,11 +129,11 @@
 - 🔴 [ ] AX (the sample number) survives the silence call
 
 ### `scrolllock-follow-from-lists`
-- 🔴 [ ] Scroll Lock in the Sample List opens the Pattern Editor with Follow Mode on  — _DOSBox ✗ — UNTESTED even in emulation_
-- 🔴 [ ] Scroll Lock in the Instrument List does the same  — _DOSBox ✗ — UNTESTED even in emulation_
+- 🔴 [ ] Scroll Lock in the Sample List opens the Pattern Editor with Follow Mode on  — _DOSBox ✓ (quick re-confirm on metal)_
+- 🔴 [ ] Scroll Lock in the Instrument List does the same  — _DOSBox ✓ (quick re-confirm on metal)_
 - 🔴 [ ] Ctrl-F in the Sample List (F3) or Instrument List (F4)  — _DOSBox ✓ (quick re-confirm on metal)_
 - 🔴 [ ] Ctrl-F INSIDE the Pattern Editor (F2) toggles Follow Mode, not the config dialog  — _DOSBox ✗ — UNTESTED even in emulation_
-- 🔴 [ ] Ctrl-F on the Order List (F11) or Song Variables (F12) enters the editor  — _DOSBox ✗ — UNTESTED even in emulation_
+- 🔴 [ ] Ctrl-F on the Order List (F11) or Song Variables (F12) enters the editor  — _DOSBox ✓ (quick re-confirm on metal)_
 - 🔴 [ ] Follow Mode is forced ON, never toggled off, from the lists
 - 🔴 [ ] The handler hands Glbl_F2 the dispatcher's own DS (no segment damage)
 
@@ -150,7 +150,7 @@
 - 🔴 [ ] Samples->Instruments envelope retention does NOT clash with this
 
 ### `shift-f4-drumkit`
-- 🔴 [ ] Shift-F4 Create builds the drumkit (01) + the 16 parts (02-17)  — _DOSBox ✗ — UNTESTED even in emulation_
+- 🔴 [ ] Shift-F4 Create builds the drumkit (01) + the 16 parts (02-17)  — _DOSBox ✓ (quick re-confirm on metal)_
 - 🔴 [ ] The drumkit maps each sample slot to a successive key  — _DOSBox ✗ — UNTESTED even in emulation_
 - 🔴 [ ] The drumkit responds to MIDI channel 10  — _DOSBox ✗ — UNTESTED even in emulation_
 - 🔴 [ ] Each pad plays its sample at fixed base pitch (C-5), not transposed  — _DOSBox ✗ — UNTESTED even in emulation_
@@ -172,6 +172,8 @@
 - 🔴 [ ] A single-pattern render runs faster than realtime (brief freeze)  — _DOSBox ✗ — UNTESTED even in emulation_
 - 🔴 [ ] Whole-song render stays realtime  — _DOSBox ✗ — UNTESTED even in emulation_
 - 🔴 [ ] A song that was playing resumes after the render, on the next MIDI clock  — _DOSBox ✗ — UNTESTED even in emulation_
+- 🔴 [ ] Standalone Ctrl-O resumes on its own, with no external clock  — _DOSBox ✓ (quick re-confirm on metal)_
+- 🔴 [ ] Resume matches the play mode that was active at render enter  — _DOSBox ✓ (quick re-confirm on metal)_
 - 🔴 [ ] No resume if nothing was playing  — _DOSBox ✗ — UNTESTED even in emulation_
 
 ### `wav-render-quicksave`
