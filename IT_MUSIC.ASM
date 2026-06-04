@@ -4067,7 +4067,7 @@ MIDIMultiBanks  DB      0
 MCMI_Count      DB      0       ; scratch: channels assigned this run
 MCMI_Name       DB      'MIDI In Ch 01' ; 13 chars; digits patched per slot
 MCMI_Chan       DB      0
-MCMI_DrumName     DB    'MIDI Drumkit'   ; name for the auto-built drumkit (slot 99)
+MCMI_DrumName     DB    'MIDI Drumkit'   ; name for the auto-built drumkit (slot 01)
 MCMI_DrumName_Len EQU   $ - MCMI_DrumName
 
 ; Music_CreateMIDIInInstruments - build instruments 1..16 directly so they
@@ -4080,15 +4080,15 @@ Proc            Music_CreateMIDIInInstruments Far
                 Push    CS
                 Pop     DS
                 Assume DS:Music
-                Mov     BX, 1
-MCMI_Loop:
-                Cmp     BX, 16
+                Mov     BX, 2                   ; multitimbral parts at slots 02-17
+MCMI_Loop:                                      ;  (slot 01 is the drumkit, below)
+                Cmp     BX, 17
                 JA      MCMI_Done
                 Call    MCMI_BuildSlot
                 Inc     BX
                 Jmp     MCMI_Loop
 MCMI_Done:
-                Call    MCMI_BuildDrumkit       ; also build the slot-99 drumkit
+                Call    MCMI_BuildDrumkit       ; drumkit = instrument 01 (FIRST)
                 Mov     Byte Ptr [MIDIMultiBanks], 1
                 Mov     Byte Ptr [MIDIMultiEnable], 1
                 Mov     AX, 16
@@ -4108,9 +4108,9 @@ Proc            Music_ExpandMIDIInTo96 Far
                 Push    CS
                 Pop     DS
                 Assume DS:Music
-                Mov     BX, 1
+                Mov     BX, 2                   ; banks fill slots 02-97 (01 = drumkit)
 MEXP_Loop:
-                Cmp     BX, 96
+                Cmp     BX, 97
                 JA      MEXP_Done
                 Call    MCMI_BuildSlot
                 Inc     BX
@@ -4137,9 +4137,9 @@ Proc            Music_ResetMIDIInTo16 Far
                 Push    CS
                 Pop     DS
                 Assume DS:Music
-                Mov     BX, 17
+                Mov     BX, 18                  ; clear 18-97; keep 01 (drumkit) + 02-17
 MRST_Loop:
-                Cmp     BX, 96
+                Cmp     BX, 97
                 JA      MRST_Done
                 Mov     DI, BX
                 Add     DI, DI
@@ -4176,7 +4176,9 @@ Proc            MCMI_BuildSlot Near
                 Push    DI
                 Push    ES
                 Mov     AX, BX
-                Dec     AX
+                Sub     AX, 2                   ; slot 02 -> ch 1 (slot 01 is the
+                                                ;  drumkit). channel = sample =
+                                                ;  ((BX-2) mod 16)+1.
                 Xor     DX, DX
                 Mov     CX, 16
                 Div     CX
@@ -4228,7 +4230,8 @@ EndP            MCMI_BuildSlot
 ; sample (i+1) for i = 0..98 (C-0 -> sample 01, C#0 -> 02, ... 99 samples), each
 ; pad at FIXED pitch C-5 (note byte 60) so samples play at their base rate (a
 ; real drumkit, not transposed). Notes 99..119 -> no sample. Built in the Create
-; step; lives at slot 99 so the 01-16 / expand-96 / reset cycle never touches it.
+; step; lives at slot 01 (FIRST) -- multitimbral parts are at 02-17, expand
+; fills 02-97 and reset clears 18-97, so slot 01 is never touched.
 ; Caller must have DS = Music. Preserves nothing of interest beyond what it pushes.
 ; FEATURE-CARD >> features/shift-f4-drumkit.feature
 Proc            MCMI_BuildDrumkit Near
@@ -4239,11 +4242,11 @@ Proc            MCMI_BuildDrumkit Near
                 Push    DI
                 Push    ES
 
-                Mov     AX, 99
+                Mov     AX, 1
                 Call    Music_ClearInstrument
-                Mov     DI, 198                 ; 99 * 2
+                Mov     DI, 2                   ; 1 * 2 -> drumkit is instrument 01
                 Mov     ES, SongDataArea
-                Mov     DI, [ES:DI+64712]       ; ES:DI -> instrument 99 header
+                Mov     DI, [ES:DI+64712]       ; ES:DI -> instrument 01 header
 
                 Mov     Byte Ptr [ES:DI+1Fh], 10 ; respond to MIDI channel 10
 
