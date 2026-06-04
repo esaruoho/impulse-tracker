@@ -13,11 +13,13 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - [F2 pattern-length increase duplicates (tiles) the existing content](#f2-resize-tiles-pattern) — `f2-resize-tiles-pattern.feature`
 - [User Presses F3 (Sample List)](#f3-sample-list) — `f3-sample-list.feature`
 - [User Presses F4 (Instrument List)](#f4-instrument-list) — `f4-instrument-list.feature`
+- [F6 in the Order List plays the song from the selected order row](#f6-play-from-order-list-row) — `f6-play-from-order-list-row.feature`
 - [Multitimbral MIDI-In](#midi-in-multitimbral) — `midi-in-multitimbral.feature`
 - [External MIDI Real-Time Sync](#midi-realtime-sync) — `midi-realtime-sync.feature`
 - [Multi-WAV render](#multi-wav) — `multi-wav.feature`
 - [F4 instrument-list play dots in multitimbral Sample mode](#multitimbral-instrument-play-dots) — `multitimbral-instrument-play-dots.feature`
 - [F12 Samples->Instruments uses upstream clear+remap (no envelope retention)](#no-samples-to-instruments-envelope-retention) — `no-samples-to-instruments-envelope-retention.feature`
+- [Impulse Tracker fork — what got baked in 2026-06-03 → 04](#recent-features-2026-06-03_to_04) — `recent-features-2026-06-03_to_04.feature`
 - [Sample Amplify keeps the song playing](#sample-amplify-keeps-playback) — `sample-amplify-keeps-playback.feature`
 - [User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument List)](#scrolllock-follow-from-lists) — `scrolllock-follow-from-lists.feature`
 - [Shift-Enter Load from Sample List (bulk-load a module's samples)](#shift-enter-bulk-load-from-module) — `shift-enter-bulk-load-from-module.feature`
@@ -183,6 +185,27 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **Commits:** `fb47b32` Import code (upstream base: F4 instrument list + tab cycle) · `10c837b` per-instrument MIDI-In channel field (hdr 1Fh) on the Pitch tab
 
 
+<a id="f6-play-from-order-list-row"></a>
+## F6 in the Order List plays the song from the selected order row
+
+`features/f6-play-from-order-list-row.feature` · [session](f6-play-from-order-list-row.session.md)
+
+**What it does:** As someone arranging a song in the F11 Order List, I want F6 to start playback from the order row I have selected, So that I can audition the song from any point in the arrangement without jumping back to the pattern editor or to order 0.
+
+**Behaviour (4 scenarios):**
+
+- F6 on a selected order row starts the song from that order — `@shipped @build-verified @runtime-untested`
+- F6 outside the Order List keeps its stock "play current pattern" — `@shipped @build-verified`
+- F7 already plays "from row" relative to the order list — `@stock @build-verified`
+- Song-from-order, not a single looped pattern (design choice) — `@shipped @build-verified`
+
+**How it does it:** **Key procs:** `Glbl_F6`, `Music_PlaySong`, `PE_F7`, `PE_GetCurrentPattern`, `Music_PlayPattern` · **Source files:** `IT_G.ASM`, `IT_MUSIC.ASM`, `IT_PE.ASM`
+
+**Grade:** @build-verified ×4 · @runtime-untested ×1 · @shipped ×3 · @stock ×1
+
+**Commits:** `8acb41f` F6 in the Order List plays the song from the selected order row
+
+
 <a id="midi-in-multitimbral"></a>
 ## Multitimbral MIDI-In
 
@@ -301,6 +324,34 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **Grade:** @build-verified ×4 · @runtime-untested ×1 · @stock ×2 · @todo ×1
 
 **Commits:** `d8ec842` (added) F12 Samples->Instruments preserves drawn envelopes · `b5a0c66` (PR #2, removed) revert envelope preservation -> upstream clear+remap · `c2094e6` a44a607 9a1142c (PR #3, re-added) IMPI-gated keep-envelopes policy
+
+
+<a id="recent-features-2026-06-03_to_04"></a>
+## Impulse Tracker fork — what got baked in 2026-06-03 → 04
+
+`features/recent-features-2026-06-03_to_04.feature` · [session](recent-features-2026-06-03_to_04.session.md)
+
+**What it does:** As the musician driving this fork, I want one page that lists every behaviour added/changed in the last two days, each graded honestly and linked to its own detailed card, So that I can see at a glance what is live, what is only build-verified, and what still needs a runtime check.
+
+**Behaviour (11 scenarios):**
+
+- Ctrl-F (and Scroll Lock) jump to the Pattern Editor with Follow ON — `@shipped @build-verified @runtime-verified`
+- Single-pattern Quicksave renders are LL<HHMMSS>.WAV — `@shipped @build-verified @runtime-untested`
+- A second render gesture mid-render no longer wedges IT — `@shipped @build-verified @runtime-untested`
+- Multi-WAV per-channel + whole-song WAV/MWAV  (NOT runtime-tested) — `@shipped @build-verified @runtime-untested`
+- Shift-Enter on a module row bulk-loads all its samples (.MOD hang fixed) — `@shipped @build-verified @runtime-untested`
+- Shift-F4 cycles multitimbral build + enters Instrument mode — `@shipped @build-verified @runtime-untested`
+- F4 instrument list shows live play dots in multitimbral Sample mode — `@shipped @build-verified @runtime-untested`
+- F2 pattern-length increase tiles the existing rows — `@shipped @build-verified @runtime-untested`
+- Sample Amplify (Alt-M) no longer stops the song — `@shipped @build-verified @runtime-untested`
+- F12 Samples->Instruments envelope retention was removed (back to upstream) — `@shipped @build-verified`
+- Pre-existing features that received their triad card in this window — `@shipped @build-verified`
+
+**How it does it:** **Key procs:** ```, `line:`, `this`, `is`, `a`, `hand-maintained`, `digest`, `spanning`, `many`
+
+**Grade:** @build-verified ×11 · @runtime-untested ×8 · @runtime-verified ×1 · @shipped ×11
+
+**Commits:** `e04be2c` Ctrl-F in Pattern Editor toggles Follow (not the F2 config dialog) · `eb6b4ea` Ctrl-F: one GlobalKeyList entry -> works F2/F3/F4/F11/F12 · `d437f78` Ctrl-F flag fix DB 0 -> DB 1 (was doing nothing) · `97b28e9` Ctrl-F on F3/F4 = Scroll-Lock action · `91dfc0b` Scroll Lock on F3/F4 -> Pattern Editor + Follow Mode · `460a6e1` e5e5c38 Sample Amplify (Alt-M) keeps playback · `3a6a434` 8c32fd2 Shift-F4 multitimbral 3-state cycle + enter Instrument mode · `478b638` F4 instrument-list play dots in multitimbral Sample mode · `05c70c9` F2 pattern-length increase tiles content (not blank rows) · `32e080c` Shift-Enter bulk-load .MOD hard-hang fix · `c9ff6b9` WAV render re-entry guard (2nd press early-stops to Quicksave) · `74c3fe8` be595b2 WAV Quicksave render -> LL<HHMMSS>.WAV (.000 -> .WAV)
 
 
 <a id="sample-amplify-keeps-playback"></a>

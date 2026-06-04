@@ -112,6 +112,11 @@ Shift-F4 "Yes, enter Multitimbral Mode" now also flips Sample→Instrument mode 
 - `8c32fd2` Shift-F4 3-state cycle (dispatcher this extends)
 - *(this session)* create-confirm → Or [songseg:2Ch],4 + Jmp Glbl_F4
 
+### ✅ f6-play-from-order-list-row.feature  (+ .session.md, full triad)
+F6 in the F11 Order List now starts the song from the SELECTED order row (Music_PlaySong from `Order`) instead of looping the editor's current pattern; gated on CurrentMode==11 so F6 stays stock elsewhere. F7 was already order-aware (PE_F7). Build-verified, runtime-untested.
+- `8acb41f` F6 in the Order List plays the song from the selected order row
+- Card + session authored same session
+
 ## Uncarded features (the work surface)
 
 > Status flipped in place 2026-06-03: entries below marked ✅ are now carded, and
