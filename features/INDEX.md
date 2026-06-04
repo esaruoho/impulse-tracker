@@ -27,7 +27,7 @@ Live 16-part sampler; per-instrument MIDI-In channel (hdr 1Fh); Shift-F4 3-state
 - `7f5b2ff` the card itself + source back-links
 
 ### 🟡 wav-render-quicksave.feature
-Ctrl-O render → auto-import; Shift-Ctrl-O no-import; Quicksave routing; LL\<HHMMSS\>.WAV naming.
+Ctrl-O render → auto-import; Shift-Ctrl-O no-import; Quicksave routing; LL\<HHMMSS\>.WAV naming. LL naming + .WAV extension runtime-verified (2026-06-04, Esa); auto-import path still runtime-untested.
 - `35732c3` Ctrl-O renders current pattern (P1)
 - `089119a` Ctrl-O toggles ITWAV.DRV render mode (P2a)
 - `af03f96` Ctrl-O auto-imports rendered pattern (P2.5+P3)
@@ -45,7 +45,7 @@ Ctrl-O render → auto-import; Shift-Ctrl-O no-import; Quicksave routing; LL\<HH
 - `34b725d` `054f1f0` gitignore rendered samples / repo-root IT.CFG
 
 ### ✅ wav-render-reentry-guard.feature  (+ .session.md, full triad)
-A second render gesture mid-render (Right then Shift-Right at the F11 order-list right edge; or a second Ctrl-O/Ctrl-G/Shift-G) now early-stops like Esc and finalizes to Quicksave instead of re-entering the teardown and wedging IT. New `WAV_FinalizeRequest` discriminator. Build-verified, runtime-untested.
+A second render gesture mid-render (Right then Shift-Right at the F11 order-list right edge; or a second Ctrl-O/Ctrl-G/Shift-G) now early-stops like Esc and finalizes to Quicksave instead of re-entering the teardown and wedging IT. New `WAV_FinalizeRequest` discriminator. Build-verified, runtime-verified (2026-06-04, Esa).
 - `c9ff6b9` guard re-entrant WAV render gesture; second press early-stops to Quicksave
 - Card + session authored same session; card-commit hash follows `c9ff6b9`
 
@@ -65,7 +65,7 @@ External transport: FA/FB/FC Start/Stop/Continue, F8 Clock tempo sync, driver F8
 - `731e168` MIDI Transport toggle (independent FA/FB/FC gate)
 
 ### ✅ scrolllock-follow-from-lists.feature  (+ .session.md, full triad)
-Scroll Lock — AND Ctrl-F — on F3 Sample List / F4 Instrument List force-enables Pattern Follow Mode and opens the Pattern Editor (= F2). Build-verified, runtime-untested.
+Scroll Lock — AND Ctrl-F — on F3 Sample List / F4 Instrument List force-enables Pattern Follow Mode and opens the Pattern Editor (= F2). Build-verified; Ctrl-F on F3/F4 runtime-verified (2026-06-04, Esa).
 - `91dfc0b` Scroll Lock on F3/F4 lists → open Pattern Editor + force Follow Mode (IT_PE.ASM `PE_ScrollLockFollow` + IT_OBJ1.ASM two keylist entries, 146h on Sample/Instrument lists)
 - `8c85035` backfill RESULT hash 91dfc0b into the card + session
 - `97b28e9` Ctrl-F (06h) added as a 2nd trigger on F3/F4 → same PE_ScrollLockFollow handler
@@ -78,7 +78,7 @@ hard-hang (missing loader-cache finalisation). Build-verified, runtime-untested.
 - *(this session)* MOD hard-hang fix: finalise loader cache before loop/teardown
 
 ### ✅ sample-amplify-keeps-playback.feature  (+ .session.md, full triad)
-Sample Amplify (Alt-M, the "normalize" gesture) no longer stops the song — only the amplified sample's voices are silenced (Music_SilenceSampleVoices), every other channel keeps playing. Same pattern as loader-keyjazz-hang. Build-verified, runtime-untested.
+Sample Amplify (Alt-M, the "normalize" gesture) no longer stops the song — only the amplified sample's voices are silenced (Music_SilenceSampleVoices), every other channel keeps playing. Same pattern as loader-keyjazz-hang. Build-verified, runtime-verified (2026-06-04, Esa).
 - `e5e5c38` Sample Amplify (Alt-M) no longer stops the song
 - Card + session authored same session
 
@@ -88,7 +88,7 @@ F4 Instrument List now shows live play dots during multitimbral MIDI-in playback
 - Card + session authored same session
 
 ### ✅ f2-resize-tiles-pattern.feature  (+ .session.md, full triad)
-Increasing the row count on the F2 Pattern-Edit-Config now DUPLICATES (tiles) the existing rows to fill the new length (64→128 = 2 copies, 64→192 = 3, partial final copy on non-multiples) instead of appending blank rows. New PE_TilePatternToLength helper. Build-verified, runtime-untested.
+Increasing the row count on the F2 Pattern-Edit-Config now DUPLICATES (tiles) the existing rows to fill the new length (64→128 = 2 copies, 64→192 = 3, partial final copy on non-multiples) instead of appending blank rows. New PE_TilePatternToLength helper. Build-verified, runtime-verified (2026-06-04, Esa).
 - `05c70c9` F2 pattern-length increase tiles content instead of blank rows
 - Card + session authored same session
 

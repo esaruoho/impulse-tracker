@@ -27,6 +27,8 @@
 #   @shipped          - in origin/main
 #   @build-verified   - assembles + links clean (TASM 4.1 / TLINK 3.01), full
 #                       BUILDALL: IT.EXE + 42 drivers, Error/Warning = None
+#   @runtime-verified - CONFIRMED on a running IT.EXE (2026-06-04, Esa): the
+#                       Quicksave render writes LL<HHMMSS>.WAV to disk.
 #   @runtime-untested - NOT yet exercised by actually running IT.EXE: pressing
 #                       the key, watching the Quicksave folder, confirming the
 #                       file name / that auto-import opens it. Runnable in
@@ -75,7 +77,7 @@ Feature: WAV Quicksave render filename
 
   # --- The trigger gesture ---------------------------------------------------
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-verified
   Scenario: Shift-Right at the order-list right edge renders to Quicksave only
     # cite: IT_PE.ASM PE_OrderList_RightDispatch (line 2320) fires only at
     #       OrderCursor == 2 (rightmost of the 3-digit cell), else normal wrap
@@ -98,7 +100,7 @@ Feature: WAV Quicksave render filename
 
   # --- The name: LL + HHMMSS -------------------------------------------------
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-verified
   Scenario: A single-pattern Quicksave render is named by wall-clock time
     # cite: IT_MUSIC.ASM Music_ToggleWAVRender enter-mode gate (~5618):
     #       MultiMode=0 AND SongMode=0 AND UserFilenameSet=0 -> timestamp path
@@ -121,7 +123,7 @@ Feature: WAV Quicksave render filename
 
   # --- The extension: real .WAV ----------------------------------------------
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-verified
   Scenario: The extension is a real .WAV, not the 3-digit pattern number
     # cite: SoundDrivers/WAVDRV.ASM CopyFileName (593) copies the basename up
     #       to its '.', then Poll9 (813) appends ".WAV" + NUL (was the pattern

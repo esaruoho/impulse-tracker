@@ -59,13 +59,13 @@ Feature: Impulse Tracker fork — what got baked in 2026-06-03 → 04
 
   # --- WAV render ------------------------------------------------------------
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-verified
   Scenario: Single-pattern Quicksave renders are LL<HHMMSS>.WAV
     # detail: features/wav-render-quicksave.feature  (commits be595b2, 74c3fe8)
     Given a single-pattern Quicksave render (F11 Shift-Right, Ctrl-O, etc.)
     Then the file is a real .WAV named by wall-clock time, e.g. LL163422.WAV
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-verified
   Scenario: A second render gesture mid-render no longer wedges IT
     # detail: features/wav-render-reentry-guard.feature  (commit c9ff6b9)
     Given a render is in progress
@@ -106,13 +106,13 @@ Feature: Impulse Tracker fork — what got baked in 2026-06-03 → 04
 
   # --- Pattern editor / sample ops -------------------------------------------
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-verified
   Scenario: F2 pattern-length increase tiles the existing rows
     # detail: features/f2-resize-tiles-pattern.feature  (commit 05c70c9)
     Given an F2 Pattern-Edit-Config row-count increase (e.g. 64 -> 128)
     Then the existing rows are duplicated to fill, not padded with blanks
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-verified
   Scenario: Sample Amplify (Alt-M) no longer stops the song
     # detail: features/sample-amplify-keeps-playback.feature (commits e5e5c38, 460a6e1)
     Given a song is playing
