@@ -12,6 +12,7 @@ include switch.inc
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
                 Extrn   D_GotoStartingDirectory:Far
+                Extrn   D_SaveDirectoryConfiguration:Far
 
                 Extrn   E_UnInitEMS:Far
                 Extrn   S_GetDestination:Far
@@ -1848,6 +1849,18 @@ Proc            Glbl_MIDIStopF8_Toggle Far
                         Assume DS:Keyboard
 
                 Xor     Byte Ptr [MIDIStopOnF8Enable], 1
+
+                ; Persist immediately so the choice survives a restart with no
+                ; separate "save config" step (same pattern as F2-F2 default
+                ; length). D_SaveDirectoryConfiguration's save-sync stamps the
+                ; just-flipped state into PE_ForkExtConfig +3.
+                Call    D_SaveDirectoryConfiguration
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Keyboard
+
+                Cmp     Byte Ptr [MIDIStopOnF8Enable], 0
                 JZ      Glbl_MIDIStopF8_Toggle_Off
 
                 Mov     SI, Offset MIDIStopF8OnMsg
