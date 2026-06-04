@@ -4758,6 +4758,12 @@ WAV_FinalizeRequest     DB      0       ; 1 = Music_Poll asked for the genuine
 WAV_ResumeArmed         DB      0       ; 1 = was playing at render enter
 WAV_ResumeOrder         DW      0       ; CurrentOrder snapshot
 WAV_ResumeRow           DW      0       ; CurrentRow snapshot
+; Fork: one-shot decision latched at WAV_LeaveMode entry. 1 = this render is a
+; plain single-pattern Ctrl-O (NOT multi-WAV, NOT whole-song) that was armed, so
+; resume should fire at leave-time WITHOUT waiting for an external MIDI clock.
+; The clock-driven resume in IT_K still works for slaved rigs (idempotent).
+; FEATURE-CARD >> features/wav-render-keep-playback.feature (standalone auto-resume)
+WAV_DoResumeOnLeave     DB      0
 
 ; Song-mode flag: when 1, the WAV render plays the WHOLE SONG (Music_PlaySong
 ; from order 0) instead of a single pattern. Set by D_FormatWAV / D_FormatMWAV
@@ -6133,6 +6139,22 @@ WAV_LeaveMode:
                 ; the last visible char on hang reveals which call wedged.
                 Mov     Byte Ptr [CS:WAV_FinalizeRequest], 0    ; consume request
 
+                ; Fork: latch the standalone auto-resume decision NOW, while
+                ; WAV_SongMode / WAV_MultiMode / WAV_ResumeArmed are all still
+                ; valid (WAV_SongMode is cleared further down). Resume on leave
+                ; only for a plain single-pattern Ctrl-O that was playing at
+                ; enter -- never mid multi-WAV sweep, never whole-song render.
+                ; FEATURE-CARD >> features/wav-render-keep-playback.feature
+                Mov     Byte Ptr [CS:WAV_DoResumeOnLeave], 0
+                Cmp     Byte Ptr [CS:WAV_MultiMode], 0
+                JNE     WAV_LeaveResumeDecided
+                Cmp     Byte Ptr [CS:WAV_SongMode], 0
+                JNE     WAV_LeaveResumeDecided
+                Cmp     Byte Ptr [CS:WAV_ResumeArmed], 0
+                JE      WAV_LeaveResumeDecided
+                Mov     Byte Ptr [CS:WAV_DoResumeOnLeave], 1
+WAV_LeaveResumeDecided:
+
                 Mov     AL, 1
                 Mov     AH, '0'                 ; entered leave
                 Call    WAV_DebugMark
@@ -6314,6 +6336,17 @@ WAV_SkipCwdRestore:
                 Mov     AL, 9
                 Mov     AH, '8'
                 Call    WAV_DebugMark
+
+                ; Fork: standalone auto-resume. The live driver is back and the
+                ; import (if any) is done, so it is safe to restart playback now
+                ; without waiting for an external MIDI clock. Music_ResumeAfterRender
+                ; is self-guarded (no-op unless armed + stopped + render finished).
+                ; FEATURE-CARD >> features/wav-render-keep-playback.feature
+                Cmp     Byte Ptr [CS:WAV_DoResumeOnLeave], 0
+                JE      WAV_NoAutoResume
+                Mov     Byte Ptr [CS:WAV_DoResumeOnLeave], 0
+                Call    Music_ResumeAfterRender
+WAV_NoAutoResume:
 
 WAV_ToggleDone:
                 Pop     ES
