@@ -60,6 +60,37 @@ views.
 6. **Self-maintaining** — the RESULT-LOG and the index keep themselves current via the
    `.githooks` (`pre-commit` for direct-to-main, `post-merge` for merges); the cards
    are the only thing a human edits.
+7. **Convey is a garden, not just a seed — it prunes (the equal-and-opposite of
+   conveying).** ★ established 2026-06-04. To convey an idea is to drop a seed; the
+   idea then *coalesces around that seed node* — cards, scenarios, sessions, and their
+   reactions get pulled together into a living tree. But a tree that only ever grows
+   becomes a thicket. RBI demands balance: generation (the action) needs **pruning**
+   (the reaction). The cards AND their reactions are therefore *pruned and sorted* —
+   automatically detectable, so the central **situation** (`CONVEY-SITUATION.md`) stays
+   wholesome instead of accreting dead wood.
+   - **What is a MALFORMED branch (prune):** a stale duplicate (`INDEX.md` already
+     flags `f11-order-list-power-tools` / `f12-directory-pickers` as COVERED-BY others);
+     a superseded line still presented as live; a scenario whose `# cite:` no longer
+     resolves to real code; an orphaned session with no card; a dead `FEATURE-CARD >>`
+     back-link; a grade that `convey verify` flags OPTIMISTIC; a dead-end polluting the
+     work-surface. These are incoherent or contradict current reality.
+   - **THE FORK that decides whether pruning heals or corrupts:** a *faithfully-recorded
+     wrong turn* in a `.session.md` is **healthy** — it is the vibe-diff audit trail and
+     must be KEPT. Pruning targets MALFORMED branches, never honest history. Conflating
+     "this was a wrong turn we recorded" with "this is dead wood" turns pruning into
+     lying-by-omission — the exact failure the honest-grade rule (5) exists to prevent.
+   - **Git is the substrate that makes pruning safe.** A prune is a *commit with a
+     reason* (quarantine to an attic / `@pruned` tag, not a silent `rm`). The live
+     situation gets wholesome; git history retains everything, so the audit survives.
+     Nothing is truly lost — this is how "edit out memories that don't make sense"
+     coexists with "never lose the trail." No silent deletes (the no-silent-caps rule):
+     what was pruned and why is itself a recorded reaction.
+   - **Pruning is conveyable and automatable** — a "gardener" worker (run via the
+     conveyer-belt reaction channel, or a `.githooks` lint) that detects drift
+     (cite-resolves? grade-vs-reality? duplicate/superseded? orphan session? dead
+     back-link?), proposes prunes, and emits the reaction (a pruning report + the edits
+     + `STATUS.md` regen). Sorting clusters cards around their seed node and surfaces
+     branches that belong to no seed.
 
 ## Operational pieces (the impulse-tracker instance)
 
