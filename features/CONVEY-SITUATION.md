@@ -26,7 +26,8 @@ Reusable HOW: the `report-card` skill. Schema: `GHERKIN-FEATURE-WIKI-PATTERN.md`
 | RESULT-LOG | header of each card | dated commit/PR lines, auto-stamped |
 | Automation | `.githooks/{pre-commit,post-merge,report-card-stamp.sh}` | stamp RESULT-LOG + regenerate STATUS.md on every commit |
 | Principles | `features/CONVEY.md` | the named methodology |
-| Sessions | `features/CONVEY-SESSIONS.md` | which conversations built it |
+| Sessions (auto) | `features/CONVEY-SESSIONS.generated.md` ← `gen-sessions.py` | **generated** registry: every Convey conversation, resume cmd + cards/tools touched |
+| Sessions (curated) | `features/CONVEY-SESSIONS.md` | human roles / distillation notes overlay |
 
 ## Current status (snapshot — live source: `features/STATUS.md`)
 

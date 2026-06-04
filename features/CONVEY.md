@@ -30,6 +30,15 @@ you are typing "runtime-verified" into an index by hand, you've broken Convey �
 the card's tag and let the index regenerate. Hand edits to a generated view are
 overwritten by design.
 
+**Corollary — the conversations are plugged in too.** The Claude sessions that build
+Convey are not a hand-typed list either: `features/gen-sessions.py` discovers them from
+the live transcripts and generates `features/CONVEY-SESSIONS.generated.md` — each
+conversation with a `claude --resume <id>` get-back command and the exact cards / tools
+it touched. So a conversation and the tooling it creates are auto-linked, both ways:
+the card knows its session (the `.session.md` get-back block), and the session registry
+knows the cards. Run via `features/gen-all.sh`; the pre-commit hook does it on any card
+commit.
+
 **Why:** a hand-kept status list drifts and lies the moment a card changes. A derived
 view cannot disagree with its source — the source IS the cards. One write, many true
 views.
@@ -69,9 +78,13 @@ drifting into N disconnected conversations:
   orientation: what Convey is, what's built, current status (pointing at generated
   sources), the cross-session decisions, and the open threads. The one place that
   holds what lives in no single card.
-- **`features/CONVEY-SESSIONS.md`** — the sessions ledger: every Claude conversation
-  that built Convey, with a get-back block (`claude --resume <id>`) and its role, so
-  any session can be re-entered and distilled.
+- **`features/CONVEY-SESSIONS.generated.md`** — the AUTO-DISCOVERED registry of every
+  Convey conversation, plugged in straight from the live transcripts by
+  `features/gen-sessions.py` (resume command + cards/tools each touched). Generated,
+  not hand-typed.
+- **`features/CONVEY-SESSIONS.md`** — the curated overlay: human roles / distillation
+  notes on top of the generated registry (which conversation was the genesis, which is
+  fully distilled, etc.).
 
 The repo itself (cards + generated `STATUS.md` + git log) is the authoritative merged
 record; these two add the human-readable synthesis on top.

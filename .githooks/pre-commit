@@ -37,6 +37,10 @@ if git diff --cached --name-only 2>/dev/null | grep -q '^features/.*\.feature$';
     REPO="$(git rev-parse --show-toplevel 2>/dev/null)"
     python3 "$REPO/features/gen-status.py" >/dev/null 2>&1 \
       && git add -- "$REPO/features/STATUS.md" 2>/dev/null || true
+    # Plug the live Claude conversations into Convey: regenerate the sessions
+    # registry from this machine's transcripts (defensive no-op if absent).
+    python3 "$REPO/features/gen-sessions.py" >/dev/null 2>&1 \
+      && git add -- "$REPO/features/CONVEY-SESSIONS.generated.md" 2>/dev/null || true
   fi
 fi
 exit 0
