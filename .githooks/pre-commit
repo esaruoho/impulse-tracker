@@ -28,4 +28,15 @@ DATE="$(date +%F 2>/dev/null)"    # commit doesn't exist yet; use today
 
 DIR="$(dirname "$0")"
 "$DIR/report-card-stamp.sh" "--cached" "$DATE" "direct-commit" "" "1" || true
+
+# Auto-derive features/STATUS.md from the cards' @grade tags whenever a card is
+# staged -- so test status is COMPUTED from the .feature source of truth, never
+# hand-typed into an index. Defensive: skip quietly if python3 is missing.
+if git diff --cached --name-only 2>/dev/null | grep -q '^features/.*\.feature$'; then
+  if command -v python3 >/dev/null 2>&1; then
+    REPO="$(git rev-parse --show-toplevel 2>/dev/null)"
+    python3 "$REPO/features/gen-status.py" >/dev/null 2>&1 \
+      && git add -- "$REPO/features/STATUS.md" 2>/dev/null || true
+  fi
+fi
 exit 0

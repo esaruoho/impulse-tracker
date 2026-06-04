@@ -28,6 +28,13 @@ gains history:
 Either way it appends a dated one-line entry to each `features/*.feature` card
 whose WATCHed symbols were actually changed.
 
+**`pre-commit` also regenerates `features/STATUS.md`** (via `features/gen-status.py`)
+whenever a `*.feature` card is staged, and `git add`s it into the same commit. That
+makes the test-status matrix (build / runtime-DOSBox / hardware) COMPUTED from each
+card's `@grade` tags — the cards are the source of truth, the table is derived, and
+nobody hand-types "runtime-verified" into an index. Skips quietly if `python3` is
+absent.
+
 A card opts in with two header lines:
 
 ```

@@ -12,6 +12,13 @@
 >   no card is the work surface — bookkeeping not yet done, or a feature not yet carded.
 >
 > Card status: ✅ carded · 🟡 partial · ⬜ no card yet
+>
+> **Test status is GENERATED, not hand-typed.** See `features/STATUS.md` — it is
+> computed from each card's `@grade` tags by `features/gen-status.py` (the
+> pre-commit hook regenerates it on any card change). Do NOT hand-edit
+> build/runtime/hardware status into this index; change the card's tags and the
+> table follows. This index stays the curated commit↔feature *map*; STATUS.md is
+> the derived test matrix.
 
 ---
 
