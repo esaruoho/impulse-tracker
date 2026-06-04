@@ -30,6 +30,7 @@
 #
 # WATCH: PEFunction_AltR_Dispatch PEFunction_ReplicateAtCursor PEFunction_ClearViews
 # RESULT-LOG >> (auto-maintained by .githooks/pre-commit / post-merge)
+#   2026-06-04  direct-commit  touched: PEFunction_ReplicateAtCursor PEFunction_ClearViews
 #
 # IT.TXT source of truth: Alt-R historically = "clear all track views"; this fork
 #   repurposes plain Alt-R to Replicate and keeps the old behaviour on Shift-Alt-R.

@@ -8362,7 +8362,7 @@ Proc            PEFunction_AltR_Dispatch Far
                 Jmp     PEFunction_ReplicateAtCursor
 
 PEFunction_AltR_Shift:
-                Jmp     PEFunction_ClearViews
+                Jmp     PEFunction_ReplicatePatternAtCursor
 
 EndP            PEFunction_AltR_Dispatch
 
@@ -8471,6 +8471,93 @@ PEFunction_ReplicateAtCursorDone:
                 Ret
 
 EndP            PEFunction_ReplicateAtCursor
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+; Replicate Pattern at Cursor (Shift-Alt-R) -- the whole-pattern sibling of
+; PEFunction_ReplicateAtCursor. Same tiling rule, but across ALL 64 channels
+; (full 320-byte rows) instead of one channel's 5-byte event:
+;
+;   If Row > 0:  source = rows 0..Row-1 (full rows); fill rows Row..MaxRow by
+;                repeating that chunk.
+;   If Row == 0: tile row 0 down the whole pattern.
+;
+; So Alt-R replicates the current TRACK, Shift-Alt-R replicates the current
+; PATTERN. (Replaces the old Shift-Alt-R = ClearViews, which the user did not
+; want.) FEATURE-CARD >> features/alt-r-replicate.feature
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+Proc            PEFunction_ReplicatePatternAtCursor Far
+
+                Mov     AX, Row
+                Cmp     AX, MaxRow
+                JA      PEFunction_RepPatDone           ; cursor past last row
+
+                Test    AX, AX
+                JNZ     PEFunction_RepPatHaveChunk
+                Mov     AX, 1                           ; Row == 0: tile row 0 down
+PEFunction_RepPatHaveChunk:
+                Cmp     AX, MaxRow
+                JA      PEFunction_RepPatDone           ; nothing to fill
+                Mov     BP, AX                          ; BP = chunk_len = dest_start
+
+                Mov     DI, 23                          ; undo tag
+                Call    PE_AddToUndoBuffer
+
+                Mov     BL, 0                           ; whole-pattern block: ch 0..
+                Mov     AX, BP
+                Mov     BH, AL                          ; dest_start row
+                Mov     CL, 64                          ; width = all 64 channels
+                Mov     CH, Byte Ptr MaxRow
+                Sub     CH, BH
+                Inc     CH
+                Call    NetworkPatternBlock
+
+                Mov     DS, PatternDataArea
+                Push    DS
+                Pop     ES
+                        Assume DS:Nothing, ES:Nothing
+
+                Mov     CX, BP                          ; CX = dst_row
+                Xor     DX, DX                          ; DX = src_row
+
+PEFunction_RepPatLoop:
+                                                        ; src offset = src_row*320
+                Push    DX
+                Mov     AX, 320
+                Mul     DX
+                Pop     DX
+                Mov     SI, AX
+
+                                                        ; dst offset = dst_row*320
+                Push    DX
+                Push    CX
+                Mov     AX, 320
+                Mul     CX
+                Pop     CX
+                Pop     DX
+                Mov     DI, AX
+
+                                                        ; copy the whole row
+                Push    CX
+                Mov     CX, 160                         ; 320 bytes = 160 words
+                ClD
+                Rep     MovsW
+                Pop     CX
+
+                Inc     DX                              ; src_row = (src+1) mod len
+                Cmp     DX, BP
+                JB      PEFunction_RepPatNoWrap
+                Xor     DX, DX
+PEFunction_RepPatNoWrap:
+
+                Inc     CX                              ; dst_row++ while <= MaxRow
+                Cmp     CX, CS:MaxRow
+                JBE     PEFunction_RepPatLoop
+
+PEFunction_RepPatDone:
+                Mov     AX, 1
+                Ret
+
+EndP            PEFunction_ReplicatePatternAtCursor
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
