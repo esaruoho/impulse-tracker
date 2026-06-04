@@ -80,3 +80,19 @@ states of the Shift-F4 cycle (expand-to-96, reset) must not disturb it.
 - Spec leg: `features/shift-f4-drumkit.feature`
 - Rides with: `features/midi-in-multitimbral.feature`, `features/shift-f4-enters-instrument-mode.feature`
 - Feature commit: `f94f63c`
+
+## Relocation: slot 99 -> slot 01 (2026-06-04, Esa hardware feedback)
+
+First cut built the drumkit at slot 99 (chosen so the 1-96 multitimbral cycle
+couldn't clobber it). Esa ran Shift-F4 and reported: "it created 01-16
+instruments, but no drumkit -- the drumkit is supposed to be the FIRST
+instrument." Slot 99 was technically correct but invisible (buried below the
+empty 18-98 gap; the user looked at the top of the list and saw no kit).
+
+Fix (commit dee41bd): the drumkit is now instrument **01** (first, immediately
+visible), and the 16 multitimbral parts shifted to **02-17** (channel/sample =
+slot-1, via `Sub AX,2` in MCMI_BuildSlot). Expand fills 02-97, reset clears
+18-97, so slot 01 is never touched by the cycle. Channel-10 note: the drumkit
+(01) and the multitimbral ch-10 part (slot 11) both claim ch 10; MMR_FindInst
+returns the first match (slot 01 = drumkit), which is GM-correct (ch 10 = drums).
+Still `@runtime-untested` -- Esa's next run is the proof.

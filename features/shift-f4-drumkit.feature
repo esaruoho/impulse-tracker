@@ -1,20 +1,20 @@
 # =============================================================================
-# WIKI PAGE / REPORT CARD: Shift-F4 also auto-builds a drumkit (slot 99, MIDI ch 10)
+# WIKI PAGE / REPORT CARD: Shift-F4 also auto-builds a drumkit (instrument 01, MIDI ch 10)
 # Convention: GHERKIN-FEATURE-WIKI-PATTERN.md
 #
 # Shift-F4's multitimbral Create step now ALSO builds, automatically, a drumkit
-# instrument at slot 99: every sample slot mapped to a key (C-0 -> sample 01,
-# C#0 -> 02, ...), responding to MIDI channel 10. Separate from the 01-16
+# instrument at slot 01 (the FIRST instrument): every sample slot mapped to a key (C-0 -> sample 01,
+# C#0 -> 02, ...), responding to MIDI channel 10. Separate from the 02-17
 # multitimbral set; the 3-state cycle (expand-96 / reset) never touches it.
 #
 # WHAT THIS CARD SPAWNS (generative SEED):
 #   - CODESPACE  : this .feature + .session.md, PLUS MCMI_BuildDrumkit (the
-#                  slot-99 builder) and the one call added to
+#                  slot-01 builder) and the one call added to
 #                  Music_CreateMIDIInInstruments' Create step.
-#   - THINKSPACE : the .session.md -- why slot 99 (must survive the 1-96 cycle),
+#   - THINKSPACE : the .session.md -- why slot 01 (FIRST, visible; Esa's relocation from 99),
 #                  why fixed pitch C-5 (a real drumkit), and Esa's "00 instrument,
 #                  automatic, not touched by the other 3-state Shift-F4" framing.
-#   - AREASPACE  : owns the drumkit build at slot 99 only; must NOT change the
+#   - AREASPACE  : owns the drumkit build at slot 01 + multitimbral shift to 02-17; must NOT change the
 #                  01-16 multitimbral set, expand-96, or reset.
 #
 # Report-card legend (tags):
@@ -25,13 +25,13 @@
 #   @hw-untested      - not yet run on real DOS hardware (this is what HARDWARE-TEST tracks)
 #
 # Source files linked back to this card (grep "features/shift-f4-drumkit"):
-#   IT_MUSIC.ASM - MCMI_BuildDrumkit (slot 99: [DI+1Fh]=10 MIDI ch; name at +20h;
+#   IT_MUSIC.ASM - MCMI_BuildDrumkit (slot 01: [DI+1Fh]=10 MIDI ch; name at +20h;
 #                  note table at +40h, entry = [60, sample]); called from
 #                  Music_CreateMIDIInInstruments MCMI_Done; MCMI_DrumName data
 #   IT_G.ASM     - Glbl_Shift_F4 Create state (calls Music_CreateMIDIInInstruments)
 #
 # Commit log (the ingest trail):
-#   f94f63c  Shift-F4 also auto-builds a slot-99 drumkit (every sample -> a key, ch 10)
+#   f94f63c  drumkit slot 99 (first cut) -> dee41bd moved to slot 01, multitimbral 02-17
 #
 # SESSION (the vibe record): features/shift-f4-drumkit.session.md
 #
@@ -51,12 +51,12 @@ Feature: Shift-F4 auto-builds a drumkit instrument alongside the 01-16 multitimb
   ready-to-play kit where each key fires a different sample.
 
   @shipped @build-verified @runtime-untested @hw-untested
-  Scenario: Shift-F4 Create builds the drumkit automatically, alongside 01-16
+  Scenario: Shift-F4 Create builds the drumkit (01) + the 16 parts (02-17)
     # cite: IT_MUSIC.ASM Music_CreateMIDIInInstruments MCMI_Done -> Call MCMI_BuildDrumkit
     # cite: commit f94f63c
     Given the user has samples loaded
     When the user confirms the Shift-F4 "create multitimbral" build
-    Then instruments 01-16 are built (the existing multitimbral set)
+    Then the 16 multitimbral parts are built at instruments 02-17
     And a drumkit instrument is also built, with no extra interaction
 
   @shipped @build-verified @runtime-untested @hw-untested
@@ -85,9 +85,9 @@ Feature: Shift-F4 auto-builds a drumkit instrument alongside the 01-16 multitimb
 
   @shipped @build-verified @runtime-untested @hw-untested
   Scenario: The 3-state Shift-F4 cycle never touches the drumkit
-    # cite: drumkit is at slot 99; expand fills 1-96, reset clears 17-96 -- both
-    #       leave 99 alone. So the drumkit persists across expand/reset.
-    Given the drumkit was built at slot 99
-    When the user presses Shift-F4 again to expand to 96, then again to reset
-    Then the drumkit at slot 99 is unchanged
-    And only the 01-96 multitimbral slots are rebuilt/cleared
+    # cite: drumkit is at slot 01; multitimbral parts at 02-17; expand fills
+    #       02-97, reset clears 18-97 -- both leave slot 01 alone.
+    Given the drumkit was built at slot 01
+    When the user presses Shift-F4 again to expand, then again to reset
+    Then the drumkit at slot 01 is unchanged
+    And only the 02-97 multitimbral slots are rebuilt/cleared

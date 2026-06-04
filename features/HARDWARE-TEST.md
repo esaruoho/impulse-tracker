@@ -2,7 +2,7 @@
 
 > **GENERATED** from the `.feature` cards by `features/gen-hwtest.py`. Do not hand-edit. A scenario is **🔴 RED-LINED** until its card is graded `@hw-verified`; flip the card tag (runtime→hardware) and regenerate.
 
-**Build under test:** `v2.354-2026-06-04 @a317aa4`  ·  put this IT.EXE on the DOS machine and work the 🔴 list.
+**Build under test:** `v2.354-2026-06-04 @dee41bd`  ·  put this IT.EXE on the DOS machine and work the 🔴 list.
 
 **Record results without burning chat:** run `./test-impulse-tracker` from the repo (works from any dir) — the TUI walks these, takes works/failed/notes, flips passes to `@hw-verified`, and writes `features/HW-FAILURES.md` (the only thing to send back).
 
@@ -129,7 +129,7 @@
 - 🔴 [ ] Samples->Instruments envelope retention does NOT clash with this
 
 ### `shift-f4-drumkit`
-- 🔴 [ ] Shift-F4 Create builds the drumkit automatically, alongside 01-16  — _DOSBox ✗ — UNTESTED even in emulation_
+- 🔴 [ ] Shift-F4 Create builds the drumkit (01) + the 16 parts (02-17)  — _DOSBox ✗ — UNTESTED even in emulation_
 - 🔴 [ ] The drumkit maps each sample slot to a successive key  — _DOSBox ✗ — UNTESTED even in emulation_
 - 🔴 [ ] The drumkit responds to MIDI channel 10  — _DOSBox ✗ — UNTESTED even in emulation_
 - 🔴 [ ] Each pad plays its sample at fixed base pitch (C-5), not transposed  — _DOSBox ✗ — UNTESTED even in emulation_

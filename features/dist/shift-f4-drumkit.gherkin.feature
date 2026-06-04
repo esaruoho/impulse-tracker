@@ -10,12 +10,12 @@ Feature: Shift-F4 auto-builds a drumkit instrument alongside the 01-16 multitimb
   ready-to-play kit where each key fires a different sample.
 
   @shipped @build-verified @runtime-untested @hw-untested
-  Scenario: Shift-F4 Create builds the drumkit automatically, alongside 01-16
+  Scenario: Shift-F4 Create builds the drumkit (01) + the 16 parts (02-17)
     # cite: IT_MUSIC.ASM Music_CreateMIDIInInstruments MCMI_Done -> Call MCMI_BuildDrumkit
     # cite: commit f94f63c
     Given the user has samples loaded
     When the user confirms the Shift-F4 "create multitimbral" build
-    Then instruments 01-16 are built (the existing multitimbral set)
+    Then the 16 multitimbral parts are built at instruments 02-17
     And a drumkit instrument is also built, with no extra interaction
 
   @shipped @build-verified @runtime-untested @hw-untested
@@ -44,9 +44,9 @@ Feature: Shift-F4 auto-builds a drumkit instrument alongside the 01-16 multitimb
 
   @shipped @build-verified @runtime-untested @hw-untested
   Scenario: The 3-state Shift-F4 cycle never touches the drumkit
-    # cite: drumkit is at slot 99; expand fills 1-96, reset clears 17-96 -- both
-    #       leave 99 alone. So the drumkit persists across expand/reset.
-    Given the drumkit was built at slot 99
-    When the user presses Shift-F4 again to expand to 96, then again to reset
-    Then the drumkit at slot 99 is unchanged
-    And only the 01-96 multitimbral slots are rebuilt/cleared
+    # cite: drumkit is at slot 01; multitimbral parts at 02-17; expand fills
+    #       02-97, reset clears 18-97 -- both leave slot 01 alone.
+    Given the drumkit was built at slot 01
+    When the user presses Shift-F4 again to expand, then again to reset
+    Then the drumkit at slot 01 is unchanged
+    And only the 02-97 multitimbral slots are rebuilt/cleared

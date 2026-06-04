@@ -480,7 +480,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **Behaviour (5 scenarios):**
 
-- Shift-F4 Create builds the drumkit automatically, alongside 01-16 — `@shipped @build-verified @runtime-untested`
+- Shift-F4 Create builds the drumkit (01) + the 16 parts (02-17) — `@shipped @build-verified @runtime-untested`
 - The drumkit maps each sample slot to a successive key — `@shipped @build-verified @runtime-untested`
 - The drumkit responds to MIDI channel 10 — `@shipped @build-verified @runtime-untested`
 - Each pad plays its sample at fixed base pitch (C-5), not transposed — `@shipped @build-verified @runtime-untested`
@@ -490,7 +490,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **Grade:** @build-verified ×5 · @runtime-untested ×5 · @shipped ×5
 
-**Commits:** `f94f63c` Shift-F4 also auto-builds a slot-99 drumkit (every sample -> a key, ch 10)
+**Commits:** `f94f63c` drumkit slot 99 (first cut) -> dee41bd moved to slot 01, multitimbral 02-17
 
 
 <a id="shift-f4-enters-instrument-mode"></a>
