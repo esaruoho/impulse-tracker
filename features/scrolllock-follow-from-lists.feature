@@ -93,7 +93,8 @@ Feature: User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument Li
     When the user presses Scroll Lock
     Then Playback Tracing toggles (on->off or off->on) and the screen does not change
 
-  @shipped @build-verified @runtime-untested @hw-untested
+  @shipped @build-verified @runtime-verified @hw-untested
+  # RUNTIME-VERIFIED 2026-06-04 (Esa): Scroll Lock from F3/F4/F11 "works beautifully".
   Scenario: Scroll Lock in the Sample List opens the Pattern Editor with Follow Mode on
     # cite: IT_OBJ1.ASM:3536 SampleGlobalKeyList DB 0 / DW 146h -> PE_ScrollLockFollow
     # cite: IT_PE.ASM:13339 PE_ScrollLockFollow: Mov TracePlayback,1; SetInfoLine;
@@ -106,7 +107,8 @@ Feature: User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument Li
     And the Scroll Lock LED is lit
     And the Pattern Editor opens, identical to pressing F2
 
-  @shipped @build-verified @runtime-untested @hw-untested
+  @shipped @build-verified @runtime-verified @hw-untested
+  # RUNTIME-VERIFIED 2026-06-04 (Esa): Scroll Lock from F3/F4/F11 "works beautifully".
   Scenario: Scroll Lock in the Instrument List does the same
     # cite: IT_OBJ1.ASM:6666 InstrumentGlobalKeyList DB 0 / DW 146h -> PE_ScrollLockFollow
     #       Entry sits BEFORE the DB 4 "always call I_PlayNote" catch-all so the
@@ -148,7 +150,9 @@ Feature: User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument Li
     And the F2 Pattern Edit Config dialog does NOT open
     # @runtime-untested: fix built + relaunched; awaiting Esa's confirm
 
-  @shipped @build-verified @runtime-untested @hw-untested
+  @shipped @build-verified @runtime-verified @hw-untested
+  # RUNTIME-VERIFIED 2026-06-04 (Esa): Ctrl-F + Scroll Lock from F11 "works
+  # beautifully". F12 is the same single GlobalKeyList entry / code path.
   Scenario: Ctrl-F on the Order List (F11) or Song Variables (F12) enters the editor
     # Same single GlobalKeyList entry; F11=O1_OrderPanningList and F12=O1_ConfigureITList
     # both chain to GlobalKeyList. From these (CurrentMode != 2) the handler forces

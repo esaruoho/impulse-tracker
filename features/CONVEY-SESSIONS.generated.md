@@ -57,4 +57,4 @@
 - Resume: `claude --resume adf61574-f4a4-4fbc-b9db-dbcf7476fc40`
 - Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/adf61574-f4a4-4fbc-b9db-dbcf7476fc40.jsonl
 - Convey tooling touched: CONVEY-SITUATION.md, CONVEY.md, GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, STATUS.md, gen-sessions.py, gen-status.py
-- Cards touched (3): midi-in-multitimbral.feature, midi-out-stop-on-f8.feature, midi-realtime-sync.feature
+- Cards touched (5): midi-in-multitimbral.feature, midi-out-stop-on-f8.feature, midi-realtime-sync.feature, pattern-length-beyond-200.feature, scrolllock-follow-from-lists.feature

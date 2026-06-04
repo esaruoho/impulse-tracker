@@ -84,7 +84,8 @@ Feature: Alt-R replicate at cursor
       (e.g. a 1-row pattern)
     Then Replicate does nothing (clean no-op)
 
-  @shipped @build-verified @runtime-untested @hw-untested
+  @shipped @build-verified @runtime-verified @hw-untested
+  # RUNTIME-VERIFIED 2026-06-04 (Esa): "alt-r and shift-alt-r work beautifully".
   Scenario: Shift-Alt-R replicates the whole PATTERN at cursor
     # Changed 2026-06-04 per Esa's hardware feedback: Shift-Alt-R was the stock
     # ClearViews ("does nothing" to him); he wanted it to replicate the current
