@@ -35,19 +35,19 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 `features/alt-r-replicate.feature` · [session](alt-r-replicate.session.md)
 
-**What it does:** As someone filling a pattern channel with a repeating figure, I want Alt-R to tile the rows above the cursor down to the end of the channel, So that I can lay down a one- or few-row loop and stamp it across the pattern without copy/paste — while Shift-Alt-R keeps the original "clear track views".
+**What it does:** As someone filling a pattern channel with a repeating figure, I want Alt-R to tile the rows above the cursor down to the end of the channel, So that I can lay down a one- or few-row loop and stamp it across the pattern without copy/paste — while Shift-Alt-R does the same across the WHOLE pattern (all channels).
 
 **Behaviour (5 scenarios):**
 
-- Alt-R and Shift-Alt-R are disambiguated by live shift state — `@shipped @build-verified`
-- Cursor above row 0 tiles the rows-above-cursor chunk downward — `@shipped @build-verified @runtime-untested`
-- Cursor on row 0 tiles row 0 down the whole channel — `@shipped @build-verified @runtime-untested`
+- Alt-R and Shift-Alt-R are disambiguated by live shift state — `@shipped @build-verified @hw-verified`
+- Cursor above row 0 tiles the rows-above-cursor chunk downward — `@shipped @build-verified @runtime-verified @hw-verified`
+- Cursor on row 0 tiles row 0 down the whole channel — `@shipped @build-verified @runtime-verified @hw-verified`
 - No-op at the pattern edges — `@shipped @build-verified`
-- Shift-Alt-R preserves the original "clear all track views" — `@shipped @build-verified @runtime-untested`
+- Shift-Alt-R replicates the whole PATTERN at cursor — `@shipped @build-verified @runtime-untested`
 
-**How it does it:** **Key procs:** `PEFunction_AltR_Dispatch`, `PEFunction_ReplicateAtCursor`, `PEFunction_ClearViews` · **Source files:** `IT_PE.ASM`
+**How it does it:** **Key procs:** `PEFunction_AltR_Dispatch`, `PEFunction_ReplicateAtCursor`, `PEFunction_ReplicatePatternAtCursor`, `PEFunction_ClearViews` · **Source files:** `IT_PE.ASM`
 
-**Grade:** @build-verified ×5 · @runtime-untested ×3 · @shipped ×5
+**Grade:** @build-verified ×5 · @hw-verified ×3 · @runtime-untested ×1 · @runtime-verified ×2 · @shipped ×5
 
 **Commits:** `d506486` Alt-R = Replicate at Cursor · `aaada5e` Alt-R tile at row 0 + Shift-Alt-R = ClearViews (original Alt-R)
 

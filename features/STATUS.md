@@ -11,7 +11,7 @@
 
 | Card | Scn | Build | Runtime (DOSBox) | Hardware | Grades present |
 |------|----:|:-----:|:----------------:|:--------:|----------------|
-| alt-r-replicate | 5 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped |
+| alt-r-replicate | 5 | ✓ | ~ partial | ✓ | @build-verified @hw-untested @hw-verified @runtime-untested @runtime-verified @shipped |
 | f11-order-list | 9 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
 | f12-song-variables | 4 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
 | f2-pattern-editor | 4 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
@@ -36,6 +36,6 @@
 ## Tally (computed)
 - Cards: 21
 - Build-verified: 21
-- Runtime-verified in DOSBox-X: 3 full + 2 partial
-- **Hardware-verified: 0**  ·  hardware-untested: 20
+- Runtime-verified in DOSBox-X: 3 full + 3 partial
+- **Hardware-verified: 1**  ·  hardware-untested: 19
 

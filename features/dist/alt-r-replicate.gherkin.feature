@@ -1,40 +1,6 @@
-# =============================================================================
-# WIKI PAGE / REPORT CARD: Alt-R = Replicate at Cursor (Paketti port)
-# Convention: GHERKIN-FEATURE-WIKI-PATTERN.md
-# SESSION >> features/alt-r-replicate.session.md
-#
-# Pattern-editor power tool ported from Paketti / ztrackerprime: Alt-R tiles the
-# current channel from the cursor downward. Alt-R and Shift-Alt-R arrive as the
-# same keyword (1300h), so a dispatcher splits on the live shift state.
-#
-# Report-card legend (tags):
-#   @shipped          - in origin/main
-#   @build-verified   - assembles + links clean (TASM 4.1 / TLINK 3.01)
-#   @hw-untested    - NOT run on real DOS hardware (DOSBox-X is emulation, not metal)
-#   @runtime-untested - NOT yet exercised by running IT.EXE and pressing the key
-#
-# Source files linked back to this card (grep "features/alt-r-replicate"):
-#   IT_PE.ASM  PEFunction_AltR_Dispatch     (8275) split on Left/Right shift
-#   IT_PE.ASM  PEFunction_ReplicateAtCursor (8308) tile current channel
-#   IT_PE.ASM  PEFunction_ClearViews        (Shift-Alt-R = original Alt-R)
-#   IT_PE.ASM  keymap entry 1300h (Alt-R) -> PEFunction_AltR_Dispatch (785)
-#
-# Commit log (the ingest trail):
-#   d506486  Alt-R = Replicate at Cursor
-#   aaada5e  Alt-R tile at row 0 + Shift-Alt-R = ClearViews (original Alt-R)
-#
-# RESULT (triad: .feature spec + .session convo + what shipped):
-#   Feature delivery : d506486, aaada5e   (direct to esaruoho/main, no PR)
-#   This card authored: this session (see RESULT-LOG / git log for this file)
-#   Triad: this .feature <-> alt-r-replicate.session.md <-> those commits
-#
-# WATCH: PEFunction_AltR_Dispatch PEFunction_ReplicateAtCursor PEFunction_ReplicatePatternAtCursor PEFunction_ClearViews
-# RESULT-LOG >> (auto-maintained by .githooks/pre-commit / post-merge)
-#   2026-06-04  direct-commit  touched: PEFunction_ReplicateAtCursor PEFunction_ClearViews
-#
-# IT.TXT source of truth: Alt-R historically = "clear all track views"; this fork
-#   repurposes plain Alt-R to Replicate and keeps the old behaviour on Shift-Alt-R.
-# =============================================================================
+# Pure Gherkin test extracted from features/alt-r-replicate.feature
+# (report-card banner stripped; inline # cite: traceability kept)
+# Regenerate: python3 features/print-card.py features/alt-r-replicate.feature
 
 Feature: Alt-R replicate at cursor
   As someone filling a pattern channel with a repeating figure,

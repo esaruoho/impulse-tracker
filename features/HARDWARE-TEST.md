@@ -2,7 +2,7 @@
 
 > **GENERATED** from the `.feature` cards by `features/gen-hwtest.py`. Do not hand-edit. A scenario is **🔴 RED-LINED** until its card is graded `@hw-verified`; flip the card tag (runtime→hardware) and regenerate.
 
-**Build under test:** `v2.354-2026-06-04 @f94f63c`  ·  put this IT.EXE on the DOS machine and work the 🔴 list.
+**Build under test:** `v2.354-2026-06-04 @5fb263b`  ·  put this IT.EXE on the DOS machine and work the 🔴 list.
 
 **Record results without burning chat:** run `./test-impulse-tracker` from the repo (works from any dir) — the TUI walks these, takes works/failed/notes, flips passes to `@hw-verified`, and writes `features/HW-FAILURES.md` (the only thing to send back).
 
@@ -11,8 +11,8 @@
 | | Count |
 |---|---:|
 | Total scenarios | 126 |
-| 🔴 Need hardware test | 126 |
-| ✅ Hardware-verified | 0 |
+| 🔴 Need hardware test | 123 |
+| ✅ Hardware-verified | 3 |
 
 
 ---
@@ -21,11 +21,11 @@
 
 
 ### `alt-r-replicate`
-- 🔴 [ ] Alt-R and Shift-Alt-R are disambiguated by live shift state
-- 🔴 [ ] Cursor above row 0 tiles the rows-above-cursor chunk downward  — _DOSBox ✗ — UNTESTED even in emulation_
-- 🔴 [ ] Cursor on row 0 tiles row 0 down the whole channel  — _DOSBox ✗ — UNTESTED even in emulation_
+- ✅ OK [x] Alt-R and Shift-Alt-R are disambiguated by live shift state
+- ✅ OK [x] Cursor above row 0 tiles the rows-above-cursor chunk downward  — _DOSBox ✓ (quick re-confirm on metal)_
+- ✅ OK [x] Cursor on row 0 tiles row 0 down the whole channel  — _DOSBox ✓ (quick re-confirm on metal)_
 - 🔴 [ ] No-op at the pattern edges
-- 🔴 [ ] Shift-Alt-R preserves the original "clear all track views"  — _DOSBox ✗ — UNTESTED even in emulation_
+- 🔴 [ ] Shift-Alt-R replicates the whole PATTERN at cursor  — _DOSBox ✗ — UNTESTED even in emulation_
 
 ### `f11-order-list`
 - 🔴 [ ] Alt-D clones the current pattern to the first free slot
