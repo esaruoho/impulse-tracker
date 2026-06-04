@@ -338,6 +338,36 @@ For any pattern-data-touching feature (block ops, replicate, transpose, fill, et
 | Last cursor instrument | `LastInstrument DB` in IT_PE.ASM (F3/F4 cursor tracks this) |
 | Constants | `NONOTE EQU 0FDh` |
 
+### Pattern length ceiling — 200 rows is ARCHITECTURAL, not arbitrary (256/512 impossible)
+
+**A 256- or 512-row pattern is impossible in this fork without a multi-day
+rewrite. The 200-row limit is a hard real-mode-segment blocker, not a soft
+clamp you can bump.** Don't promise longer patterns; the math forbids it.
+
+- The unpacked editor buffer is **one real-mode segment of exactly 64,000
+  bytes** (`IT_PE.ASM:14687` `Segment PatternData PARA 'Data' / DB 64000 Dup(?)`).
+  At 320 bytes/row that is **200 rows exactly** (200 × 320 = 64,000). 201 rows =
+  64,320 B already overflows; ~204 is the true ceiling, 200 is the clean clamp.
+- Row offsets are computed with **16-bit math** (`IT_PE.ASM:8457` `Mov AX,320 /
+  Mul DX / Add AX,BX / Mov SI,AX` — the high word of the `Mul` in DX is
+  discarded). At row ≥ 205 the offset exceeds 65,535 and **wraps mod 64KB**,
+  aliasing an earlier row → silent corruption.
+- Block / row-delete-insert / network ops pass **Row and Height as bytes**
+  (`NetworkPatternBlock` `BH=Row CH=Height`). >255 rows truncates to the low
+  byte; 256 maps to byte 0. An independent blocker on top of the 64KB one.
+- The on-disk `.IT` `Rows` field IS a word (256/512 is *representable* on disk),
+  but the IT 2.xx spec defines the range as **32..200** (`ITTECH.TXT:369`);
+  classic IT / Schism won't reliably read a >200-row pattern. So the FILE isn't
+  the blocker — the EDITOR buffer is.
+- To truly support it you'd need 32-bit/"unreal-mode" big-segment or EMS-paged
+  multi-segment addressing AND to convert *every* `PatternDataArea` access site
+  (block ops, replicate, encode/decode, the mixer's pattern read) AND widen the
+  byte-width Row/Height fields — and the output stops being a spec-conformant
+  `.IT`. Multi-day rewrite with compatibility breakage, not a clamp bump.
+
+Full feasibility analysis (negative-result card, every claim cited by file:line):
+`features/pattern-length-beyond-200.feature` (+ `.session.md`), 2026-06-04.
+
 ### Undo
 
 `PE_AddToUndoBuffer Far` in `IT_PE.ASM` (~line 11361) takes `DI = opaque category tag`. Snapshots the whole pattern into EMS or near-mem. Existing tags **1-22 are taken** (grep `^[[:space:]]*Mov[[:space:]]+DI,[[:space:]]*[0-9]+\s*$` in IT_PE.ASM for the table). Tag 23 was first used by `aaada5e` (Replicate at Cursor). Tag is purely a slot identifier — no name table indexes it.
