@@ -189,6 +189,7 @@ EndS
                 Global  F_InstrumentButtonHandler:Far
 
                 Global  F_NewSong:Far
+                Global  F_SetTimestampSongName:Far
                 Global  F_DrawStringInput:Far
                 Global  F_PreStringInput:Far
                 Global  F_PostStringInput:Far
@@ -5023,6 +5024,8 @@ F_NewSong3:
                 Xor     AX, AX
                 Rep     StosW
 
+                Call    F_SetTimestampSongName  ; default name = creation timestamp
+
                 Mov     DI, 3Ch         ; Clear Time
                 Xor     AX, AX
                 StosW
@@ -5058,6 +5061,116 @@ F_NewSongEnd:
                 Ret
 
 EndP            F_NewSong
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+; FEATURE-CARD >> features/song-name-timestamp-default.feature
+; Stamp a fresh, blank song's name with the wall-clock timestamp at the moment
+; the song came into existence, formatted "YYYY-MM-DD HH:MM" (16 chars, fits the
+; 26-byte name field). Called at startup (IT.ASM) and after F_NewSong blanks the
+; name, so the user never has to look up the date/time to save it into the song.
+; Self-guarding: only overwrites a name whose first byte is 0 (blank) â a loaded
+; song's name is left untouched.
+
+Proc            F_SetTimestampSongName Far
+
+                Push    AX
+                Push    BX
+                Push    CX
+                Push    DX
+                Push    DI
+                Push    ES
+
+                Call    Music_GetSongSegment
+                Mov     ES, AX
+
+                Cmp     Byte Ptr [ES:4], 0      ; Only stamp a blank name
+                JNE     F_SetTimestampDone
+
+                Mov     DI, 4                   ; SongData:4 = song name
+
+                Mov     AH, 2Ah                 ; Get system date
+                Int     21h                     ; CX=year DH=month DL=day
+                Push    DX                      ; preserve month/day across calls
+
+                Mov     AX, CX                  ; --- Year, 4 digits ---
+                Mov     BX, 1000
+                Xor     DX, DX
+                Div     BX                      ; AL=thousands DX=remainder
+                Add     AL, '0'
+                StosB
+                Mov     AX, DX
+                Mov     BX, 100
+                Xor     DX, DX
+                Div     BX                      ; AL=hundreds DX=remainder
+                Add     AL, '0'
+                StosB
+                Mov     AX, DX                  ; remainder 0..99
+                Mov     BL, 10
+                Div     BL                      ; AL=tens AH=units
+                Add     AX, 3030h               ; ASCII both nibbles
+                StosW                           ; tens then units
+
+                Mov     AL, '-'
+                StosB
+
+                Pop     DX                      ; DH=month DL=day
+                Push    DX
+
+                Mov     AL, DH                  ; --- Month, 2 digits ---
+                Xor     AH, AH
+                Mov     BL, 10
+                Div     BL
+                Add     AX, 3030h
+                StosW
+
+                Mov     AL, '-'
+                StosB
+
+                Pop     DX                      ; DH=month DL=day
+
+                Mov     AL, DL                  ; --- Day, 2 digits ---
+                Xor     AH, AH
+                Mov     BL, 10
+                Div     BL
+                Add     AX, 3030h
+                StosW
+
+                Mov     AL, ' '
+                StosB
+
+                Mov     AH, 2Ch                 ; Get system time
+                Int     21h                     ; CH=hour CL=minute DH=second
+                Push    CX                      ; preserve hour/minute
+
+                Mov     AL, CH                  ; --- Hour, 2 digits ---
+                Xor     AH, AH
+                Mov     BL, 10
+                Div     BL
+                Add     AX, 3030h
+                StosW
+
+                Mov     AL, ':'
+                StosB
+
+                Pop     CX                      ; CH=hour CL=minute
+
+                Mov     AL, CL                  ; --- Minute, 2 digits ---
+                Xor     AH, AH
+                Mov     BL, 10
+                Div     BL
+                Add     AX, 3030h
+                StosW
+
+F_SetTimestampDone:
+                Pop     ES
+                Pop     DI
+                Pop     DX
+                Pop     CX
+                Pop     BX
+                Pop     AX
+                Ret
+
+EndP            F_SetTimestampSongName
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
