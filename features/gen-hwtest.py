@@ -22,6 +22,7 @@ EXCLUDE = {
     'convey-test-runner.feature',   # host-side tool, not a tracker feature
 }
 HW_OK = {'@hw-verified', '@hw-tested'}
+DUP_OK = {'@duplicate'}   # redundant branch the user pruned; not a red-line, not a test
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FEAT = os.path.join(ROOT, 'features')
@@ -74,8 +75,10 @@ def main():
         any_fork = False
         for title, tags in scns:
             total += 1
-            hw = bool(tags & HW_OK)
-            if hw:
+            if tags & DUP_OK:
+                box = 'DUP'
+                lead = '⊘'              # pruned duplicate: shown, but not a red-line
+            elif tags & HW_OK:
                 hw_done += 1
                 box = 'OK [x]'
                 lead = '✅'
