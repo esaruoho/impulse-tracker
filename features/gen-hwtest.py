@@ -93,6 +93,9 @@ def main():
              'Do not hand-edit. A scenario is **🔴 RED-LINED** until its card is graded '
              '`@hw-verified`; flip the card tag (runtime→hardware) and regenerate.\n')
     L.append('**Build under test:** `%s`  ·  put this IT.EXE on the DOS machine and work the 🔴 list.\n' % build)
+    L.append('**Record results without burning chat:** run `./test-impulse-tracker` from the repo '
+             '(works from any dir) — the TUI walks these, takes works/failed/notes, flips passes to '
+             '`@hw-verified`, and writes `features/HW-FAILURES.md` (the only thing to send back).\n')
     L.append('**Focus order:** (1) 🔴 fork features below, DOSBox ✓ first (fast confirm), '
              'then DOSBox ✗ (never even emulated). (2) Stock/upstream last (low risk).\n')
     L.append('| | Count |\n|---|---:|\n| Total scenarios | %d |\n| 🔴 Need hardware test | %d |\n| ✅ Hardware-verified | %d |\n'

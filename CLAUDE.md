@@ -10,6 +10,8 @@ Full Impulse Tracker 2.15 source, BSD-3-Clause. Originally released 2014 on Bitb
 
 ## Report Cards & Self-Maintaining Docs (`features/` + git hooks)
 
+**Testing the fork — `./test-impulse-tracker`** (repo-anchored; runs from any directory). This is THE way to verify the fork on real hardware or in DOSBox: it launches the interactive runner (`features/hwtest.py`) over every fork scenario not yet `@hw-verified`, records works / failed (+ how) / skip, flips passes to `@hw-verified` in the cards, and writes `features/HW-FAILURES.md` — the focused worklist of what didn't work. Derived test matrices: `features/STATUS.md` (per-card) and `features/HARDWARE-TEST.md` (per-scenario red-line checklist), both generated from card tags.
+
 This repo documents its own behaviour with **report cards** — Gherkin `.feature` files in `features/`, one per behaviour cluster (e.g. `f11-order-list.feature`, `midi-in-multitimbral.feature`). Each card is the durable understanding-store: Given/When/Then scenarios, each cited to its source proc + line + commit, graded with tags (`@stock` upstream / `@shipped` fork / `@build-verified` / `@hw-untested`). The schema is `GHERKIN-FEATURE-WIKI-PATTERN.md`. **When you change a documented behaviour, update its card in the same motion — don't let it drift.**
 
 Each card carries a **triad**: the `.feature` (the spec/claims), a sibling `*.session.md` (the conversation that spawned it — the "vibe diff"), and a `RESULT-LOG` (what actually shipped: dated commit/PR lines). The triad makes the wiki rebuildable straight from git.

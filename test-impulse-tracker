@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# =============================================================================
+# test-impulse-tracker -- the canonical way to test this fork's changes.
+#
+# Repo-anchored: it locates the repo from its OWN path, so it works from ANY
+# directory. Runs the interactive hardware/runtime test TUI
+# (features/hwtest.py): walk every fork scenario not yet @hw-verified, record
+# works / failed (+ how) / skip, and it flips passes into the cards and writes
+# features/HW-FAILURES.md (the only thing to send back).
+#
+# Usage (from anywhere):
+#   ~/work/impulse-tracker/test-impulse-tracker
+#   ~/work/impulse-tracker/test-impulse-tracker --reset      # start the verdicts over
+#   ~/work/impulse-tracker/test-impulse-tracker --failures    # just rewrite HW-FAILURES.md
+#
+# Tip: add the repo to PATH (e.g. in ~/.zshrc) and just type:
+#   test-impulse-tracker
+# =============================================================================
+set -euo pipefail
+SRC="${BASH_SOURCE[0]:-$0}"
+# resolve symlinks to find the real repo dir
+while [ -h "$SRC" ]; do
+  DIR="$(cd -P "$(dirname "$SRC")" >/dev/null 2>&1 && pwd)"
+  SRC="$(readlink "$SRC")"
+  [[ "$SRC" != /* ]] && SRC="$DIR/$SRC"
+done
+REPO="$(cd -P "$(dirname "$SRC")" >/dev/null 2>&1 && pwd)"
+
+if [ ! -f "$REPO/features/hwtest.py" ]; then
+  echo "test-impulse-tracker: cannot find features/hwtest.py under $REPO" >&2
+  exit 1
+fi
+
+exec python3 "$REPO/features/hwtest.py" "$@"
