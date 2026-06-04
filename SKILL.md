@@ -891,13 +891,17 @@ Total: 1423 bytes after fork extension.
 |-------:|------:|----------|---------|
 | 0 | DW | `DefaultNewPatternLength` | 32..200, default 64. New-empty-pattern row count. |
 | 2 | DB | `ClonePatternMuteWipe` | 0 / 1, default 1. F11 `M` toggle for Alt-D clone behaviour. |
-| 3..15 | DB 13 Dup(0) | reserved | Future fork extensions land here without IT.CFG breakage. |
+| 3 | DB | `MIDIStopOnF8PersistOff` | **FORCE-OFF sense**: 0 = "Send MIDI Stop on F8" ON (default), nonzero = OFF. Mirror of the Keyboard-segment `MIDIStopOnF8Enable`; synced at load (`D_InitDisk` → `MIDI_SetF8StopEnable`) and save (`D_SaveDirectoryConfiguration` reads `MIDI_F8StopEnabled`). Since `222962f`. See `features/midi-out-stop-on-f8.feature`. |
+| 4..15 | DB 12 Dup(0) | reserved | Future fork extensions land here without IT.CFG breakage. |
 
 Backward compatibility: older IT.CFG files (pre-`068648f`) don't have the
 trailing 16 bytes. The read at boot falls short, the static defaults in
-IT_PE.ASM (`DefaultNewPatternLength=64`, `ClonePatternMuteWipe=1`) stay in
-effect, and the next `D_SaveDirectoryConfiguration` writes IT.CFG with the
-block appended. Forward-compatible by design.
+IT_PE.ASM (`DefaultNewPatternLength=64`, `ClonePatternMuteWipe=1`,
+`MIDIStopOnF8PersistOff=0`) stay in effect, and the next
+`D_SaveDirectoryConfiguration` writes IT.CFG with the block appended.
+Forward-compatible by design. **The +3 byte uses force-off sense precisely so
+that pre-`222962f` IT.CFGs — which wrote that byte as a reserved zero — decode
+to ON, not a surprise OFF.**
 
 Accessor: `PE_GetForkExtConfigOffset Far` (IT_PE.ASM), returns
 `DS:DX -> PE_ForkExtConfig`.
