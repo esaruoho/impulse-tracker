@@ -2,7 +2,7 @@
 
 > **GENERATED** from the `.feature` cards by `features/gen-hwtest.py`. Do not hand-edit. A scenario is **🔴 RED-LINED** until its card is graded `@hw-verified`; flip the card tag (runtime→hardware) and regenerate.
 
-**Build under test:** `v2.354-2026-06-04 @dee41bd`  ·  put this IT.EXE on the DOS machine and work the 🔴 list.
+**Build under test:** `v2.354-2026-06-04 @702727c`  ·  put this IT.EXE on the DOS machine and work the 🔴 list.
 
 **Record results without burning chat:** run `./test-impulse-tracker` from the repo (works from any dir) — the TUI walks these, takes works/failed/notes, flips passes to `@hw-verified`, and writes `features/HW-FAILURES.md` (the only thing to send back).
 
@@ -10,8 +10,8 @@
 
 | | Count |
 |---|---:|
-| Total scenarios | 126 |
-| 🔴 Need hardware test | 123 |
+| Total scenarios | 157 |
+| 🔴 Need hardware test | 154 |
 | ✅ Hardware-verified | 3 |
 
 
@@ -26,6 +26,12 @@
 - ✅ OK [x] Cursor on row 0 tiles row 0 down the whole channel  — _DOSBox ✓ (quick re-confirm on metal)_
 - 🔴 [ ] No-op at the pattern edges
 - 🔴 [ ] Shift-Alt-R replicates the whole PATTERN at cursor  — _DOSBox ✗ — UNTESTED even in emulation_
+- 🔴 [ ] Both replicate ops are undoable and show a correct label in the undo list  — _DOSBox ✗ — UNTESTED even in emulation_
+
+### `convey-gardener`
+- 🔴 [ ] It reports, it never mutates  — _DOSBox ✓ (quick re-confirm on metal)_
+- 🔴 [ ] A faithfully-recorded wrong turn is never a finding  — _DOSBox ✓ (quick re-confirm on metal)_
+- 🔴 [ ] Findings are trustworthy — known false positives are suppressed  — _DOSBox ✓ (quick re-confirm on metal)_
 
 ### `f11-order-list`
 - 🔴 [ ] Alt-D clones the current pattern to the first free slot
@@ -76,6 +82,16 @@
 - 🔴 [ ] Channel 1 note entry is unchanged when the router is off
 - 🔴 [ ] The router on/off switch lives on the Shift-F1 MIDI screen
 
+### `midi-out-stop-on-f8`
+- 🔴 [ ] F8 transmits exactly one MIDI Stop byte out
+- 🔴 [ ] The Stop byte does not disturb MIDI running status
+- 🔴 [ ] With no MIDI-capable driver the transmit is a clean no-op
+- 🔴 [ ] A MIDI-thru loopback cannot create a transport storm
+- 🔴 [ ] The toggle defaults ON and is flipped on the Shift-F1 MIDI screen  — _DOSBox ✗ — UNTESTED even in emulation_
+- 🔴 [ ] With the toggle OFF, F8 behaves exactly like stock
+- 🔴 [ ] The toggle survives an Impulse Tracker restart (no separate save step)  — _DOSBox ✗ — UNTESTED even in emulation_
+- 🔴 [ ] Old IT.CFG files (and fresh installs) default the toggle ON  — _DOSBox ✗ — UNTESTED even in emulation_
+
 ### `midi-realtime-sync`
 - 🔴 [ ] Real-Time bytes are dispatched without disturbing running status
 - 🔴 [ ] 0xFA Start plays the song from the top
@@ -100,6 +116,10 @@
 - 🔴 [ ] Normal Sample mode (router off) is unchanged
 - 🔴 [ ] The dot row is the routed instrument, not a sentinel
 
+### `note-cut-toggle`
+- 🔴 [ ] First '1' on an empty (or noted) cell stamps a note cut  — _DOSBox ✗ — UNTESTED even in emulation_
+- 🔴 [ ] Second '1' on a note-cut cell wipes it  — _DOSBox ✗ — UNTESTED even in emulation_
+
 ### `sample-amplify-keeps-playback`
 - 🔴 [ ] Amplifying a sample mid-playback does not stop the song  — _DOSBox ✓ (quick re-confirm on metal)_
 - 🔴 [ ] Alt-M Maximize/Normalize during playback keeps playing through OK/Process  — _DOSBox ✓ (quick re-confirm on metal)_
@@ -121,6 +141,7 @@
 - 🔴 [ ] Shift-Enter on a module bulk-loads its samples into consecutive slots  — _DOSBox ✗ — UNTESTED even in emulation_
 - 🔴 [ ] Loaded samples keep their original module names and loop modes  — _DOSBox ✗ — UNTESTED even in emulation_
 - 🔴 [ ] REGRESSION (reported 2026-06-03) - Shift-Enter on a .MOD hard-hangs IT
+- 🔴 [ ] REGRESSION (reported 2026-06-04) - after bulk-load the loader is parked
 
 ### `shift-enter-load-from-sample-list`
 - 🔴 [ ] Shift-Enter on a module loads its samples one per row
@@ -139,6 +160,19 @@
 - 🔴 [ ] From Sample mode, Shift-F4 + confirm enters Instrument mode with 16 instruments  — _DOSBox ✗ — UNTESTED even in emulation_
 - 🔴 [ ] The mode switch is a direct flag set, NOT the F12 clear/remap path
 - 🔴 [ ] Declining the prompt changes nothing
+
+### `song-name-timestamp-default`
+- 🔴 [ ] The boot default song is named with the startup timestamp  — _DOSBox ✓ (quick re-confirm on metal)_
+- 🔴 [ ] The format is fixed-width 16 chars, zero-padded, no seconds  — _DOSBox ✓ (quick re-confirm on metal)_
+- 🔴 [ ] Making a fresh song re-stamps the name with the new time  — _DOSBox ✗ — UNTESTED even in emulation_
+- 🔴 [ ] A name that already has content is never clobbered  — _DOSBox ✗ — UNTESTED even in emulation_
+- 🔴 [ ] The stamped name is an ordinary editable name, not a locked field  — _DOSBox ✗ — UNTESTED even in emulation_
+
+### `wav-render-keep-playback`
+- 🔴 [ ] A single-pattern render runs faster than realtime (brief freeze)  — _DOSBox ✗ — UNTESTED even in emulation_
+- 🔴 [ ] Whole-song render stays realtime  — _DOSBox ✗ — UNTESTED even in emulation_
+- 🔴 [ ] A song that was playing resumes after the render, on the next MIDI clock  — _DOSBox ✗ — UNTESTED even in emulation_
+- 🔴 [ ] No resume if nothing was playing  — _DOSBox ✗ — UNTESTED even in emulation_
 
 ### `wav-render-quicksave`
 - 🔴 [ ] Shift-Right at the order-list right edge renders to Quicksave only  — _DOSBox ✓ (quick re-confirm on metal)_
@@ -200,6 +234,9 @@
 ### `multitimbral-instrument-play-dots`
 - 🔴 [ ] Instrument mode still shows dots exactly as before  — _stock/upstream — low risk_
 
+### `note-cut-toggle`
+- 🔴 [ ] Note-off and '.' are unchanged  — _stock/upstream — low risk_
+
 ### `sample-amplify-keeps-playback`
 - 🔴 [ ] Alt-M on the Sample List is the Amplify gesture  — _stock/upstream — low risk_
 - 🔴 [ ] The dialog pre-fills the no-clip (normalize) amplification  — _stock/upstream — low risk_
@@ -212,6 +249,9 @@
 ### `shift-f4-enters-instrument-mode`
 - 🔴 [ ] (verify live) cursor + playback survive the mode switch  — _DOSBox ✗ — UNTESTED even in emulation_
 
+### `wav-render-keep-playback`
+- 🔴 [ ] True simultaneous live-audio + render is NOT done
+
 ### `wav-render-quicksave`
 - 🔴 [ ] Two renders in the same second overwrite
 
@@ -221,4 +261,11 @@
 - 🔴 [ ] Shift-Enter bulk-load can no longer feed the crash class
 - 🔴 [ ] The I_MapEnvelope MaxNode<=25 clamp stays as defensive insurance  — _stock/upstream — low risk_
 - 🔴 [ ] (guardrail) Do not re-introduce envelope retention without HW verify
+
+### `pattern-length-beyond-200`
+- 🔴 [ ] The unpacked editor buffer is a single 64,000-byte segment = 200 rows exactly
+- 🔴 [ ] Row offsets are computed with 16-bit math that wraps past ~64KB
+- 🔴 [ ] Block and network ops pack the row index into a byte (cap 255)
+- 🔴 [ ] The on-disk .IT Rows field is a WORD, but the spec defines 32..200  — _stock/upstream — low risk_
+- 🔴 [ ] What it would actually take (NOT done — recorded for honesty)
 

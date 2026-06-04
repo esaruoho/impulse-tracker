@@ -51,6 +51,11 @@ Ctrl-O render → auto-import; Shift-Ctrl-O no-import; Quicksave routing; LL\<HH
 - `74c3fe8` LL\<HHMMSS\>.WAV naming *(carded)*
 - `34b725d` `054f1f0` gitignore rendered samples / repo-root IT.CFG
 
+### ✅ wav-render-keep-playback.feature  (+ .session.md, full triad)
+WAV render no longer kills the groove: a single-PATTERN render runs faster-than-realtime (tight Music_Poll loop; WAVDRV mixes on demand) = a brief freeze not a realtime silence; and if a song was playing, an incoming MIDI clock/transport after the render RESUMES it from the saved order/row (Music_ResumeAfterRender). True-simultaneous = @known-limit (one engine). Build-verified, runtime+hw-untested.
+- `702727c` faster-than-realtime pattern render + MIDI-clock resume after
+- Card + session authored same session
+
 ### ✅ wav-render-reentry-guard.feature  (+ .session.md, full triad)
 A second render gesture mid-render (Right then Shift-Right at the F11 order-list right edge; or a second Ctrl-O/Ctrl-G/Shift-G) now early-stops like Esc and finalizes to Quicksave instead of re-entering the teardown and wedging IT. New `WAV_FinalizeRequest` discriminator. Build-verified, runtime-verified (2026-06-04, Esa).
 - `c9ff6b9` guard re-entrant WAV render gesture; second press early-stops to Quicksave

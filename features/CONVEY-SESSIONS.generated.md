@@ -39,7 +39,7 @@
 - Resume: `claude --resume e86aa106-2936-452b-805c-e3418c03140c`
 - Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/e86aa106-2936-452b-805c-e3418c03140c.jsonl
 - Convey tooling touched: .githooks/post-merge, .githooks/pre-commit, CONVEY-SITUATION.md, CONVEY.md, GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, STATUS.md, gen-status.py, report-card-stamp.sh
-- Cards touched (25): alt-r-replicate.feature, convey-test-runner.feature, day-2026-06-03.feature, f11-order-list.feature, f12-song-variables.feature, f2-pattern-editor.feature, f2-resize-tiles-pattern.feature, f3-sample-list.feature, f4-instrument-list.feature, f6-play-from-order-list-row.feature, midi-in-multitimbral.feature, midi-out-stop-on-f8.feature, midi-realtime-sync.feature, multi-wav.feature … (+11)
+- Cards touched (26): alt-r-replicate.feature, convey-test-runner.feature, day-2026-06-03.feature, f11-order-list.feature, f12-song-variables.feature, f2-pattern-editor.feature, f2-resize-tiles-pattern.feature, f3-sample-list.feature, f4-instrument-list.feature, f6-play-from-order-list-row.feature, midi-in-multitimbral.feature, midi-out-stop-on-f8.feature, midi-realtime-sync.feature, multi-wav.feature … (+12)
 
 ### `2f145369-14b0-48b7-b4cb-1d15255dfcad`  (2026-06-04)
 - Resume: `claude --resume 2f145369-14b0-48b7-b4cb-1d15255dfcad`

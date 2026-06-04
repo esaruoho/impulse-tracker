@@ -32,6 +32,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - [Shift-F4 auto-builds a drumkit instrument alongside the 01-16 multitimbral set](#shift-f4-drumkit) — `shift-f4-drumkit.feature`
 - [Shift-F4 to enable Multitimbral mode also switches Samples -> Instruments](#shift-f4-enters-instrument-mode) — `shift-f4-enters-instrument-mode.feature`
 - [A blank song is born named with its creation timestamp](#song-name-timestamp-default) — `song-name-timestamp-default.feature`
+- [WAV render keeps the music going (fast pattern render + MIDI-clock resume)](#wav-render-keep-playback) — `wav-render-keep-playback.feature`
 - [WAV Quicksave render filename](#wav-render-quicksave) — `wav-render-quicksave.feature`
 - [WAV render re-entry guard -- a second render gesture mid-render stops cleanly](#wav-render-reentry-guard) — `wav-render-reentry-guard.feature`
 
@@ -624,6 +625,28 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **Grade:** @build-verified ×5 · @runtime-untested ×3 · @runtime-verified ×2 · @shipped ×5
 
 **Commits:** `87ad1dd` default blank song name to creation timestamp (YYYY-MM-DD HH:MM)
+
+
+<a id="wav-render-keep-playback"></a>
+## WAV render keeps the music going (fast pattern render + MIDI-clock resume)
+
+`features/wav-render-keep-playback.feature` · [session](wav-render-keep-playback.session.md)
+
+**What it does:** As someone rendering a pattern to WAV while a tune plays, I want the render to barely interrupt playback and the song to resume, So that bouncing a pattern doesn't kill my groove for seconds at a time.
+
+**Behaviour (5 scenarios):**
+
+- A single-pattern render runs faster than realtime (brief freeze) — `@shipped @build-verified @runtime-untested`
+- Whole-song render stays realtime — `@shipped @build-verified @runtime-untested`
+- A song that was playing resumes after the render, on the next MIDI clock — `@shipped @build-verified @runtime-untested`
+- No resume if nothing was playing — `@shipped @build-verified @runtime-untested`
+- True simultaneous live-audio + render is NOT done
+
+**How it does it:** **Key procs:** `Music_ToggleWAVRender`, `Music_Poll`, `Music_ResumeAfterRender`, `Music_PlayPartSong`, `MIDISend` · **Source files:** `IT_MUSIC.ASM`, `SoundDrivers/WAVDRV.ASM`, `IT_K.ASM`
+
+**Grade:** @build-verified ×4 · @runtime-untested ×4 · @shipped ×4
+
+**Commits:** `702727c` faster-than-realtime pattern render + MIDI-clock resume after
 
 
 <a id="wav-render-quicksave"></a>
