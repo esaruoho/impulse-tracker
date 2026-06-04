@@ -123,6 +123,7 @@ include network.inc
         Global  Music_DecreaseSpeed:Far
         Global  Music_GetOutputWaveform:Far
         Global  Music_PlayPartSong:Far
+        Global  Music_ResumeAfterRender:Far
         Global  Music_GetPatternLength:Far
         Global  Music_ShowAutodetectSoundcard:Far
         Global  Music_GetWaveForm:Far
@@ -4748,6 +4749,15 @@ WAV_FinalizeRequest     DB      0       ; 1 = Music_Poll asked for the genuine
                                         ; render gesture mid-render -- that path
                                         ; must early-STOP, not tear down the
                                         ; driver re-entrantly. See WAV_AlreadyActive.
+; Fork: resume-after-render. Captured at render ENTER if a song/pattern was
+; playing; Music_ResumeAfterRender (called from the MIDI F8-clock + FA/FB path
+; in IT_K) resumes from this order/row once the render is done and the live
+; driver is back. So an external MIDI transport/clock arriving after the render
+; restarts playback in place.
+; FEATURE-CARD >> features/wav-render-keep-playback.feature
+WAV_ResumeArmed         DB      0       ; 1 = was playing at render enter
+WAV_ResumeOrder         DW      0       ; CurrentOrder snapshot
+WAV_ResumeRow           DW      0       ; CurrentRow snapshot
 
 ; Song-mode flag: when 1, the WAV render plays the WHOLE SONG (Music_PlaySong
 ; from order 0) instead of a single pattern. Set by D_FormatWAV / D_FormatMWAV
@@ -5669,6 +5679,21 @@ Proc            Music_ToggleWAVRender Far       ; AX = pattern (on enter)
                 ; the pattern that was captured when we entered.
                 Mov     [CS:WAV_PendingPattern], AX
 
+                ; Fork (resume-after-render): snapshot whether a song was playing
+                ; right now, and its position, BEFORE Music_Stop tears it down. If
+                ; it was playing, arm Music_ResumeAfterRender so the next incoming
+                ; MIDI transport/clock (handled in IT_K) restarts it in place.
+                Mov     Byte Ptr [CS:WAV_ResumeArmed], 0
+                Cmp     Word Ptr [CS:PlayMode], 0
+                JE      WAV_NoResumeArm
+                Mov     Byte Ptr [CS:WAV_ResumeArmed], 1
+                Mov     AX, [CS:CurrentOrder]
+                Mov     [CS:WAV_ResumeOrder], AX
+                Mov     AX, [CS:CurrentRow]
+                Mov     [CS:WAV_ResumeRow], AX
+                Mov     AX, [CS:WAV_PendingPattern]     ; restore AX for below
+WAV_NoResumeArm:
+
                 ; Pre-flight: validate the render destination BEFORE touching
                 ; audio state. If the configured Quicksave / Sample directory
                 ; doesn't exist (chdir would fail), bail out now and show an
@@ -6015,7 +6040,47 @@ WAV_PlaySongMode:
                 Call    Music_PlaySong
 
 WAV_PlayDone:
+                ; Song-mode render uses Music_PlaySong, which arms a hardware
+                ; timer (StartClock) -- keep THAT realtime via the async path.
+                ; The single-PATTERN render uses Music_PlayPattern (no timer), so
+                ; drive it FASTER-THAN-REALTIME here: WAVDRV's Poll mixes on demand
+                ; (no timer/DMA wait, "called as often as possible"), so a tight
+                ; Music_Poll loop renders the whole pattern as fast as the CPU can
+                ; mix -- a brief freeze instead of a realtime-length silence.
+                ; FEATURE-CARD >> features/wav-render-keep-playback.feature
+                Cmp     Byte Ptr [CS:WAV_SongMode], 0
+                JNE     WAV_ArmAsyncFinalize
 
+                Mov     Byte Ptr [CS:WAV_AutoFinalize], 0    ; finalize inline below
+                Mov     ECX, 100000                          ; safety cap vs a
+                                                             ;  pathological Bxx loop
+WAV_SyncRenderLoop:
+                Push    ECX
+                Call    Music_Poll                           ; mix one buffer + write
+                Pop     ECX
+                Cmp     Word Ptr [CS:PlayMode], 0
+                JE      WAV_SyncRenderEnded
+                Dec     ECX
+                JNZ     WAV_SyncRenderLoop
+WAV_SyncRenderEnded:
+                                                             ; PlayMode hit 0 -- a
+                                                             ; few more Polls so
+                                                             ; WAVDRV Poll(AX=0)
+                                                             ; flushes + closes the
+                                                             ; file.
+                Mov     CX, 6
+WAV_SyncCloseLoop:
+                Push    CX
+                Call    Music_Poll
+                Pop     CX
+                Loop    WAV_SyncCloseLoop
+                                                             ; finalize inline:
+                                                             ; swap the live driver
+                                                             ; back + import.
+                Mov     Byte Ptr [CS:WAV_FinalizeRequest], 1
+                Jmp     WAV_LeaveMode
+
+WAV_ArmAsyncFinalize:
                 ; Arm async finalize: Music_Poll will trigger leave+import
                 ; once playback stops and WAVDRV has closed its file.
                 Mov     Byte Ptr [CS:WAV_AutoFinalize], 1
@@ -9261,6 +9326,34 @@ Proc            Music_PlayPartSong Far          ; AX = order, BX = row.
                 Ret
 
 EndP            Music_PlayPartSong
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+; Music_ResumeAfterRender - Far. If a song was playing when the last WAV render
+; started (WAV_ResumeArmed) and playback is currently STOPPED (PlayMode==0) and
+; the render is finished (WAV_RenderMode==0), resume from the saved order/row.
+; Called from the MIDI F8-clock / FA-FB path in IT_K, so an external transport or
+; clock arriving after the render restarts playback in place. Idempotent: clears
+; WAV_ResumeArmed once it fires; no-op otherwise.
+; FEATURE-CARD >> features/wav-render-keep-playback.feature
+Proc            Music_ResumeAfterRender Far
+                Cmp     Byte Ptr [CS:WAV_ResumeArmed], 0
+                JE      MRAR_Done
+                Cmp     Byte Ptr [CS:WAV_RenderMode], 0
+                JNE     MRAR_Done               ; still mid-render -> not yet
+                Cmp     Word Ptr [CS:PlayMode], 0
+                JNE     MRAR_Clear              ; already playing -> just disarm
+                Push    AX
+                Push    BX
+                Mov     AX, [CS:WAV_ResumeOrder]
+                Mov     BX, [CS:WAV_ResumeRow]
+                Call    Music_PlayPartSong       ; resume from saved order + row
+                Pop     BX
+                Pop     AX
+MRAR_Clear:
+                Mov     Byte Ptr [CS:WAV_ResumeArmed], 0
+MRAR_Done:
+                Ret
+EndP            Music_ResumeAfterRender
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 

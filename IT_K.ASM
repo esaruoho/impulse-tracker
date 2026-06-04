@@ -18,6 +18,7 @@ include switch.inc
                 Extrn   S_GetDestination:Far
                 Extrn   Music_Stop:Far
                 Extrn   Music_KBPlaySong:Far
+                Extrn   Music_ResumeAfterRender:Far
                 Extrn   MIDIMulti_Route:Far
                 Extrn   Music_SetTempoFromClocks:Far
                 Extrn   Music_IncreaseVolume:Far
@@ -2128,6 +2129,23 @@ MIDISendRTStop:
 MIDISendRTClock:
                 Inc     Word Ptr [MIDIMon_F8Count]
                 Mov     [MIDIMon_LastRT], AL
+
+                ; Fork (resume-after-render): if a song was playing when a WAV
+                ; render started, an incoming clock resumes playback in place.
+                ; Music_ResumeAfterRender is a cheap no-op unless armed. Gated by
+                ; the transport switch + the loader-suppress, like FA/FB/FC.
+                ; FEATURE-CARD >> features/wav-render-keep-playback.feature
+                Cmp     Byte Ptr [MIDITransportEnable], 0
+                JE      MIDISendRTClock_Tempo
+                Cmp     Byte Ptr [MIDISyncLoaderSuppress], 0
+                JNE     MIDISendRTClock_Tempo
+                PushAD
+                Push    ES
+                Call    Music_ResumeAfterRender
+                Pop     ES
+                PopAD
+MIDISendRTClock_Tempo:
+
                 ; F8 MIDI Clock: gated by MIDISyncEnable. When enabled,
                 ; count to 24 (one quarter note at 24 PPQ standard) and
                 ; derive BPM from DOS-tick delta across the beat.
