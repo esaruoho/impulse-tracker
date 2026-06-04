@@ -2,7 +2,7 @@
 
 > **GENERATED** from the `.feature` cards by `features/gen-hwtest.py`. Do not hand-edit. A scenario is **🔴 RED-LINED** until its card is graded `@hw-verified`; flip the card tag (runtime→hardware) and regenerate.
 
-**Build under test:** `(unspecified build)`  ·  put this IT.EXE on the DOS machine and work the 🔴 list.
+**Build under test:** `@2f80bfc`  ·  put this IT.EXE on the DOS machine and work the 🔴 list.
 
 **Record results without burning chat:** run `./test-impulse-tracker` from the repo (works from any dir) — the TUI walks these, takes works/failed/notes, flips passes to `@hw-verified`, and writes `features/HW-FAILURES.md` (the only thing to send back).
 
@@ -10,9 +10,9 @@
 
 | | Count |
 |---|---:|
-| Total scenarios | 156 |
-| 🔴 Need hardware test | 153 |
-| ✅ Hardware-verified | 3 |
+| Total scenarios | 162 |
+| 🔴 Need hardware test | 136 |
+| ✅ Hardware-verified | 26 |
 
 
 ---
@@ -24,12 +24,12 @@
 - ✅ OK [x] Alt-R and Shift-Alt-R are disambiguated by live shift state
 - ✅ OK [x] Cursor above row 0 tiles the rows-above-cursor chunk downward  — _DOSBox ✓ (quick re-confirm on metal)_
 - ✅ OK [x] Cursor on row 0 tiles row 0 down the whole channel  — _DOSBox ✓ (quick re-confirm on metal)_
-- 🔴 [ ] No-op at the pattern edges
-- 🔴 [ ] Shift-Alt-R replicates the whole PATTERN at cursor  — _DOSBox ✓ (quick re-confirm on metal)_
-- 🔴 [ ] Both replicate ops are undoable and show a correct label in the undo list  — _DOSBox ✗ — UNTESTED even in emulation_
+- ✅ OK [x] No-op at the pattern edges
+- ✅ OK [x] Shift-Alt-R replicates the whole PATTERN at cursor  — _DOSBox ✓ (quick re-confirm on metal)_
+- ✅ OK [x] Both replicate ops are undoable and show a correct label in the undo list  — _DOSBox ✗ — UNTESTED even in emulation_
 
 ### `f11-order-list`
-- 🔴 [ ] Alt-D clones the current pattern to the first free slot
+- ✅ OK [x] Alt-D clones the current pattern to the first free slot
 - 🔴 [ ] Alt-E doubles the current pattern's length by tiling
 - 🔴 [ ] M toggles the clone mute-wipe mode
 - 🔴 [ ] Ctrl-O renders the active pattern to WAV (Shift-Ctrl-O = no import)
@@ -46,9 +46,9 @@
 - 🔴 [ ] A freshly-entered empty pattern uses the remembered length
 
 ### `f2-resize-tiles-pattern`
-- 🔴 [ ] 64 -> 128 duplicates the 64 rows once  — _DOSBox ✓ (quick re-confirm on metal)_
-- 🔴 [ ] 64 -> 192 duplicates the 64 rows twice  — _DOSBox ✓ (quick re-confirm on metal)_
-- 🔴 [ ] Non-multiple lengths get a partial final copy ("until the end")  — _DOSBox ✓ (quick re-confirm on metal)_
+- ✅ OK [x] 64 -> 128 duplicates the 64 rows once  — _DOSBox ✓ (quick re-confirm on metal)_
+- ✅ OK [x] 64 -> 192 duplicates the 64 rows twice  — _DOSBox ✓ (quick re-confirm on metal)_
+- ✅ OK [x] Non-multiple lengths get a partial final copy ("until the end")  — _DOSBox ✓ (quick re-confirm on metal)_
 - 🔴 [ ] Shrinking the pattern does not tile
 - 🔴 [ ] Scope is the F2 config path only
 - 🔴 [ ] The tiled buffer persists via the working-copy model
@@ -116,19 +116,19 @@
 - 🔴 [ ] Second '1' on a note-cut cell wipes it  — _DOSBox ✗ — UNTESTED even in emulation_
 
 ### `sample-amplify-keeps-playback`
-- 🔴 [ ] Amplifying a sample mid-playback does not stop the song  — _DOSBox ✓ (quick re-confirm on metal)_
-- 🔴 [ ] Alt-M Maximize/Normalize during playback keeps playing through OK/Process  — _DOSBox ✓ (quick re-confirm on metal)_
-- 🔴 [ ] REGRESSION (reported 2026-06-03) - Alt-M still stopped F6 playback  — _DOSBox ✓ (quick re-confirm on metal)_
+- ✅ OK [x] Amplifying a sample mid-playback does not stop the song  — _DOSBox ✓ (quick re-confirm on metal)_
+- ✅ OK [x] Alt-M Maximize/Normalize during playback keeps playing through OK/Process  — _DOSBox ✓ (quick re-confirm on metal)_
+- ✅ OK [x] REGRESSION (reported 2026-06-03) - Alt-M still stopped F6 playback  — _DOSBox ✓ (quick re-confirm on metal)_
 - 🔴 [ ] Only the amplified sample's voices are silenced, not all channels
 - 🔴 [ ] The mixer never reads the sample while it is being rewritten
 - 🔴 [ ] AX (the sample number) survives the silence call
 
 ### `scrolllock-follow-from-lists`
-- 🔴 [ ] Scroll Lock in the Sample List opens the Pattern Editor with Follow Mode on  — _DOSBox ✓ (quick re-confirm on metal)_
-- 🔴 [ ] Scroll Lock in the Instrument List does the same  — _DOSBox ✓ (quick re-confirm on metal)_
-- 🔴 [ ] Ctrl-F in the Sample List (F3) or Instrument List (F4)  — _DOSBox ✓ (quick re-confirm on metal)_
+- ✅ OK [x] Scroll Lock in the Sample List opens the Pattern Editor with Follow Mode on  — _DOSBox ✓ (quick re-confirm on metal)_
+- ✅ OK [x] Scroll Lock in the Instrument List does the same  — _DOSBox ✓ (quick re-confirm on metal)_
+- ✅ OK [x] Ctrl-F in the Sample List (F3) or Instrument List (F4)  — _DOSBox ✓ (quick re-confirm on metal)_
 - 🔴 [ ] Ctrl-F INSIDE the Pattern Editor (F2) toggles Follow Mode, not the config dialog  — _DOSBox ✗ — UNTESTED even in emulation_
-- 🔴 [ ] Ctrl-F on the Order List (F11) or Song Variables (F12) enters the editor  — _DOSBox ✓ (quick re-confirm on metal)_
+- ✅ OK [x] Ctrl-F on the Order List (F11) or Song Variables (F12) enters the editor  — _DOSBox ✓ (quick re-confirm on metal)_
 - 🔴 [ ] Follow Mode is forced ON, never toggled off, from the lists
 - 🔴 [ ] The handler hands Glbl_F2 the dispatcher's own DS (no segment damage)
 
@@ -145,38 +145,42 @@
 - 🔴 [ ] Samples->Instruments envelope retention does NOT clash with this
 
 ### `shift-f4-drumkit`
-- 🔴 [ ] Shift-F4 Create builds the drumkit (01) + the 16 parts (02-17)  — _DOSBox ✓ (quick re-confirm on metal)_
+- ✅ OK [x] Shift-F4 Create builds the drumkit (01) + the 16 parts (02-17)  — _DOSBox ✓ (quick re-confirm on metal)_
 - 🔴 [ ] The drumkit maps each sample slot to a successive key  — _DOSBox ✗ — UNTESTED even in emulation_
 - 🔴 [ ] The drumkit responds to MIDI channel 10  — _DOSBox ✗ — UNTESTED even in emulation_
 - 🔴 [ ] Each pad plays its sample at fixed base pitch (C-5), not transposed  — _DOSBox ✗ — UNTESTED even in emulation_
 - 🔴 [ ] The 3-state Shift-F4 cycle never touches the drumkit  — _DOSBox ✗ — UNTESTED even in emulation_
 
 ### `shift-f4-enters-instrument-mode`
-- 🔴 [ ] From Sample mode, Shift-F4 + confirm enters Instrument mode with 16 instruments  — _DOSBox ✗ — UNTESTED even in emulation_
+- ✅ OK [x] From Sample mode, Shift-F4 + confirm enters Instrument mode with 16 instruments  — _DOSBox ✓ (quick re-confirm on metal)_
 - 🔴 [ ] The mode switch is a direct flag set, NOT the F12 clear/remap path
 - 🔴 [ ] Declining the prompt changes nothing
 
 ### `song-name-timestamp-default`
-- 🔴 [ ] The boot default song is named with the startup timestamp  — _DOSBox ✓ (quick re-confirm on metal)_
-- 🔴 [ ] The format is fixed-width 16 chars, zero-padded, no seconds  — _DOSBox ✓ (quick re-confirm on metal)_
+- ✅ OK [x] The boot default song is named with the startup timestamp  — _DOSBox ✓ (quick re-confirm on metal)_
+- ✅ OK [x] The format is fixed-width 16 chars, zero-padded, no seconds  — _DOSBox ✓ (quick re-confirm on metal)_
 - 🔴 [ ] Making a fresh song re-stamps the name with the new time  — _DOSBox ✗ — UNTESTED even in emulation_
 - 🔴 [ ] A name that already has content is never clobbered  — _DOSBox ✗ — UNTESTED even in emulation_
 - 🔴 [ ] The stamped name is an ordinary editable name, not a locked field  — _DOSBox ✗ — UNTESTED even in emulation_
+
+### `undo-messaging`
+- 🔴 [ ] A type with no offset-table entry draws garbage (the trap)  — _DOSBox ✓ (quick re-confirm on metal)_
+- 🔴 [ ] Worked example - Alt-R / Shift-Alt-R replicate labels  — _DOSBox ✗ — UNTESTED even in emulation_
 
 ### `wav-render-keep-playback`
 - 🔴 [ ] A single-pattern render runs faster than realtime (brief freeze)  — _DOSBox ✗ — UNTESTED even in emulation_
 - 🔴 [ ] Whole-song render stays realtime  — _DOSBox ✗ — UNTESTED even in emulation_
 - 🔴 [ ] A song that was playing resumes after the render, on the next MIDI clock  — _DOSBox ✗ — UNTESTED even in emulation_
-- 🔴 [ ] Standalone Ctrl-O resumes on its own, with no external clock  — _DOSBox ✓ (quick re-confirm on metal)_
-- 🔴 [ ] Resume matches the play mode that was active at render enter  — _DOSBox ✓ (quick re-confirm on metal)_
+- ✅ OK [x] Standalone Ctrl-O resumes on its own, with no external clock  — _DOSBox ✓ (quick re-confirm on metal)_
+- ✅ OK [x] Resume matches the play mode that was active at render enter  — _DOSBox ✓ (quick re-confirm on metal)_
 - 🔴 [ ] No resume if nothing was playing  — _DOSBox ✗ — UNTESTED even in emulation_
 
 ### `wav-render-quicksave`
-- 🔴 [ ] Shift-Right at the order-list right edge renders to Quicksave only  — _DOSBox ✓ (quick re-confirm on metal)_
+- ✅ OK [x] Shift-Right at the order-list right edge renders to Quicksave only  — _DOSBox ✓ (quick re-confirm on metal)_
 - 🔴 [ ] Plain Right at the same edge renders AND auto-imports  — _DOSBox ✗ — UNTESTED even in emulation_
-- 🔴 [ ] A single-pattern Quicksave render is named by wall-clock time  — _DOSBox ✓ (quick re-confirm on metal)_
+- ✅ OK [x] A single-pattern Quicksave render is named by wall-clock time  — _DOSBox ✓ (quick re-confirm on metal)_
 - 🔴 [ ] The prefix is a static "LL" (Lackluster), not derived from the song
-- 🔴 [ ] The extension is a real .WAV, not the 3-digit pattern number  — _DOSBox ✓ (quick re-confirm on metal)_
+- ✅ OK [x] The extension is a real .WAV, not the 3-digit pattern number  — _DOSBox ✓ (quick re-confirm on metal)_
 - 🔴 [ ] The auto-import opens the exact file WAVDRV wrote  — _DOSBox ✗ — UNTESTED even in emulation_
 - 🔴 [ ] Multi-WAV, full-song, and user-named renders keep <PFX><NNNN>
 
@@ -245,6 +249,12 @@
 
 ### `shift-f4-enters-instrument-mode`
 - 🔴 [ ] (verify live) cursor + playback survive the mode switch  — _DOSBox ✗ — UNTESTED even in emulation_
+
+### `undo-messaging`
+- 🔴 [ ] Each undo slot stores a TYPE number that indexes a string table  — _DOSBox ✓ (quick re-confirm on metal)_
+- 🔴 [ ] Recording an undo step assigns its type  — _DOSBox ✓ (quick re-confirm on metal)_
+- 🔴 [ ] The undo list draws each step's name from the table  — _DOSBox ✓ (quick re-confirm on metal)_
+- 🔴 [ ] Adding a new named undo step (the four-step recipe)
 
 ### `wav-render-keep-playback`
 - 🔴 [ ] True simultaneous live-audio + render is NOT done

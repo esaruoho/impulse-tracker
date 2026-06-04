@@ -76,7 +76,7 @@ Feature: Sample Amplify keeps the song playing
 
   # --- The user-visible behaviour --------------------------------------------
 
-  @shipped @build-verified @runtime-verified @hw-untested
+  @shipped @build-verified @runtime-verified @hw-verified
   Scenario: Amplifying a sample mid-playback does not stop the song
     # cite: IT_I.ASM I_AmplifySample apply path (~3997): Music_Stop replaced by
     #       Music_SilenceSampleVoices (AL = sample slot, 1..99)
@@ -87,7 +87,7 @@ Feature: Sample Amplify keeps the song playing
     Then the sample is amplified (scaled in place, clipped)
     And the song keeps playing -- only voices using THIS sample fall silent
 
-  @shipped @build-verified @runtime-verified @hw-untested
+  @shipped @build-verified @runtime-verified @hw-verified
   Scenario: Alt-M Maximize/Normalize during playback keeps playing through OK/Process
     # The user-journey form (Esa's wantlist phrasing). "Amplify" IS IT's
     # Maximize/Normalize: the peak-scan pre-fills the no-clip slider value (see
@@ -104,7 +104,7 @@ Feature: Sample Amplify keeps the song playing
     Then the sample is scaled by that amount
     And the playback does not stop
 
-  @bug @runtime-verified
+  @bug @runtime-verified @hw-verified
   Scenario: REGRESSION (reported 2026-06-03) - Alt-M still stopped F6 playback
     # Reported by Esa: "playback on (F6), i hit alt-M on a sample, and the
     # playback stopped." The e5e5c38 fix swapped the ENTRY Music_Stop for

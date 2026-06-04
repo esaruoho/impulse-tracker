@@ -1,0 +1,15 @@
+{
+  "$comment": "Project-scoped Convey hook. Merges with (does NOT replace) any user-level ~/.claude/settings.json hooks. SessionEnd -> the Convey distiller: when a Convey conversation in this repo ends, it regenerates features/CONVEY-SESSIONS.generated.md and writes a per-session stub at features/sessions/<id>.md. Defensive (always exits 0), metadata-only, no git. See features/convey-session-distiller.feature.",
+  "hooks": {
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/features/convey-distill.py\""
+          }
+        ]
+      }
+    ]
+  }
+}

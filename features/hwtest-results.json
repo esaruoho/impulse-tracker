@@ -50,5 +50,53 @@
  "alt-r-replicate::Alt-R and Shift-Alt-R are disambiguated by live shift state": {
   "verdict": "fail",
   "note": "q"
+ },
+ "alt-r-replicate::Shift-Alt-R replicates the whole PATTERN at cursor": {
+  "verdict": "pass",
+  "note": ""
+ },
+ "scrolllock-follow-from-lists::Scroll Lock in the Sample List opens the Pattern Editor with Follow Mode on": {
+  "verdict": "pass",
+  "note": ""
+ },
+ "scrolllock-follow-from-lists::Scroll Lock in the Instrument List does the same": {
+  "verdict": "pass",
+  "note": ""
+ },
+ "scrolllock-follow-from-lists::Ctrl-F on the Order List (F11) or Song Variables (F12) enters the editor": {
+  "verdict": "pass",
+  "note": ""
+ },
+ "shift-f4-drumkit::Shift-F4 Create builds the drumkit (01) + the 16 parts (02-17)": {
+  "verdict": "pass",
+  "note": ""
+ },
+ "song-name-timestamp-default::The boot default song is named with the startup timestamp": {
+  "verdict": "pass",
+  "note": ""
+ },
+ "song-name-timestamp-default::The format is fixed-width 16 chars, zero-padded, no seconds": {
+  "verdict": "pass",
+  "note": ""
+ },
+ "wav-render-keep-playback::Standalone Ctrl-O resumes on its own, with no external clock": {
+  "verdict": "pass",
+  "note": ""
+ },
+ "wav-render-keep-playback::Resume matches the play mode that was active at render enter": {
+  "verdict": "pass",
+  "note": ""
+ },
+ "alt-r-replicate::No-op at the pattern edges": {
+  "verdict": "pass",
+  "note": ""
+ },
+ "alt-r-replicate::Both replicate ops are undoable and show a correct label in the undo list": {
+  "verdict": "pass",
+  "note": ""
+ },
+ "f11-order-list::Alt-D clones the current pattern to the first free slot": {
+  "verdict": "pass",
+  "note": ""
  }
 }

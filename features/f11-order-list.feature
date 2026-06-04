@@ -87,7 +87,7 @@ Feature: User Presses F11 (Order List)
 
   # --- Fork power tools (commit 1a7aa16 and follow-ups) ----------------------
 
-  @shipped @build-verified @hw-untested
+  @shipped @build-verified @hw-verified
   Scenario: Alt-D clones the current pattern to the first free slot
     # cite: IT_PE.ASM:2827 PE_OrderList_ClonePattern;
     #       IT_MUSIC.ASM:9983 Music_FindFreePattern (first type-0 slot, 0..199)

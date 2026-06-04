@@ -60,7 +60,7 @@ Feature: A blank song is born named with its creation timestamp
   So that I can save the moment of creation into the song without ever
   having to read a clock or type the date myself.
 
-  @shipped @build-verified @runtime-verified @hw-untested
+  @shipped @build-verified @runtime-verified @hw-verified
   Scenario: The boot default song is named with the startup timestamp
     # cite: IT.ASM StartUp calls F_SetTimestampSongName after
     #       Music_AutoDetectSoundCard, before M_Object1List (the main loop)
@@ -71,7 +71,7 @@ Feature: A blank song is born named with its creation timestamp
     When the user opens F12 and looks at the Song Name
     Then it reads the start time as "YYYY-MM-DD HH:MM" (e.g. "2026-06-04 15:07")
 
-  @shipped @build-verified @runtime-verified @hw-untested
+  @shipped @build-verified @runtime-verified @hw-verified
   Scenario: The format is fixed-width 16 chars, zero-padded, no seconds
     # cite: F_SetTimestampSongName emits 4-digit year, "-", 2-digit month, "-",
     #       2-digit day, " ", 2-digit hour, ":", 2-digit minute = 16 bytes

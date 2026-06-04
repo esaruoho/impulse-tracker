@@ -57,7 +57,7 @@ Feature: F2 pattern-length increase duplicates (tiles) the existing content
   So that growing 64 -> 128 (or 192) gives me repeats of my material to edit,
   not a block of empty rows I have to re-enter.
 
-  @shipped @build-verified @runtime-verified @hw-untested
+  @shipped @build-verified @runtime-verified @hw-verified
   Scenario: 64 -> 128 duplicates the 64 rows once
     # cite: IT_G.ASM Glbl_F2_1 captures F2_OldRowCount on entry, calls
     #       PE_TilePatternToLength on leave when NumberOfRows grew
@@ -68,7 +68,7 @@ Feature: F2 pattern-length increase duplicates (tiles) the existing content
     Then rows 64..127 are a copy of rows 0..63
     And the pattern is 128 rows of the original material, twice
 
-  @shipped @build-verified @runtime-verified @hw-untested
+  @shipped @build-verified @runtime-verified @hw-verified
   Scenario: 64 -> 192 duplicates the 64 rows twice
     # cite: PE_TilePatternToLength loops dest rows with a wrapping source index
     Given a pattern of 64 rows
@@ -76,7 +76,7 @@ Feature: F2 pattern-length increase duplicates (tiles) the existing content
     Then rows 64..127 and 128..191 are each a copy of rows 0..63
     And the pattern is the original material, three times
 
-  @shipped @build-verified @runtime-verified @hw-untested
+  @shipped @build-verified @runtime-verified @hw-verified
   Scenario: Non-multiple lengths get a partial final copy ("until the end")
     # cite: the row loop fills exactly NEW-OLD rows, wrapping the source; the
     #       last copy is partial when NEW isn't a multiple of OLD

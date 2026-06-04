@@ -17,6 +17,7 @@ EXCLUDE = {
     'day-2026-06-03.feature',              # day rollup
     'session-2026-06-03-multitimbral-and-whitelabel.feature',  # session rollup
     'convey-test-runner.feature',          # host-side tool, not a tracker feature
+    'convey-session-distiller.feature',    # host-side tool (the SessionEnd distiller)
 }
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

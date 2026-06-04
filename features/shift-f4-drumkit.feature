@@ -50,7 +50,7 @@ Feature: Shift-F4 auto-builds a drumkit instrument alongside the 01-16 multitimb
   So that, in the same gesture that builds my 16 single-sample parts, I get a
   ready-to-play kit where each key fires a different sample.
 
-  @shipped @build-verified @runtime-verified @hw-untested
+  @shipped @build-verified @runtime-verified @hw-verified
   # RUNTIME-VERIFIED 2026-06-04 (Esa): "shift-f4 drumkit works pretty well" --
   # overall create/build confirmed working live; the granular sub-behaviours
   # below (MIDI ch10 response, fixed-pitch playback) not individually vetted yet.

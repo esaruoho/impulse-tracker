@@ -93,7 +93,7 @@ Feature: User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument Li
     When the user presses Scroll Lock
     Then Playback Tracing toggles (on->off or off->on) and the screen does not change
 
-  @shipped @build-verified @runtime-verified @hw-untested
+  @shipped @build-verified @runtime-verified @hw-verified
   # RUNTIME-VERIFIED 2026-06-04 (Esa): Scroll Lock from F3/F4/F11 "works beautifully".
   Scenario: Scroll Lock in the Sample List opens the Pattern Editor with Follow Mode on
     # cite: IT_OBJ1.ASM:3536 SampleGlobalKeyList DB 0 / DW 146h -> PE_ScrollLockFollow
@@ -107,7 +107,7 @@ Feature: User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument Li
     And the Scroll Lock LED is lit
     And the Pattern Editor opens, identical to pressing F2
 
-  @shipped @build-verified @runtime-verified @hw-untested
+  @shipped @build-verified @runtime-verified @hw-verified
   # RUNTIME-VERIFIED 2026-06-04 (Esa): Scroll Lock from F3/F4/F11 "works beautifully".
   Scenario: Scroll Lock in the Instrument List does the same
     # cite: IT_OBJ1.ASM:6666 InstrumentGlobalKeyList DB 0 / DW 146h -> PE_ScrollLockFollow
@@ -125,7 +125,7 @@ Feature: User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument Li
   # special-key flag) made Ctrl-F do NOTHING at runtime -> must be DB 1 (the
   # Ctrl+letter class, like stock Ctrl-S/Q/R); and a first cut with per-screen
   # F3/F4 copies was collapsed into this one entry.
-  @shipped @build-verified @runtime-verified @hw-untested
+  @shipped @build-verified @runtime-verified @hw-verified
   Scenario: Ctrl-F in the Sample List (F3) or Instrument List (F4)
     # RUNTIME-VERIFIED 2026-06-03: Esa confirmed on a live IT.EXE (DOSBox-X) that
     # Ctrl-F works in both F3 and F4. (I drove F3 then Ctrl-F via the GUI; Esa
@@ -150,7 +150,7 @@ Feature: User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument Li
     And the F2 Pattern Edit Config dialog does NOT open
     # @runtime-untested: fix built + relaunched; awaiting Esa's confirm
 
-  @shipped @build-verified @runtime-verified @hw-untested
+  @shipped @build-verified @runtime-verified @hw-verified
   # RUNTIME-VERIFIED 2026-06-04 (Esa): Ctrl-F + Scroll Lock from F11 "works
   # beautifully". F12 is the same single GlobalKeyList entry / code path.
   Scenario: Ctrl-F on the Order List (F11) or Song Variables (F12) enters the editor
