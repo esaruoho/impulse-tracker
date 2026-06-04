@@ -51,10 +51,10 @@
 - Resume: `claude --resume 6ddcab86-2462-4295-9717-0b3f0e837425`
 - Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/6ddcab86-2462-4295-9717-0b3f0e837425.jsonl
 - Convey tooling touched: .githooks/post-merge, .githooks/pre-commit, CONVEY-SITUATION.md, CONVEY.md, GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, STATUS.md, gen-sessions.py, gen-status.py, report-card-stamp.sh
-- Cards touched (16): alt-r-replicate.feature, convey-test-runner.feature, day-2026-06-03.feature, f11-order-list.feature, f12-song-variables.feature, f2-pattern-editor.feature, f2-resize-tiles-pattern.feature, f3-sample-list.feature, f4-instrument-list.feature, f6-play-from-order-list-row.feature, midi-in-multitimbral.feature, note-cut-toggle.feature, pattern-length-beyond-200.feature, sample-amplify-keeps-playback.feature … (+2)
+- Cards touched (20): alt-r-replicate.feature, convey-test-runner.feature, day-2026-06-03.feature, f11-order-list.feature, f12-song-variables.feature, f2-pattern-editor.feature, f2-resize-tiles-pattern.feature, f3-sample-list.feature, f4-instrument-list.feature, f6-play-from-order-list-row.feature, midi-in-multitimbral.feature, note-cut-toggle.feature, pattern-length-beyond-200.feature, sample-amplify-keeps-playback.feature … (+6)
 
 ### `adf61574-f4a4-4fbc-b9db-dbcf7476fc40`  (2026-06-04)
 - Resume: `claude --resume adf61574-f4a4-4fbc-b9db-dbcf7476fc40`
 - Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/adf61574-f4a4-4fbc-b9db-dbcf7476fc40.jsonl
 - Convey tooling touched: CONVEY-SITUATION.md, CONVEY.md, GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, STATUS.md, gen-sessions.py, gen-status.py
-- Cards touched (10): alt-r-replicate.feature, convey-test-runner.feature, midi-in-multitimbral.feature, midi-out-stop-on-f8.feature, midi-realtime-sync.feature, pattern-length-beyond-200.feature, scrolllock-follow-from-lists.feature, wav-render-keep-playback.feature, wav-render-quicksave.feature, wav-render-reentry-guard.feature
+- Cards touched (16): alt-r-replicate.feature, convey-test-runner.feature, f11-order-list.feature, f2-resize-tiles-pattern.feature, midi-in-multitimbral.feature, midi-out-stop-on-f8.feature, midi-realtime-sync.feature, pattern-length-beyond-200.feature, sample-amplify-keeps-playback.feature, scrolllock-follow-from-lists.feature, shift-f4-drumkit.feature, song-name-timestamp-default.feature, undo-messaging.feature, wav-render-keep-playback.feature … (+2)
