@@ -4067,6 +4067,8 @@ MIDIMultiBanks  DB      0
 MCMI_Count      DB      0       ; scratch: channels assigned this run
 MCMI_Name       DB      'MIDI In Ch 01' ; 13 chars; digits patched per slot
 MCMI_Chan       DB      0
+MCMI_DrumName     DB    'MIDI Drumkit'   ; name for the auto-built drumkit (slot 99)
+MCMI_DrumName_Len EQU   $ - MCMI_DrumName
 
 ; Music_CreateMIDIInInstruments - build instruments 1..16 directly so they
 ; line up with samples 1..16: instrument N gets MIDI-in channel N (header
@@ -4086,6 +4088,7 @@ MCMI_Loop:
                 Inc     BX
                 Jmp     MCMI_Loop
 MCMI_Done:
+                Call    MCMI_BuildDrumkit       ; also build the slot-99 drumkit
                 Mov     Byte Ptr [MIDIMultiBanks], 1
                 Mov     Byte Ptr [MIDIMultiEnable], 1
                 Mov     AX, 16
@@ -4219,6 +4222,65 @@ MCMI_BS_Map:
                 Pop     AX
                 Ret
 EndP            MCMI_BuildSlot
+
+; MCMI_BuildDrumkit - Near. Build instrument 99 as a "drumkit": MIDI-in channel
+; 10, name 'MIDI Drumkit', and every sample slot mapped to a key -- note i plays
+; sample (i+1) for i = 0..98 (C-0 -> sample 01, C#0 -> 02, ... 99 samples), each
+; pad at FIXED pitch C-5 (note byte 60) so samples play at their base rate (a
+; real drumkit, not transposed). Notes 99..119 -> no sample. Built in the Create
+; step; lives at slot 99 so the 01-16 / expand-96 / reset cycle never touches it.
+; Caller must have DS = Music. Preserves nothing of interest beyond what it pushes.
+; FEATURE-CARD >> features/shift-f4-drumkit.feature
+Proc            MCMI_BuildDrumkit Near
+                Push    AX
+                Push    BX
+                Push    CX
+                Push    SI
+                Push    DI
+                Push    ES
+
+                Mov     AX, 99
+                Call    Music_ClearInstrument
+                Mov     DI, 198                 ; 99 * 2
+                Mov     ES, SongDataArea
+                Mov     DI, [ES:DI+64712]       ; ES:DI -> instrument 99 header
+
+                Mov     Byte Ptr [ES:DI+1Fh], 10 ; respond to MIDI channel 10
+
+                Push    DI                      ; name at +20h
+                Add     DI, 20h
+                Mov     SI, Offset MCMI_DrumName
+                Mov     CX, MCMI_DrumName_Len
+                ClD
+                Rep     MovsB
+                Pop     DI
+
+                Push    DI                      ; note table at +40h
+                Add     DI, 40h
+                Xor     BX, BX                  ; BX = note index 0..119
+MCMI_BD_Map:
+                Mov     Byte Ptr [ES:DI], 60    ; note-to-play = C-5 (fixed pitch)
+                Mov     AX, BX
+                Inc     AX                      ; AX = sample = note index + 1
+                Cmp     AX, 99
+                JBE     MCMI_BD_HaveSample
+                Xor     AX, AX                  ; notes 99..119 -> no sample
+MCMI_BD_HaveSample:
+                Mov     [ES:DI+1], AL           ; sample byte of this note entry
+                Add     DI, 2
+                Inc     BX
+                Cmp     BX, 120
+                JB      MCMI_BD_Map
+                Pop     DI
+
+                Pop     ES
+                Pop     DI
+                Pop     SI
+                Pop     CX
+                Pop     BX
+                Pop     AX
+                Ret
+EndP            MCMI_BuildDrumkit
 
 ; Music_GetMIDIMultiBanks - Far getter, AL = MIDIMultiBanks (0/1/6).
 Proc            Music_GetMIDIMultiBanks Far
