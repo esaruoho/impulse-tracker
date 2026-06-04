@@ -59,3 +59,19 @@ views.
 - Test matrix (generated): `features/STATUS.md` ← `features/gen-status.py`.
 - Automation: `.githooks/pre-commit`, `.githooks/post-merge`, `.githooks/report-card-stamp.sh`.
 - Schema / how-to: `GHERKIN-FEATURE-WIKI-PATTERN.md`.
+
+## The Convey base (distilling many conversations into one situation)
+
+Convey is built across multiple parallel Claude sessions. Two files keep them from
+drifting into N disconnected conversations:
+
+- **`features/CONVEY-SITUATION.md`** — the single distilled situation. Read-this-first
+  orientation: what Convey is, what's built, current status (pointing at generated
+  sources), the cross-session decisions, and the open threads. The one place that
+  holds what lives in no single card.
+- **`features/CONVEY-SESSIONS.md`** — the sessions ledger: every Claude conversation
+  that built Convey, with a get-back block (`claude --resume <id>`) and its role, so
+  any session can be re-entered and distilled.
+
+The repo itself (cards + generated `STATUS.md` + git log) is the authoritative merged
+record; these two add the human-readable synthesis on top.
