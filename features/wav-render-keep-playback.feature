@@ -95,7 +95,8 @@ Feature: WAV render keeps the music going (fast pattern render + MIDI-clock resu
     And an external MIDI clock (or Start/Continue) arrives
     Then playback resumes from the saved order/row
 
-  @shipped @build-verified @runtime-untested @hw-untested
+  @shipped @build-verified @runtime-verified @hw-untested
+  # runtime-verified 2026-06-04 (Esa, DOSBox-X): F6-loop a pattern, Ctrl-O, it resumes on its own.
   Scenario: Standalone Ctrl-O resumes on its own, with no external clock
     # cite: IT_MUSIC.ASM WAV_LeaveMode latches WAV_DoResumeOnLeave (only when
     #       single-pattern: not WAV_MultiMode, not WAV_SongMode, and armed), then
@@ -107,7 +108,8 @@ Feature: WAV render keeps the music going (fast pattern render + MIDI-clock resu
     Then playback resumes on its own from where it was
     And a whole-song render or a multi-WAV sweep does NOT auto-resume this way
 
-  @shipped @build-verified @runtime-untested @hw-untested
+  @shipped @build-verified @runtime-verified @hw-untested
+  # runtime-verified 2026-06-04 (Esa, DOSBox-X): PTN 022 ROW 32 resumes as PTN 022 ROW 32.
   Scenario: Resume matches the play mode that was active at render enter
     # cite: IT_MUSIC.ASM enter snapshots WAV_ResumePlayMode + CurrentPattern +
     #       NumberOfRows + CurrentRow + CurrentOrder; Music_ResumeAfterRender

@@ -35,13 +35,13 @@
 | shift-f4-drumkit | 5 | ✓ | ~ partial | ✗ | @build-verified @hw-untested @runtime-untested @runtime-verified @shipped |
 | shift-f4-enters-instrument-mode | 4 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped |
 | song-name-timestamp-default | 5 | ✓ | ~ partial | ✗ | @build-verified @hw-untested @runtime-untested @runtime-verified @shipped |
-| wav-render-keep-playback | 7 | ✓ | ✗ | ✗ | @build-verified @hw-untested @known-limit @runtime-untested @shipped |
+| wav-render-keep-playback | 7 | ✓ | ~ partial | ✗ | @build-verified @hw-untested @known-limit @runtime-untested @runtime-verified @shipped |
 | wav-render-quicksave | 8 | ✓ | ~ partial | ✗ | @build-verified @hw-untested @known-limit @runtime-untested @runtime-verified @shipped |
 | wav-render-reentry-guard | 7 | ✓ | ✓ | ✗ | @build-verified @hw-untested @runtime-verified @shipped |
 
 ## Tally (computed)
 - Cards: 27
 - Build-verified: 25
-- Runtime-verified in DOSBox-X: 4 full + 5 partial
+- Runtime-verified in DOSBox-X: 4 full + 6 partial
 - **Hardware-verified: 1**  ·  hardware-untested: 23
 

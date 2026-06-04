@@ -639,14 +639,14 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - A single-pattern render runs faster than realtime (brief freeze) — `@shipped @build-verified @runtime-untested`
 - Whole-song render stays realtime — `@shipped @build-verified @runtime-untested`
 - A song that was playing resumes after the render, on the next MIDI clock — `@shipped @build-verified @runtime-untested`
-- Standalone Ctrl-O resumes on its own, with no external clock — `@shipped @build-verified @runtime-untested`
-- Resume matches the play mode that was active at render enter — `@shipped @build-verified @runtime-untested`
+- Standalone Ctrl-O resumes on its own, with no external clock — `@shipped @build-verified @runtime-verified`
+- Resume matches the play mode that was active at render enter — `@shipped @build-verified @runtime-verified`
 - No resume if nothing was playing — `@shipped @build-verified @runtime-untested`
 - True simultaneous live-audio + render is NOT done
 
 **How it does it:** **Key procs:** `Music_ToggleWAVRender`, `Music_Poll`, `Music_ResumeAfterRender`, `Music_PlayPartSong`, `MIDISend` · **Source files:** `IT_MUSIC.ASM`, `SoundDrivers/WAVDRV.ASM`, `IT_K.ASM`
 
-**Grade:** @build-verified ×6 · @runtime-untested ×6 · @shipped ×6
+**Grade:** @build-verified ×6 · @runtime-untested ×4 · @runtime-verified ×2 · @shipped ×6
 
 **Commits:** `702727c` faster-than-realtime pattern render + MIDI-clock resume after · `ed62137` standalone auto-resume at render-complete (no external clock needed) · `ac3332f` mode-aware resume: pattern-play resumes the PATTERN at its row
 
