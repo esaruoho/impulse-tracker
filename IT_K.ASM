@@ -282,6 +282,12 @@ USKeyboardTable    Label Byte
          DW      12h
          DB      5       ; Alt-R
          DW      1300h
+         DB      11      ; Shift+Alt-R -> same 1300h keyword as Alt-R, so it
+         DW      1300h   ;   reaches PEFunction_AltR_Dispatch; the dispatcher's
+                         ;   live-shift check then routes it to ReplicatePattern.
+                         ;   Without this entry Shift+Alt+R produced NO keyword
+                         ;   (cond 5 = Alt rejects when Shift is also held), so
+                         ;   the dispatcher's Shift branch was never reachable.
          DB      0FFh
 
         DB      20      ; T
