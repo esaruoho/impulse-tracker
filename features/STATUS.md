@@ -20,6 +20,7 @@
 | f4-instrument-list | 4 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
 | f6-play-from-order-list-row | 5 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped @stock |
 | midi-in-multitimbral | 9 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock @todo |
+| midi-out-stop-on-f8 | 6 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped |
 | midi-realtime-sync | 11 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @todo |
 | multi-wav | 5 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped |
 | multitimbral-instrument-play-dots | 5 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped @stock |
@@ -36,8 +37,8 @@
 | wav-render-reentry-guard | 7 | ✓ | ✓ | ✗ | @build-verified @hw-untested @runtime-verified @shipped |
 
 ## Tally (computed)
-- Cards: 23
-- Build-verified: 22
+- Cards: 24
+- Build-verified: 23
 - Runtime-verified in DOSBox-X: 3 full + 3 partial
-- **Hardware-verified: 1**  ·  hardware-untested: 20
+- **Hardware-verified: 1**  ·  hardware-untested: 21
 

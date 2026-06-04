@@ -16,6 +16,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - [User Presses F4 (Instrument List)](#f4-instrument-list) — `f4-instrument-list.feature`
 - [Order List F6 loops the selected order's pattern; F7 plays from it at the cursor row](#f6-play-from-order-list-row) — `f6-play-from-order-list-row.feature`
 - [Multitimbral MIDI-In](#midi-in-multitimbral) — `midi-in-multitimbral.feature`
+- [Send MIDI Stop (FC) out on F8](#midi-out-stop-on-f8) — `midi-out-stop-on-f8.feature`
 - [External MIDI Real-Time Sync](#midi-realtime-sync) — `midi-realtime-sync.feature`
 - [Multi-WAV render](#multi-wav) — `multi-wav.feature`
 - [F4 instrument-list play dots in multitimbral Sample mode](#multitimbral-instrument-play-dots) — `multitimbral-instrument-play-dots.feature`
@@ -259,6 +260,29 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **Grade:** @build-verified ×6 · @shipped ×8 · @stock ×1 · @todo ×1
 
 **Commits:** `b38dbcdee53d,` 2026-06-03; "claude --resume 1fa213d0-83aa-4fc1-a8fb-b38dbcdee53d") · `10c837b` per-instrument MIDI-In channel (hdr 1Fh) + Shift-F4 batch v1 · `7e3620a` live any-screen note router (MIDIMulti_Route) · `2dac7d5` Shift-F4 made a toggle (MIDIMultiEnable can be turned off) · `b5a0c66` Shift-F4 gated to Instrument mode <- SUPERSEDED by 8c32fd2 · `8c32fd2` 3-state Shift-F4 cycle + Shift-F1 router toggle + gate removed
+
+
+<a id="midi-out-stop-on-f8"></a>
+## Send MIDI Stop (FC) out on F8
+
+`features/midi-out-stop-on-f8.feature` · [session](midi-out-stop-on-f8.session.md)
+
+**What it does:** As a musician whose DOS PC is the master in a MIDI rig, I want pressing F8 (Stop) to also transmit a single MIDI Stop to slaved gear, So that one keypress halts both Impulse Tracker and everything downstream, with no risk of a transport feedback loop.
+
+**Behaviour (6 scenarios):**
+
+- F8 transmits exactly one MIDI Stop byte out — `@shipped @build-verified`
+- The Stop byte does not disturb MIDI running status — `@shipped @build-verified`
+- With no MIDI-capable driver the transmit is a clean no-op — `@shipped @build-verified`
+- A MIDI-thru loopback cannot create a transport storm — `@shipped @build-verified`
+- The toggle defaults ON and is flipped on the Shift-F1 MIDI screen — `@shipped @build-verified @runtime-untested`
+- With the toggle OFF, F8 behaves exactly like stock — `@shipped @build-verified`
+
+**How it does it:** **Key procs:** `Glbl_F8`, `Music_SendMIDIStop`, `Glbl_MIDIStopF8_Toggle`, `MIDI_F8StopEnabled` · **Source files:** `IT_G.ASM`, `IT_MUSIC.ASM`, `IT_K.ASM`, `IT_OBJ1.ASM`
+
+**Grade:** @build-verified ×6 · @runtime-untested ×1 · @shipped ×6
+
+**Commits:** `67cdb60` 2026-06-04 Glbl_F8 transmits 0FCh out, gated by Shift-F1 toggle
 
 
 <a id="midi-realtime-sync"></a>
