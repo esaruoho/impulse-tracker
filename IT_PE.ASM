@@ -5493,9 +5493,9 @@ PE_PatternCursorPos0_3:
 
                 Inc     AX
                 Cmp     DX, '1'
-                JE      WipeNote
+                JE      NoteCutToggle
                 Cmp     DX, '!'
-                JE      WipeNote
+                JE      NoteCutToggle
 
                 Inc     AX
                 Cmp     DX, '`'
@@ -5596,6 +5596,25 @@ ELSE
 ENDIF
 
 EndP            WipeNote
+
+;-------------------------------------------------------------------------------
+; NoteCutToggle (fork) -- pressing '1' on the note column normally stamps a note
+; cut (^^^, 0FEh). If the cursor's note cell ALREADY holds a note cut, a second
+; press wipes the cell instead (falls through to WipeNote with AL = NONOTE, the
+; same erase as pressing '.'), so '1' toggles ^^^ on/off on the row under the
+; cursor. ES:DI already points at the current event's note byte here (set by the
+; caller; WipeNote writes through the same pointer). AL = 0FEh on entry.
+; FEATURE-CARD >> features/note-cut-toggle.feature
+;-------------------------------------------------------------------------------
+
+Proc            NoteCutToggle Far
+
+                Cmp     Byte Ptr [ES:DI], 0FEh  ; already ^^^ at the cursor?
+                JNE     WipeNote                ; no  -> AL=0FEh, stamp the note cut
+                Mov     AL, NONOTE              ; yes -> erase the cell (wipe ^^^)
+                Jmp     WipeNote
+
+EndP            NoteCutToggle
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
