@@ -24,6 +24,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - [User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument List)](#scrolllock-follow-from-lists) — `scrolllock-follow-from-lists.feature`
 - [Shift-Enter Load from Sample List (bulk-load a module's samples)](#shift-enter-bulk-load-from-module) — `shift-enter-bulk-load-from-module.feature`
 - [Shift-Enter Load from Sample List](#shift-enter-load-from-sample-list) — `shift-enter-load-from-sample-list.feature`
+- [Shift-F4 auto-builds a drumkit instrument alongside the 01-16 multitimbral set](#shift-f4-drumkit) — `shift-f4-drumkit.feature`
 - [Shift-F4 to enable Multitimbral mode also switches Samples -> Instruments](#shift-f4-enters-instrument-mode) — `shift-f4-enters-instrument-mode.feature`
 - [WAV Quicksave render filename](#wav-render-quicksave) — `wav-render-quicksave.feature`
 - [WAV render re-entry guard -- a second render gesture mid-render stops cleanly](#wav-render-reentry-guard) — `wav-render-reentry-guard.feature`
@@ -444,6 +445,28 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **How it does it:** **Source files:** `IT_DISK.ASM`, `IT_F.ASM`, `IT_MUSIC.ASM`
 
 **Grade:** @shipped ×4
+
+
+<a id="shift-f4-drumkit"></a>
+## Shift-F4 auto-builds a drumkit instrument alongside the 01-16 multitimbral set
+
+`features/shift-f4-drumkit.feature` · [session](shift-f4-drumkit.session.md)
+
+**What it does:** As a musician setting up a multitimbral MIDI rig, I want Shift-F4 to also create one drumkit instrument that maps every sample to a key on MIDI channel 10, So that, in the same gesture that builds my 16 single-sample parts, I get a ready-to-play kit where each key fires a different sample.
+
+**Behaviour (5 scenarios):**
+
+- Shift-F4 Create builds the drumkit automatically, alongside 01-16 — `@shipped @build-verified @runtime-untested`
+- The drumkit maps each sample slot to a successive key — `@shipped @build-verified @runtime-untested`
+- The drumkit responds to MIDI channel 10 — `@shipped @build-verified @runtime-untested`
+- Each pad plays its sample at fixed base pitch (C-5), not transposed — `@shipped @build-verified @runtime-untested`
+- The 3-state Shift-F4 cycle never touches the drumkit — `@shipped @build-verified @runtime-untested`
+
+**How it does it:** **Key procs:** `MCMI_BuildDrumkit`, `Music_CreateMIDIInInstruments`, `Music_ClearInstrument`, `Glbl_Shift_F4` · **Source files:** `IT_MUSIC.ASM`
+
+**Grade:** @build-verified ×5 · @runtime-untested ×5 · @shipped ×5
+
+**Commits:** `f94f63c` Shift-F4 also auto-builds a slot-99 drumkit (every sample -> a key, ch 10)
 
 
 <a id="shift-f4-enters-instrument-mode"></a>

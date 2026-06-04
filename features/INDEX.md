@@ -119,6 +119,11 @@ Shift-F4 "Yes, enter Multitimbral Mode" now also flips Sample→Instrument mode 
 - `8c32fd2` Shift-F4 3-state cycle (dispatcher this extends)
 - *(this session)* create-confirm → Or [songseg:2Ch],4 + Jmp Glbl_F4
 
+### ✅ shift-f4-drumkit.feature  (+ .session.md, full triad)
+Shift-F4's Create step ALSO auto-builds a drumkit at slot 99 (MIDI ch 10): note i → sample (i+1), C-0→01, C#0→02, … every sample slot mapped to a key at fixed C-5 pitch. Separate from the 01-16 set; expand-96/reset never touch slot 99. New MCMI_BuildDrumkit. Build-verified, runtime+hw-untested.
+- `f94f63c` Shift-F4 also auto-builds a slot-99 drumkit (every sample → a key, ch 10)
+- Card + session authored same session
+
 ### ✅ f6-play-from-order-list-row.feature  (+ .session.md, full triad)
 F11 Order List: F6 LOOPS the pattern at the selected order row (PE_OrderListLoopPattern: Order→pattern→row count→Music_PlayPattern); F7 = "Playback from Cursor" = Music_PlayPartSong(selected Order, current Row). Gated on CurrentMode==11; stock elsewhere. Build-verified, runtime-untested. (First cut 8acb41f used Music_PlaySong — wrong, Esa corrected to loop.)
 - `8acb41f` first cut: F6 = Music_PlaySong(Order) *(superseded)*

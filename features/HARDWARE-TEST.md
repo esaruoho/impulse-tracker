@@ -2,7 +2,7 @@
 
 > **GENERATED** from the `.feature` cards by `features/gen-hwtest.py`. Do not hand-edit. A scenario is **🔴 RED-LINED** until its card is graded `@hw-verified`; flip the card tag (runtime→hardware) and regenerate.
 
-**Build under test:** `v2.354-2026-06-04 @9ec40af`  ·  put this IT.EXE on the DOS machine and work the 🔴 list.
+**Build under test:** `v2.354-2026-06-04 @f94f63c`  ·  put this IT.EXE on the DOS machine and work the 🔴 list.
 
 **Record results without burning chat:** run `./test-impulse-tracker` from the repo (works from any dir) — the TUI walks these, takes works/failed/notes, flips passes to `@hw-verified`, and writes `features/HW-FAILURES.md` (the only thing to send back).
 
@@ -10,8 +10,8 @@
 
 | | Count |
 |---|---:|
-| Total scenarios | 121 |
-| 🔴 Need hardware test | 121 |
+| Total scenarios | 126 |
+| 🔴 Need hardware test | 126 |
 | ✅ Hardware-verified | 0 |
 
 
@@ -127,6 +127,13 @@
 - 🔴 [ ] Loaded samples keep their original names and loop modes
 - 🔴 [ ] In Instrument mode each sample is also auto-assigned to an instrument
 - 🔴 [ ] Samples->Instruments envelope retention does NOT clash with this
+
+### `shift-f4-drumkit`
+- 🔴 [ ] Shift-F4 Create builds the drumkit automatically, alongside 01-16  — _DOSBox ✗ — UNTESTED even in emulation_
+- 🔴 [ ] The drumkit maps each sample slot to a successive key  — _DOSBox ✗ — UNTESTED even in emulation_
+- 🔴 [ ] The drumkit responds to MIDI channel 10  — _DOSBox ✗ — UNTESTED even in emulation_
+- 🔴 [ ] Each pad plays its sample at fixed base pitch (C-5), not transposed  — _DOSBox ✗ — UNTESTED even in emulation_
+- 🔴 [ ] The 3-state Shift-F4 cycle never touches the drumkit  — _DOSBox ✗ — UNTESTED even in emulation_
 
 ### `shift-f4-enters-instrument-mode`
 - 🔴 [ ] From Sample mode, Shift-F4 + confirm enters Instrument mode with 16 instruments  — _DOSBox ✗ — UNTESTED even in emulation_

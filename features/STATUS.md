@@ -28,13 +28,14 @@
 | scrolllock-follow-from-lists | 9 | ✓ | ~ partial | ✗ | @bug @build-verified @hw-untested @runtime-untested @runtime-verified @shipped @stock @todo |
 | shift-enter-bulk-load-from-module | 3 | ✓ | ✗ | ✗ | @bug @build-verified @fixed-pending-verify @hw-untested @runtime-untested @shipped |
 | shift-enter-load-from-sample-list | 4 | ✓ | — | ✗ | @code-verified @hw-untested @shipped |
+| shift-f4-drumkit | 5 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped |
 | shift-f4-enters-instrument-mode | 4 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped |
 | wav-render-quicksave | 8 | ✓ | ~ partial | ✗ | @build-verified @hw-untested @known-limit @runtime-untested @runtime-verified @shipped |
 | wav-render-reentry-guard | 7 | ✓ | ✓ | ✗ | @build-verified @hw-untested @runtime-verified @shipped |
 
 ## Tally (computed)
-- Cards: 20
-- Build-verified: 20
+- Cards: 21
+- Build-verified: 21
 - Runtime-verified in DOSBox-X: 3 full + 2 partial
-- **Hardware-verified: 0**  ·  hardware-untested: 19
+- **Hardware-verified: 0**  ·  hardware-untested: 20
 
