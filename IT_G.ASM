@@ -527,6 +527,25 @@ Proc            Glbl_F6 Far
 
                 Call    I_ClearTables
 
+                ; Fork: in the Order List (F11, CurrentMode==11), F6 starts the
+                ; SONG from the selected order row -- Music_PlaySong from `Order`,
+                ; the highlighted order index -- so playback begins at that
+                ; order's pattern and continues through the order list. Anywhere
+                ; else F6 keeps its stock "play current pattern" behaviour.
+                ; FEATURE-CARD >> features/f6-play-from-order-list-row.feature
+                Cmp     Byte Ptr CS:CurrentMode, 11
+                JNE     Glbl_F6_CurrentPattern
+
+                Mov     AX, Pattern
+                Mov     DS, AX
+                        Assume DS:Pattern
+                Mov     AX, Order               ; selected order row index
+                        Assume DS:Nothing
+                Call    Music_PlaySong          ; play the song from that order
+                Mov     AX, 1
+                Ret
+
+Glbl_F6_CurrentPattern:
                 Call    PE_GetCurrentPattern
                 Xor     CX, CX
                 Call    Music_PlayPattern
