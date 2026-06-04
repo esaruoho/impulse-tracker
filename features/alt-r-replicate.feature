@@ -77,14 +77,14 @@ Feature: Alt-R replicate at cursor
     Then the source chunk is row 0 itself (length 1)
     And rows 1..MaxRow are filled with copies of row 0
 
-  @shipped @build-verified @hw-untested
+  @shipped @build-verified @hw-verified
   Scenario: No-op at the pattern edges
     # cite: IT_PE.ASM PEFunction_ReplicateAtCursor guards (8310-8312)
     Given the cursor is past MaxRow, or the destination start is past MaxRow
       (e.g. a 1-row pattern)
     Then Replicate does nothing (clean no-op)
 
-  @shipped @build-verified @runtime-verified @hw-untested
+  @shipped @build-verified @runtime-verified @hw-verified
   # RUNTIME-VERIFIED 2026-06-04 (Esa): "alt-r and shift-alt-r work beautifully".
   Scenario: Shift-Alt-R replicates the whole PATTERN at cursor
     # Changed 2026-06-04 per Esa's hardware feedback: Shift-Alt-R was the stock
@@ -104,23 +104,27 @@ Feature: Alt-R replicate at cursor
     And if R > 0, rows 0..R-1 (ALL channels) tile down to fill rows R..MaxRow
     And if R == 0, row 0 (all channels) tiles down the whole pattern
 
-  @shipped @build-verified @runtime-untested @hw-untested
+  @shipped @build-verified @runtime-untested @hw-verified
   Scenario: Both replicate ops are undoable and show a correct label in the undo list
     # Added 2026-06-04 per Esa ("Shift-Alt-R should create an undo step"). Both ops
     # already snapshotted via PE_AddToUndoBuffer, so the data was always recoverable;
     # the defect was that BOTH used undo tag 23 while the UndoBufferTypes offset table
     # only labelled tags 0..22 -- so PEFunction_DrawUndo indexed past the table end and
     # drew a garbage label for any replicate step in the Ctrl-Backspace undo list.
-    # FIX (3a3b7ff): UndoBufferType23 "Undo replicate track (Alt-R)" + UndoBufferType24
-    # "Undo replicate pattern (Sh-Alt-R)", extend UndoBufferTypes, move Shift-Alt-R to
-    # tag 24. NOTE: the undo key is Ctrl-Backspace (IT.TXT:1054), NOT Alt-Z -- Alt-Z is
+    # FIX (3a3b7ff): UndoBufferType23/24 strings, extend UndoBufferTypes, move
+    # Shift-Alt-R to tag 24. RENAMED per Esa 2026-06-05 to the action-named labels
+    # he wanted: UndoBufferType23 = "Replicate Track Above (Alt-R)",
+    # UndoBufferType24 = "Replicate Pattern Above (Sh-Alt-R)" (plain inline-key
+    # style, like the pre-existing Type24 form -- no 0FFh alignment guesswork).
+    # NOTE: the undo key is Ctrl-Backspace (IT.TXT:1054), NOT Alt-Z -- Alt-Z is
     # "Cut current block" (IT.TXT:1152).
     # cite: IT_PE.ASM PEFunction_ReplicateAtCursor (DI=23) + PEFunction_ReplicatePatternAtCursor
     #       (DI=24); UndoBufferTypes table + UndoBufferType23/24 strings ; commit 3a3b7ff
     # cite: IT_PE.ASM PEFunction_DrawUndo (~13845) indexes UndoBufferTypes by tag low byte
     Given the user has performed an Alt-R or Shift-Alt-R replicate
     When they open the undo list with Ctrl-Backspace
-    Then the replicate step is listed with its own readable label
+    Then the step is named "Replicate Track Above (Alt-R)" (Alt-R) or
+      "Replicate Pattern Above (Sh-Alt-R)" (Shift-Alt-R), not blank/garbage
     And selecting it reverts the pattern to its pre-replicate state
     # @runtime-untested: assembles + links clean (IT.EXE 477096 bytes). Flip to
     # @runtime-verified after a live DOSBox-X test: replicate, Ctrl-Backspace, confirm

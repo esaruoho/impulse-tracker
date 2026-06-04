@@ -55,7 +55,8 @@ Feature: Shift-F4 to enable Multitimbral mode also switches Samples -> Instrumen
   mode into Instrument mode (since the 16 things created are instruments),
   So that the instruments I just made are immediately the active, playable mode.
 
-  @shipped @build-verified @runtime-untested @hw-untested
+  @shipped @build-verified @runtime-verified @hw-verified
+  # HW-VERIFIED 2026-06-05 (Esa): "shift f4 works in hw".
   Scenario: From Sample mode, Shift-F4 + confirm enters Instrument mode with 16 instruments
     # cite: IT_G.ASM:389 Glbl_Shift_F4_Create opens O1_ConfirmCreateMIDIIn; YES (DX!=0)
     # cite: IT_G.ASM:396 Call Music_CreateMIDIInInstruments

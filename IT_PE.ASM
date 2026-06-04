@@ -413,8 +413,8 @@ UndoBufferType19        DB      "Remove inserted row(s)", 0FFh, 4, " (Alt-Insert
 UndoBufferType20        DB      "Replace deleted row(s)", 0FFh, 4, " (Alt-Delete)", 0
 UndoBufferType21        DB      "Redo", 0FFh, 28, " (Undo)", 0
 UndoBufferType22        DB      "Pattern ", 0FDh, "D", 0
-UndoBufferType23        DB      "Undo replicate track", 0FFh, 11, " (Alt-R)", 0
-UndoBufferType24        DB      "Undo replicate pattern (Sh-Alt-R)", 0
+UndoBufferType23        DB      "Replicate Track Above (Alt-R)", 0
+UndoBufferType24        DB      "Replicate Pattern Above (Sh-Alt-R)", 0
 
 SelectUndo              DW      0
 ShiftPressed            DB      0
