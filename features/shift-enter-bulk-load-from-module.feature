@@ -13,6 +13,7 @@
 #   @stock            - upstream Impulse Tracker behaviour
 #   @shipped          - fork addition, in origin/main
 #   @build-verified   - assembles + links clean (TASM 4.1 / TLINK 3.01)
+#   @hw-untested    - NOT run on real DOS hardware (DOSBox-X is emulation, not metal)
 #   @runtime-verified - confirmed live against a running IT.EXE in DOSBox-X
 #   @runtime-untested - NOT yet confirmed live
 #   @bug              - a reported defect; the scenario documents the demand it violated
@@ -65,7 +66,7 @@ Feature: Shift-Enter Load from Sample List (bulk-load a module's samples)
   sample's original name and loop mode,
   So that I can lift a whole module's sample set in a single keystroke.
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Shift-Enter on a module bulk-loads its samples into consecutive slots
     # cite: IT_DISK.ASM:988 LSWindowKeys cond 4 (Shift) / key 11Ch -> LSWindow_ShiftEnter
     # cite: IT_DISK.ASM:7830 calls the per-format LoadSamplesInModuleTable loader
@@ -78,7 +79,7 @@ Feature: Shift-Enter Load from Sample List (bulk-load a module's samples)
     Then every sample in the module is loaded into consecutive sample slots
     And each occupies its own row in the sample list
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Loaded samples keep their original module names and loop modes
     # cite: IT_D_RIS.INC:136 MOD loader copies the 22-char sample name into the
     #       cache entry; :131 sets loop flag (Or AL,16); :155/:161 loop begin/end

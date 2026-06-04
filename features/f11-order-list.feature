@@ -11,6 +11,7 @@
 #   @stock          - upstream Impulse Tracker behaviour
 #   @shipped        - fork addition, in origin/main
 #   @build-verified - assembles + links clean (TASM 4.1 / TLINK 3.01)
+#   @hw-untested    - NOT run on real DOS hardware (DOSBox-X is emulation, not metal)
 #
 # Source files linked back to this card:
 #   IT_OBJ1.ASM  - GlobalKeyList F11 (3194, scancode 157h) -> Glbl_F11
@@ -85,7 +86,7 @@ Feature: User Presses F11 (Order List)
 
   # --- Fork power tools (commit 1a7aa16 and follow-ups) ----------------------
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: Alt-D clones the current pattern to the first free slot
     # cite: IT_PE.ASM:2827 PE_OrderList_ClonePattern;
     #       IT_MUSIC.ASM:9983 Music_FindFreePattern (first type-0 slot, 0..199)
@@ -96,7 +97,7 @@ Feature: User Presses F11 (Order List)
     And the order cursor advances
     And if mute-wipe is ON, muted channels are wiped with a note-cut at row 0
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: Alt-E doubles the current pattern's length by tiling
     # cite: IT_PE.ASM:3204 PE_OrderList_ExtendPattern; bails if 2*N > 200;
     #       runs under ClI in PEFunction_StorePattern (live-playback-safe)
@@ -106,7 +107,7 @@ Feature: User Presses F11 (Order List)
     Then rows 0..N-1 are tiled into N..2N-1, giving a 2N-row pattern
     And nothing happens if 2*N would exceed 200
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: M toggles the clone mute-wipe mode
     # cite: IT_PE.ASM:2433 PE_OrderList_ToggleMuteWipe flips ClonePatternMuteWipe
     #       (IT_PE.ASM:287, default ON); IT_PE.ASM:2604 PE_OrderList_ApplyMuteWipe
@@ -116,7 +117,7 @@ Feature: User Presses F11 (Order List)
     Then ClonePatternMuteWipe flips (default ON) and the info line shows the state
     And while ON, Alt-D's clone wipes events on currently-muted channels
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: Ctrl-O renders the active pattern to WAV (Shift-Ctrl-O = no import)
     # cite: IT_PE.ASM:2338 PE_OrderList_RenderDispatch checks both Shift keys
     #       and runs the Music_ToggleWAVRender pipeline
@@ -127,7 +128,7 @@ Feature: User Presses F11 (Order List)
     When the user instead presses Shift-Ctrl-O
     Then it renders to the Quicksave folder only, with no sample-slot import
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: Ctrl-G and Shift-G render variants
     # cite: IT_PE.ASM:2374 PE_OrderList_RenderQuicksave (Ctrl-G, no import);
     #       IT_PE.ASM:2395 PE_OrderList_GDispatch (plain G = goto; Shift-G = render+import)
@@ -138,7 +139,7 @@ Feature: User Presses F11 (Order List)
     When the user presses Shift-G
     Then the pattern renders with auto-import (plain G keeps the stock goto behaviour)
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: Cursor-key edge gestures clone (left) and render (right)
     # cite: IT_PE.ASM:2269 PE_OrderList_LeftDispatch (col 0: Left=clone verbatim,
     #       Shift-Left=clone with mute-wipe + ^^^ at row 0)

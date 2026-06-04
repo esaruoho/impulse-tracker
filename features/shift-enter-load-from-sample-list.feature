@@ -52,7 +52,7 @@ Feature: Shift-Enter Load from Sample List
     Then each loaded sample shows its ORIGINAL module name
     And its loop mode (off / forward / ping-pong / sustain) is preserved
 
-  @shipped @code-verified
+  @shipped @code-verified @hw-untested
   Scenario: In Instrument mode each sample is also auto-assigned to an instrument
     # cite: IT_DISK.ASM 7935-7940 -- if LSBulkInstMode != 0, Call
     #       Music_AssignSampleToInstrument (BX = slot); writes the instrument
@@ -63,7 +63,7 @@ Feature: Shift-Enter Load from Sample List
     And the sample headers (names, loop modes) are unaffected by that assignment
 
   # --- The clash the user worried about, checked and disproven ---------------
-  @shipped @code-verified
+  @shipped @code-verified @hw-untested
   Scenario: Samples->Instruments envelope retention does NOT clash with this
     # cite: PR #3 (9493101) changed ONLY IT_F.ASM + IT_MUSIC.ASM, NOT IT_DISK.ASM
     # cite: F_SetControlInstrument runs on the F12 mode-flip, not on Shift-Enter;

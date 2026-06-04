@@ -11,6 +11,7 @@
 # Report-card legend (tags):
 #   @shipped          - in origin/main
 #   @build-verified   - assembles + links clean (full BUILDALL, Error/Warning None)
+#   @hw-untested    - NOT run on real DOS hardware (DOSBox-X is emulation, not metal)
 #   @runtime-verified - confirmed on a live IT.EXE in DOSBox-X
 #   @runtime-untested - built, NOT yet exercised against a running IT.EXE
 #   @removal          - a feature deliberately taken back out (behaviour = upstream)
@@ -46,7 +47,7 @@ Feature: Impulse Tracker fork — what got baked in 2026-06-03 → 04
 
   # --- Navigation / Follow ---------------------------------------------------
 
-  @shipped @build-verified @runtime-verified
+  @shipped @build-verified @runtime-verified @hw-untested
   Scenario: Ctrl-F (and Scroll Lock) jump to the Pattern Editor with Follow ON
     # detail: features/scrolllock-follow-from-lists.feature
     # Scroll Lock or Ctrl-F on F3/F4 -> force Follow Mode + open Pattern Editor.
@@ -59,20 +60,20 @@ Feature: Impulse Tracker fork — what got baked in 2026-06-03 → 04
 
   # --- WAV render ------------------------------------------------------------
 
-  @shipped @build-verified @runtime-verified
+  @shipped @build-verified @runtime-verified @hw-untested
   Scenario: Single-pattern Quicksave renders are LL<HHMMSS>.WAV
     # detail: features/wav-render-quicksave.feature  (commits be595b2, 74c3fe8)
     Given a single-pattern Quicksave render (F11 Shift-Right, Ctrl-O, etc.)
     Then the file is a real .WAV named by wall-clock time, e.g. LL163422.WAV
 
-  @shipped @build-verified @runtime-verified
+  @shipped @build-verified @runtime-verified @hw-untested
   Scenario: A second render gesture mid-render no longer wedges IT
     # detail: features/wav-render-reentry-guard.feature  (commit c9ff6b9)
     Given a render is in progress
     When a second render gesture arrives
     Then it early-stops like Esc and finalizes to Quicksave instead of re-entering teardown
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Multi-WAV per-channel + whole-song WAV/MWAV  (NOT runtime-tested)
     # detail: features/multi-wav.feature -- carries a READ-FIRST untested banner
     Given Shift-Alt-M, or the F10 WAV / MWAV buttons
@@ -80,7 +81,7 @@ Feature: Impulse Tracker fork — what got baked in 2026-06-03 → 04
 
   # --- Loading ---------------------------------------------------------------
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Shift-Enter on a module row bulk-loads all its samples (.MOD hang fixed)
     # detail: features/shift-enter-bulk-load-from-module.feature (+ load-from-sample-list)
     #         commit 32e080c fixed a .MOD hard-hang (loader-cache finalisation)
@@ -90,7 +91,7 @@ Feature: Impulse Tracker fork — what got baked in 2026-06-03 → 04
 
   # --- Multitimbral MIDI-in --------------------------------------------------
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Shift-F4 cycles multitimbral build + enters Instrument mode
     # detail: features/midi-in-multitimbral.feature + shift-f4-enters-instrument-mode.feature
     #         commits 8c32fd2 (3-state cycle 16->96->16 + Shift-F1 toggle), 3a6a434
@@ -98,7 +99,7 @@ Feature: Impulse Tracker fork — what got baked in 2026-06-03 → 04
     When the user presses Shift-F4 and confirms
     Then 01-16 instruments are built, the router is enabled, and Instrument mode shows
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-untested @hw-untested
   Scenario: F4 instrument list shows live play dots in multitimbral Sample mode
     # detail: features/multitimbral-instrument-play-dots.feature  (commit 478b638)
     Given multitimbral MIDI-in playing while in Sample mode
@@ -106,13 +107,13 @@ Feature: Impulse Tracker fork — what got baked in 2026-06-03 → 04
 
   # --- Pattern editor / sample ops -------------------------------------------
 
-  @shipped @build-verified @runtime-verified
+  @shipped @build-verified @runtime-verified @hw-untested
   Scenario: F2 pattern-length increase tiles the existing rows
     # detail: features/f2-resize-tiles-pattern.feature  (commit 05c70c9)
     Given an F2 Pattern-Edit-Config row-count increase (e.g. 64 -> 128)
     Then the existing rows are duplicated to fill, not padded with blanks
 
-  @shipped @build-verified @runtime-verified
+  @shipped @build-verified @runtime-verified @hw-untested
   Scenario: Sample Amplify (Alt-M) no longer stops the song
     # detail: features/sample-amplify-keeps-playback.feature (commits e5e5c38, 460a6e1)
     Given a song is playing
@@ -121,7 +122,7 @@ Feature: Impulse Tracker fork — what got baked in 2026-06-03 → 04
 
   # --- Removal (honest tombstone) --------------------------------------------
 
-  @shipped @build-verified @removal
+  @shipped @build-verified @removal @hw-untested
   Scenario: F12 Samples->Instruments envelope retention was removed (back to upstream)
     # detail: features/no-samples-to-instruments-envelope-retention.feature (commit 727fc60)
     # The brittle envelope-preserve feature (EMM386 #12 crash class) is removed
@@ -131,7 +132,7 @@ Feature: Impulse Tracker fork — what got baked in 2026-06-03 → 04
 
   # --- Carded-this-window (older features that GOT their report card) ---------
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: Pre-existing features that received their triad card in this window
     # No code change -- just the wiki catching up. Detail in each card:
     #   midi-realtime-sync, midi-in-multitimbral, alt-r-replicate, multi-wav,

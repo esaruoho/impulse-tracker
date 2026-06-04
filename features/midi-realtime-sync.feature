@@ -51,7 +51,7 @@ Feature: External MIDI Real-Time Sync
   time with the rest of the rig.
 
   # --- The spec-correctness claim that the whole feature rests on ------------
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: Real-Time bytes are dispatched without disturbing running status
     # cite: IT_K.ASM MIDISend (~1947) tests AL >= 0F8h BEFORE the running-status
     #       store; per the MIDI spec, F8h..FFh are transparent to running status.
@@ -108,7 +108,7 @@ Feature: External MIDI Real-Time Sync
     And otherwise Music_SetTempoFromClocks applies the derived tempo
 
   # --- The user-visible gates (independent of each other) ---------------------
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: MIDI Transport can be switched off, swallowing FA/FB/FC
     # cite: IT_K.ASM MIDITransportEnable (default 1); gate at ~1988 and ~2011
     # cite: Glbl_MIDITransport_Toggle (~1773); commit 731e168
@@ -117,7 +117,7 @@ Feature: External MIDI Real-Time Sync
     Then the MIDI Monitor counters still tick (the byte was seen)
     But no playback start or stop occurs
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: MIDI Sync (clock) can be switched off independently, ignoring F8
     # cite: IT_K.ASM MIDISyncEnable (default 1); gate at ~2029 ; commit 0a82cb3
     Given the user turns MIDI Sync (F8 Clock) OFF on the Shift-F1 screen
@@ -125,7 +125,7 @@ Feature: External MIDI Real-Time Sync
     Then they are counted in the monitor but never alter IT's tempo
     And the Transport gate is unaffected (the two switches are independent)
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: Loader keyjazz suppresses transport re-entry
     # cite: IT_K.ASM MIDISyncLoaderSuppress (default 0); gate at ~1991 and ~2014
     # cross-card: features/loader-keyjazz-hang.feature owns the suppress flag
@@ -146,7 +146,7 @@ Feature: External MIDI Real-Time Sync
     And only F0h..F7h are still filtered at the driver
 
   # --- Observability ----------------------------------------------------------
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: The MIDI Monitor shows live Real-Time byte counters
     # cite: IT_K.ASM K_ShowMIDIInput (~1690) renders MIDIMon_StartCount /
     #       StopCount / ContCount / F8Count + last RT byte + DOS tick

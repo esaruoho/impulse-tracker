@@ -34,7 +34,7 @@ Feature: Day 2026-06-03 — what changed in impulse-tracker
     Then real instruments keep their envelopes instead of being wiped
     And crash-free operation is @hw-untested (the original bug was hardware-only)
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: WAV render filenames are clock-named
     # cite: be595b2 (.WAV extension, 09:27) ; 74c3fe8 (LL<HHMMSS>.WAV, 09:42)
     Given a single-pattern Quicksave WAV render
@@ -65,7 +65,7 @@ Feature: Day 2026-06-03 — what changed in impulse-tracker
 
   # ---- B. The self-documenting report-card system + tooling ----------------
 
-  @shipped
+  @shipped @hw-untested
   Scenario: The report-card wiki + self-maintaining hooks landed
     # cite cards: f2/f3/f4/f11/f12, midi-in-multitimbral, midi-realtime-sync,
     #   wav-render-quicksave, wav-render-reentry-guard, scrolllock-follow,
@@ -79,7 +79,7 @@ Feature: Day 2026-06-03 — what changed in impulse-tracker
 
   # ---- C. The release ------------------------------------------------------
 
-  @shipped @verified
+  @shipped @verified @hw-untested
   Scenario: v2.354-2026-06-03 was published with the day's features
     # cite: GitHub release v2.354-2026-06-03, asset IT-V2.354-2026-06-03.zip,
     #   built 10:04 UTC from commit b9a5a71 (8c32fd2 proven in its history)

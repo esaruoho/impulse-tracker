@@ -54,7 +54,7 @@ Feature: Shift-F4 to enable Multitimbral mode also switches Samples -> Instrumen
   mode into Instrument mode (since the 16 things created are instruments),
   So that the instruments I just made are immediately the active, playable mode.
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-untested @hw-untested
   Scenario: From Sample mode, Shift-F4 + confirm enters Instrument mode with 16 instruments
     # cite: IT_G.ASM:389 Glbl_Shift_F4_Create opens O1_ConfirmCreateMIDIIn; YES (DX!=0)
     # cite: IT_G.ASM:396 Call Music_CreateMIDIInInstruments
@@ -68,7 +68,7 @@ Feature: Shift-F4 to enable Multitimbral mode also switches Samples -> Instrumen
     And 16 instruments are created, instrument N mapped to sample N (01-16)
     And the Instrument List is shown so the mode change is visible
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: The mode switch is a direct flag set, NOT the F12 clear/remap path
     # cite: IT_G.ASM:415 sets the flag directly after Music_GetSongSegment, exactly
     #       like F_SetControlInstrument does, but WITHOUT calling it -- so none of
@@ -79,7 +79,7 @@ Feature: Shift-F4 to enable Multitimbral mode also switches Samples -> Instrumen
     Then F_SetControlInstrument is NOT invoked
     And no instrument-clearing / envelope-preserve logic runs
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: Declining the prompt changes nothing
     # cite: IT_G.ASM Glbl_Shift_F4_Create: Test DX / JZ Glbl_Shift_F4_Done
     Given the user presses Shift-F4 and chooses "No"

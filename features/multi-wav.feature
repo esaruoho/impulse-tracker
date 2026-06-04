@@ -22,6 +22,7 @@
 # Report-card legend (tags):
 #   @shipped          - in origin/main
 #   @build-verified   - assembles + links clean (TASM 4.1 / TLINK 3.01)
+#   @hw-untested    - NOT run on real DOS hardware (DOSBox-X is emulation, not metal)
 #   @runtime-untested - NOT run in IT.EXE; the on-disk result is UNCONFIRMED
 #
 # Source files linked back to this card (grep "features/multi-wav"):
@@ -51,7 +52,7 @@ Feature: Multi-WAV render
   So that I can take Impulse Tracker output into another DAW —
   NOTE: this whole feature is shipped but NOT yet runtime-tested (see header).
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Shift-Alt-M renders the current pattern per non-empty channel
     # cite: IT_PE.ASM PEFunction_StartMultiWAVKey (8267) -> Music_StartMultiWAV;
     #       PE_ChannelIsEmpty (8206) skips channels with no triggered note (0..119);
@@ -62,7 +63,7 @@ Feature: Multi-WAV render
     Then each non-empty channel is rendered to its own WAV (empty channels skipped)
     And plain Alt-M still does block-mix (3200h), unchanged
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-untested @hw-untested
   Scenario: F10 "WAV" renders the whole song to a single WAV
     # cite: IT_MUSIC.ASM Music_StartFullSongWAV (2621); commit 9fb5ac1
     # UNTESTED: on-disk whole-song WAV not confirmed by running IT.EXE
@@ -70,7 +71,7 @@ Feature: Multi-WAV render
     When the user activates the F10 "WAV" button
     Then the entire song is rendered to one WAV in the render folder
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-untested @hw-untested
   Scenario: F10 "MWAV" renders the whole song as per-channel stems
     # cite: IT_MUSIC.ASM Music_StartFullSongMWAV (2859); commit 9fb5ac1
     # UNTESTED: per-channel stem set not confirmed by running IT.EXE
@@ -78,7 +79,7 @@ Feature: Multi-WAV render
     When the user activates the F10 "MWAV" button
     Then the song is rendered once per non-empty/non-muted channel (stems)
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: The Shift+Alt keymap path exists (this part IS structural)
     # cite: IT_K.ASM K_TranslateCondition11 (1457) emits 3232h for Shift+Alt-M
     # This is a build-time fact (the translate path assembles), distinct from the

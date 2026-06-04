@@ -11,6 +11,7 @@
 #   @stock          - upstream Impulse Tracker behaviour
 #   @shipped        - fork addition, in origin/main
 #   @build-verified - assembles + links clean (TASM 4.1 / TLINK 3.01)
+#   @hw-untested    - NOT run on real DOS hardware (DOSBox-X is emulation, not metal)
 #
 # Source files linked back to this card:
 #   IT_OBJ1.ASM  - GlobalKeyList F3 (3142) and Ctrl-F3 (3146) dispatch entries
@@ -70,7 +71,7 @@ Feature: User Presses F3 (Sample List)
 
   # --- The fork's loader keyjazz hang fix ------------------------------------
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: Previewing a sample in the loader does not stop the song
     # cite: IT_DISK.ASM:6108 D_PreLoadSampleWindow calls MIDI_SetLoaderSuppress
     #       before LoadSample, :6157 clears it after Music_PlayNote
@@ -82,7 +83,7 @@ Feature: User Presses F3 (Sample List)
     Then only the voices reading that one slot are silenced (200h sentinel)
     And the rest of the song keeps playing
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: MIDI transport bytes can't restart the song mid-load
     # cite: IT_K.ASM:114 MIDISyncLoaderSuppress; :1991 FA guard, :2014 FC guard
     #       MIDISend skips Music_KBPlaySong / Music_Stop while the flag is set;
@@ -93,7 +94,7 @@ Feature: User Presses F3 (Sample List)
     Then MIDISend skips the playback restart while slot 99 is mid-write
     And once the load finishes the flag is cleared and sync resumes normally
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: Shift-Enter bulk sample load is guarded the same way
     # cite: IT_DISK.ASM:7859 LSWindow_ShiftEnter sets suppress at loop start,
     #       :7922 clears it at loop end

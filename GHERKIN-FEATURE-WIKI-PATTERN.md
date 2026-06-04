@@ -110,6 +110,25 @@ conversation (thinkspace), and its interface contract / what-it-must-not-load
   scenarios (source moved), behaviors mentioned in CLAUDE.md but lacking a feature,
   contradictions between a scenario and the current `.ASM`.
 
+## The grade ladder (and the hardware floor)
+
+A scenario's tags are its honesty grade. The verification ladder, weakest → strongest:
+
+- `@build-verified` — assembles + links clean (full BUILDALL, Error/Warning None).
+- `@runtime-verified` — confirmed on a running `IT.EXE` **in DOSBox-X** (emulation).
+- `@hw-untested` — **NOT run on real DOS hardware.** DOSBox-X is an emulator, so
+  `@runtime-verified` is *not* the same as hardware-proven. **Every fork feature
+  carries `@hw-untested` until someone runs it on real DOS metal** — even the
+  `@runtime-verified` ones. It is removed only when a feature is actually
+  hardware-confirmed (then: `@hw-verified`). (Esa, 2026-06-04: "@hw-untested needs
+  to be added to every feature unless tested.")
+- `@stock` scenarios are exempt — upstream IT behaviour was proven on hardware over
+  two decades; the floor applies to FORK additions (`@shipped`).
+
+So a freshly built fork feature is `@shipped @build-verified @hw-untested`; pressing
+it in DOSBox adds `@runtime-verified` (and keeps `@hw-untested`); only a real-hardware
+run earns `@hw-verified`.
+
 ## The one honest caveat
 
 This is 16-bit TASM assembly with no test runner. Cucumber can't drive `IT.EXE`

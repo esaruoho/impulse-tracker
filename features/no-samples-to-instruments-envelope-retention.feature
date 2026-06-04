@@ -24,6 +24,7 @@
 #   @stock            - upstream Impulse Tracker 2.15 behaviour
 #   @removed          - a fork feature deliberately taken back OUT
 #   @build-verified   - assembles + links clean (TASM 4.1 / TLINK 3.01)
+#   @hw-untested    - NOT run on real DOS hardware (DOSBox-X is emulation, not metal)
 #   @runtime-untested - not yet exercised against a running IT.EXE
 #
 # Source files linked back to this card:

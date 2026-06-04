@@ -10,6 +10,7 @@
 # Report-card legend (tags):
 #   @shipped          - in origin/main
 #   @build-verified   - assembles + links clean (TASM 4.1 / TLINK 3.01)
+#   @hw-untested    - NOT run on real DOS hardware (DOSBox-X is emulation, not metal)
 #   @runtime-untested - NOT yet exercised by running IT.EXE and pressing the key
 #
 # Source files linked back to this card (grep "features/alt-r-replicate"):
@@ -40,7 +41,7 @@ Feature: Alt-R replicate at cursor
   So that I can lay down a one- or few-row loop and stamp it across the pattern
   without copy/paste — while Shift-Alt-R keeps the original "clear track views".
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: Alt-R and Shift-Alt-R are disambiguated by live shift state
     # cite: IT_PE.ASM PEFunction_AltR_Dispatch (8275) — both keys map to 1300h
     #       (Alt suppresses ASCII; Shift doesn't change R's scancode), so the
@@ -51,7 +52,7 @@ Feature: Alt-R replicate at cursor
     When the user presses Alt-R with either shift held
     Then control goes to PEFunction_ClearViews (the original Alt-R behaviour)
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Cursor above row 0 tiles the rows-above-cursor chunk downward
     # cite: IT_PE.ASM PEFunction_ReplicateAtCursor (8308); commit d506486
     # single-channel; empty source events copy through (exact tiling)
@@ -60,21 +61,21 @@ Feature: Alt-R replicate at cursor
     And rows R..MaxRow of the SAME channel are filled by repeating that chunk
     And empty events are copied through as-is (mirror semantics, exact tiling)
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Cursor on row 0 tiles row 0 down the whole channel
     # cite: IT_PE.ASM PEFunction_ReplicateAtCursor row==0 branch (~8316); aaada5e
     Given the cursor is on Row 0 of the current channel
     Then the source chunk is row 0 itself (length 1)
     And rows 1..MaxRow are filled with copies of row 0
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: No-op at the pattern edges
     # cite: IT_PE.ASM PEFunction_ReplicateAtCursor guards (8310-8312)
     Given the cursor is past MaxRow, or the destination start is past MaxRow
       (e.g. a 1-row pattern)
     Then Replicate does nothing (clean no-op)
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Shift-Alt-R preserves the original "clear all track views"
     # cite: IT_PE.ASM PEFunction_ClearViews; commit aaada5e kept this on Shift-Alt-R
     Given the pattern editor

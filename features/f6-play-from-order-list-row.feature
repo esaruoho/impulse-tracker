@@ -21,6 +21,7 @@
 #   @shipped          - in esaruoho/main
 #   @build-verified   - assembles + links clean (TASM 4.1 / TLINK 3.01);
 #                       IT_G.asm + IT_PE.asm Error/Warning = None, IT.EXE links
+#   @hw-untested    - NOT run on real DOS hardware (DOSBox-X is emulation, not metal)
 #   @runtime-verified - exercised by running IT.EXE and watching it play
 #   @runtime-untested - NOT yet run; logic verified by reading only
 #   @stock            - upstream Impulse Tracker behaviour, not a fork addition
@@ -55,7 +56,7 @@ Feature: Order List F6 loops the selected order's pattern; F7 plays from it at t
 
   # --- F6: loop the selected order's pattern ---------------------------------
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-untested @hw-untested
   Scenario: F6 loops the pattern at the selected order row
     # cite: IT_G.ASM Glbl_F6: Cmp CurrentMode,11 -> Call PE_OrderListLoopPattern
     # cite: IT_PE.ASM PE_OrderListLoopPattern: Order -> pattern via SongSeg:100h+Order;
@@ -67,7 +68,7 @@ Feature: Order List F6 loops the selected order's pattern; F7 plays from it at t
     Then pattern P plays, LOOPING (not advancing through the order list)
     And the row count comes from P's own header, so it loops correctly
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: F6 outside the Order List keeps its stock "play current pattern"
     # cite: the CurrentMode==11 gate; the JNE branch is the original
     #       PE_GetCurrentPattern -> Music_PlayPattern path
@@ -75,7 +76,7 @@ Feature: Order List F6 loops the selected order's pattern; F7 plays from it at t
     When the user presses F6
     Then the editor's current pattern is played (stock behaviour)
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: A skip/end marker order slot is a no-op
     # cite: PE_OrderListLoopPattern: Cmp AL,254 / JAE done (0FEh ++ / 0FFh end)
     Given the selected order row holds a "++" (254) or end (255) marker
@@ -84,7 +85,7 @@ Feature: Order List F6 loops the selected order's pattern; F7 plays from it at t
 
   # --- F7: Playback from Cursor (selected order, current row) -----------------
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-untested @hw-untested
   Scenario: F7 plays from the SELECTED order at the current edit row
     # Esa's spec: on row 048 of pattern 003, navigate the order list to a row
     # whose pattern is 008, press F7 -> playback starts at that order, row 048.

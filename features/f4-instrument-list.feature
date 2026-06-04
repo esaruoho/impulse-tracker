@@ -13,6 +13,7 @@
 #   @stock          - upstream Impulse Tracker behaviour
 #   @shipped        - fork addition, in origin/main
 #   @build-verified - assembles + links clean (TASM 4.1 / TLINK 3.01)
+#   @hw-untested    - NOT run on real DOS hardware (DOSBox-X is emulation, not metal)
 #
 # Source files linked back to this card:
 #   IT_OBJ1.ASM  - GlobalKeyList F4 (3150) and Ctrl-F4 (3154) dispatch entries
@@ -74,7 +75,7 @@ Feature: User Presses F4 (Instrument List)
     When the user presses Ctrl-F4
     Then CurrentMode becomes 15 and the disk instrument library browser opens
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: The per-instrument MIDI-In Channel is edited on the Pitch tab
     # cite: IT_OBJ1.ASM:6531 InstrumentMIDIInChannel (type 14, hdr byte 1Fh, 0..17)
     # cite: commit 10c837b

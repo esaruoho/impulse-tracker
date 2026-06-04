@@ -24,6 +24,7 @@
 #   @shipped          - in esaruoho/main
 #   @build-verified   - assembles + links clean (TASM 4.1 / TLINK 3.01);
 #                       IT_MUSIC.asm Error/Warning = None, IT.EXE links
+#   @hw-untested    - NOT run on real DOS hardware (DOSBox-X is emulation, not metal)
 #   @runtime-verified - EXERCISED by actually running IT.EXE in DOSBox-X.
 #                       2026-06-03: Esa pressed Right then Shift-Right on F11
 #                       mid-render -- "it worked without a hitch", the in-flight
@@ -77,7 +78,7 @@ Feature: WAV render re-entry guard -- a second render gesture mid-render stops c
 
   # --- The bug this fixes ----------------------------------------------------
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: The old behaviour -- a second gesture tore the driver down mid-playback
     # Documents the pre-fix wedge from the bug report; not re-runnable now that
     # c9ff6b9 fixed it. Kept as the historical "before" half of the contrast.
@@ -93,7 +94,7 @@ Feature: WAV render re-entry guard -- a second render gesture mid-render stops c
 
   # --- The trigger: Right then Shift-Right at the order-list right edge -------
 
-  @shipped @build-verified @runtime-verified
+  @shipped @build-verified @runtime-verified @hw-untested
   Scenario: Right starts the render, Shift-Right during it halts and finalizes
     # cite: IT_PE.ASM PE_OrderList_RightDispatch (2323) at OrderCursor==2 ->
     #       PE_OrderList_RenderDispatch (2340) -> Music_ToggleWAVRender
@@ -110,7 +111,7 @@ Feature: WAV render re-entry guard -- a second render gesture mid-render stops c
 
   # --- The discriminator: WAV_FinalizeRequest --------------------------------
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: WAV_FinalizeRequest tells the genuine finalize apart from a re-press
     # cite: IT_MUSIC.ASM Music_Poll auto-finalize sets WAV_FinalizeRequest=1
     #       (~3207) immediately before calling Music_ToggleWAVRender with AX=0
@@ -122,7 +123,7 @@ Feature: WAV render re-entry guard -- a second render gesture mid-render stops c
       WAV_LeaveMode path runs and consumes the flag (sets it back to 0)
     And if WAV_FinalizeRequest = 0 (a user re-press) the early-stop path runs
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: The genuine auto-finalize is unchanged -- still leaves + imports
     # cite: Music_Poll: RenderMode=1 AND AutoFinalize=1 AND PlayMode=0, wait 3
     #       frames (WAVDRV closes file), set WAV_FinalizeRequest=1, call Toggle
@@ -133,7 +134,7 @@ Feature: WAV render re-entry guard -- a second render gesture mid-render stops c
 
   # --- Why this is the Esc-equivalent ----------------------------------------
 
-  @shipped @build-verified @runtime-verified
+  @shipped @build-verified @runtime-verified @hw-untested
   Scenario: Early-stop reuses the existing safe finalize, not a new teardown
     # cite: the early-stop branch does ONLY: Music_Stop; WAV_AutoFinalize=1;
     #       WAV_FinalizeDelay=0; show WAV_RenderStopMsg; Jmp WAV_ToggleDone.
@@ -147,7 +148,7 @@ Feature: WAV render re-entry guard -- a second render gesture mid-render stops c
 
   # --- Boundary: what this guard does NOT change -----------------------------
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: All render entry points share the one central guard
     # cite: the guard lives in Music_ToggleWAVRender (the single chokepoint),
     #       so PE_OrderList_RenderDispatch, PE_OrderList_RenderQuicksave,
@@ -156,7 +157,7 @@ Feature: WAV render re-entry guard -- a second render gesture mid-render stops c
     When it re-enters Music_ToggleWAVRender while a render is live
     Then the same early-stop protection applies -- not just the order-list path
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: Multi-WAV sweep finalize and chaining are untouched
     # cite: WAV_MultiAdvance / WAV_MultiFinish re-enter Toggle only to ENTER the
     #       next channel (RenderMode=0 at that point), so WAV_AlreadyActive is

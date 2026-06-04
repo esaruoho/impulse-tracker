@@ -50,7 +50,7 @@ Feature: Multitimbral MIDI-In
   # The boundary that confused us for weeks: the per-instrument MIDI fields
   # split cleanly into OUT (drive outboard gear) and IN (listen). They never
   # cross. This scenario is the canonical claim that keeps them un-conflated.
-  @stock @shipped @build-verified
+  @stock @shipped @build-verified @hw-untested
   Scenario: Output MIDI fields are independent of the input field
     # cite: IT_MUSIC.ASM UpdateMIDI (~line 7960) reads hdr 3Ch/3Dh/3Eh-3Fh
     # cite: nothing in the output path reads hdr 1Fh
@@ -60,7 +60,7 @@ Feature: Multitimbral MIDI-In
     And byte 1Fh "MIDI In Channel" is INPUT only (which channel IT listens on)
     And changing one never affects the other
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: Each instrument can claim an incoming MIDI channel
     # cite: IT_OBJ1.ASM InstrumentMIDIInChannel object (F4 MIDI tab, type 14,
     #       bound DW 1Fh, min/max 0,17); commit 10c837b
@@ -71,7 +71,7 @@ Feature: Multitimbral MIDI-In
 
   # --- Shift-F4 three-state cycle (this session's spec) ----------------------
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: First Shift-F4 maps current samples to MIDI-In 01-16
     # cite: IT_G.ASM Glbl_Shift_F4 -> Music_CreateMIDIInInstruments (IT_MUSIC)
     # cite: commit 8c32fd2 ; instrument-mode gate (b5a0c66) removed here
@@ -86,7 +86,7 @@ Feature: Multitimbral MIDI-In
     And each is named "MIDI In Ch NN"
     And the multitimbral router is enabled
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: Second Shift-F4 replicates 01-16 across six banks (96 instruments)
     # cite: IT_G.ASM Glbl_Shift_F4 -> Music_ExpandMIDIInTo96 (IT_MUSIC)
     # cite: commit 8c32fd2 ; decision: "just create the 96 slots, no router change"
@@ -99,7 +99,7 @@ Feature: Multitimbral MIDI-In
     And the router still plays the first matching instrument per channel
       (the extra five copies are spare slots, by design)
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: Third Shift-F4 resets the six banks back to one 01-16 set
     # cite: IT_G.ASM Glbl_Shift_F4 -> Music_ResetMIDIInTo16 (IT_MUSIC)
     # cite: commit 8c32fd2
@@ -135,7 +135,7 @@ Feature: Multitimbral MIDI-In
 
   # --- The on/off switch (this session) --------------------------------------
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: The router on/off switch lives on the Shift-F1 MIDI screen
     # cite: IT_OBJ1.ASM MIDIMultiToggleButton (list entry 25, rows 46-48)
     # cite: IT_K.ASM Glbl_MIDIMulti_Toggle flips MIDIMultiEnable ; commit 8c32fd2

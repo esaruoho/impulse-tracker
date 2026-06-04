@@ -27,6 +27,7 @@
 #   @shipped          - in origin/main
 #   @build-verified   - assembles + links clean (TASM 4.1 / TLINK 3.01), full
 #                       BUILDALL: IT.EXE + 42 drivers, Error/Warning = None
+#   @hw-untested    - NOT run on real DOS hardware (DOSBox-X is emulation, not metal)
 #   @runtime-verified - CONFIRMED on a running IT.EXE (2026-06-04, Esa): the
 #                       Quicksave render writes LL<HHMMSS>.WAV to disk.
 #   @runtime-untested - NOT yet exercised by actually running IT.EXE: pressing
@@ -77,7 +78,7 @@ Feature: WAV Quicksave render filename
 
   # --- The trigger gesture ---------------------------------------------------
 
-  @shipped @build-verified @runtime-verified
+  @shipped @build-verified @runtime-verified @hw-untested
   Scenario: Shift-Right at the order-list right edge renders to Quicksave only
     # cite: IT_PE.ASM PE_OrderList_RightDispatch (line 2320) fires only at
     #       OrderCursor == 2 (rightmost of the 3-digit cell), else normal wrap
@@ -89,7 +90,7 @@ Feature: WAV Quicksave render filename
     And the file lands in the Quicksave folder with NO auto-import
       (Shift = render-to-Quicksave-only)
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Plain Right at the same edge renders AND auto-imports
     # cite: IT_PE.ASM PE_OrderList_RenderDispatch (2337): no Shift =>
     #       Music_ClearRenderNoImport, so the file imports as the next sample
@@ -100,7 +101,7 @@ Feature: WAV Quicksave render filename
 
   # --- The name: LL + HHMMSS -------------------------------------------------
 
-  @shipped @build-verified @runtime-verified
+  @shipped @build-verified @runtime-verified @hw-untested
   Scenario: A single-pattern Quicksave render is named by wall-clock time
     # cite: IT_MUSIC.ASM Music_ToggleWAVRender enter-mode gate (~5618):
     #       MultiMode=0 AND SongMode=0 AND UserFilenameSet=0 -> timestamp path
@@ -112,7 +113,7 @@ Feature: WAV Quicksave render filename
     Then the file is named LL163422.WAV
     And HHMMSS is the 24-hour DOS clock (hour, minute, second), zero-padded
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: The prefix is a static "LL" (Lackluster), not derived from the song
     # cite: WAV_BuildTimestampBasename writes literal 'L','L' at bytes 0..1 of
     #       WAV_RenderBasename, independent of the song name
@@ -123,7 +124,7 @@ Feature: WAV Quicksave render filename
 
   # --- The extension: real .WAV ----------------------------------------------
 
-  @shipped @build-verified @runtime-verified
+  @shipped @build-verified @runtime-verified @hw-untested
   Scenario: The extension is a real .WAV, not the 3-digit pattern number
     # cite: SoundDrivers/WAVDRV.ASM CopyFileName (593) copies the basename up
     #       to its '.', then Poll9 (813) appends ".WAV" + NUL (was the pattern
@@ -134,7 +135,7 @@ Feature: WAV Quicksave render filename
     Then its extension is ".WAV"
     And it is NOT the 3-digit pattern number (the old PTN0003.000 form is gone)
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-untested @hw-untested
   Scenario: The auto-import opens the exact file WAVDRV wrote
     # cite: IT_MUSIC.ASM two RenderedFilename builders -- enter-mode at
     #       WAV_BasenameReady's tail (~5790) and Music_ImportRenderedPattern
@@ -148,7 +149,7 @@ Feature: WAV Quicksave render filename
 
   # --- The boundary: what KEEPS the old counter naming -----------------------
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: Multi-WAV, full-song, and user-named renders keep <PFX><NNNN>
     # cite: IT_MUSIC.ASM enter-mode gate jumps to WAV_BuildCounterName (5651)
     #       whenever WAV_MultiMode, WAV_SongMode, or WAV_UserFilenameSet is set

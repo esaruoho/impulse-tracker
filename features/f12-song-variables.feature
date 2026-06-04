@@ -12,6 +12,7 @@
 #   @stock          - upstream Impulse Tracker behaviour
 #   @shipped        - fork addition, in origin/main
 #   @build-verified - assembles + links clean (TASM 4.1 / TLINK 3.01)
+#   @hw-untested    - NOT run on real DOS hardware (DOSBox-X is emulation, not metal)
 #
 # Source files linked back to this card:
 #   IT_OBJ1.ASM  - GlobalKeyList F12 (3198, scancode 158h) -> Glbl_F12
@@ -70,7 +71,7 @@ Feature: User Presses F12 (Song Variables & Directory Configuration)
     Then CurrentMode becomes 12 and the song variables & directory config screen opens
     And song name, tempo, speed, global volume and mixing config are editable
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: A Quicksave directory row is on the F12 screen
     # cite: IT_OBJ1.ASM:5643 QuickSaveDirectoryInput (object 31), Enter -> D_PickQuickSaveDir
     # cite: commit 7fd1abc
@@ -79,7 +80,7 @@ Feature: User Presses F12 (Song Variables & Directory Configuration)
       Module / Sample / Instrument directory rows
     And typing a path and saving persists it to IT.CFG
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: Each directory row is Enter-pickable through a file browser
     # cite: IT_DISK.ASM:8403/8452/8461/8470 the four D_Pick*Dir Enter callbacks
     #       all route through D_PickDir_Common (IT_DISK.ASM:8504)
@@ -91,7 +92,7 @@ Feature: User Presses F12 (Song Variables & Directory Configuration)
     Then the F9 file browser opens scoped to that directory
     And choosing a folder writes it back to that row; Esc restores the previous value
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: Samples->Instruments keeps drawn envelopes
     # cite: IT_F.ASM:4833 F_SetControlInstrument; :4922 Music_InstrumentIsReal gate
     #       (ZF=1 -> "IMPI" magic present -> real instrument, do not clear);

@@ -11,6 +11,7 @@
 #   @stock          - upstream Impulse Tracker behaviour, not a fork addition
 #   @shipped        - fork addition, in origin/main
 #   @build-verified - assembles + links clean (TASM 4.1 / TLINK 3.01)
+#   @hw-untested    - NOT run on real DOS hardware (DOSBox-X is emulation, not metal)
 #
 # Source files linked back to this card:
 #   IT_OBJ1.ASM  - GlobalKeyList F2 dispatch entry (lines 3138-3140)
@@ -66,7 +67,7 @@ Feature: User Presses F2 (Pattern Editor)
     And the current pattern's length (MaxRow + 1) is shown as NumberOfRows
     And the user can set the row count in IT's 32..200 range
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: F2-F2 remembers the chosen pattern length for new patterns
     # cite: IT_G.ASM:280-291 on leaving config, NumberOfRows -> DefaultNewPatternLength
     #       then D_SaveDirectoryConfiguration persists it to IT.CFG immediately
@@ -77,7 +78,7 @@ Feature: User Presses F2 (Pattern Editor)
     Then that row count is saved as DefaultNewPatternLength
     And it is written to IT.CFG so it survives the next launch of IT
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: A freshly-entered empty pattern uses the remembered length
     # cite: IT_PE.ASM:10163 NewPattern_ApplyDefaultLength reads DefaultNewPatternLength
     #       on entry into an empty slot; clamps to 32..200, falls back to 64 if corrupt

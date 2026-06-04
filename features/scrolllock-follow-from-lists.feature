@@ -14,6 +14,7 @@
 #   @stock          - upstream Impulse Tracker behaviour
 #   @shipped        - fork addition, in origin/main (commit 91dfc0b)
 #   @build-verified - assembles + links clean (TASM 4.1 / TLINK 3.01)
+#   @hw-untested    - NOT run on real DOS hardware (DOSBox-X is emulation, not metal)
 #   @runtime-verified - confirmed working on a live IT.EXE in DOSBox-X
 #   @runtime-untested - not yet exercised against a running IT.EXE in DOSBox-X
 #
@@ -92,7 +93,7 @@ Feature: User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument Li
     When the user presses Scroll Lock
     Then Playback Tracing toggles (on->off or off->on) and the screen does not change
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Scroll Lock in the Sample List opens the Pattern Editor with Follow Mode on
     # cite: IT_OBJ1.ASM:3536 SampleGlobalKeyList DB 0 / DW 146h -> PE_ScrollLockFollow
     # cite: IT_PE.ASM:13339 PE_ScrollLockFollow: Mov TracePlayback,1; SetInfoLine;
@@ -105,7 +106,7 @@ Feature: User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument Li
     And the Scroll Lock LED is lit
     And the Pattern Editor opens, identical to pressing F2
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Scroll Lock in the Instrument List does the same
     # cite: IT_OBJ1.ASM:6666 InstrumentGlobalKeyList DB 0 / DW 146h -> PE_ScrollLockFollow
     #       Entry sits BEFORE the DB 4 "always call I_PlayNote" catch-all so the
@@ -122,7 +123,7 @@ Feature: User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument Li
   # special-key flag) made Ctrl-F do NOTHING at runtime -> must be DB 1 (the
   # Ctrl+letter class, like stock Ctrl-S/Q/R); and a first cut with per-screen
   # F3/F4 copies was collapsed into this one entry.
-  @shipped @build-verified @runtime-verified
+  @shipped @build-verified @runtime-verified @hw-untested
   Scenario: Ctrl-F in the Sample List (F3) or Instrument List (F4)
     # RUNTIME-VERIFIED 2026-06-03: Esa confirmed on a live IT.EXE (DOSBox-X) that
     # Ctrl-F works in both F3 and F4. (I drove F3 then Ctrl-F via the GUI; Esa
@@ -131,7 +132,7 @@ Feature: User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument Li
     When the user presses Ctrl-F
     Then Pattern Follow Mode is forced ON, the LED lights, and the Pattern Editor opens
 
-  @bug @shipped @build-verified @runtime-untested
+  @bug @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Ctrl-F INSIDE the Pattern Editor (F2) toggles Follow Mode, not the config dialog
     # BUG (reported by Esa 2026-06-03): "press Ctrl-F while in the pattern editor and
     # follow pattern is on -> the F2 Pattern Editor Settings dialog opens instead of
@@ -147,7 +148,7 @@ Feature: User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument Li
     And the F2 Pattern Edit Config dialog does NOT open
     # @runtime-untested: fix built + relaunched; awaiting Esa's confirm
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Ctrl-F on the Order List (F11) or Song Variables (F12) enters the editor
     # Same single GlobalKeyList entry; F11=O1_OrderPanningList and F12=O1_ConfigureITList
     # both chain to GlobalKeyList. From these (CurrentMode != 2) the handler forces
@@ -156,7 +157,7 @@ Feature: User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument Li
     When the user presses Ctrl-F
     Then Pattern Follow Mode is forced ON, the LED lights, and the Pattern Editor opens
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: Follow Mode is forced ON, never toggled off, from the lists
     # cite: IT_PE.ASM:13339 uses "Mov TracePlayback, 1" (set), NOT "Xor ...,1" (toggle)
     # Rationale: the Gherkin says "with Follow Mode enabled". Arriving from a list
@@ -167,7 +168,7 @@ Feature: User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument Li
     When the user presses Scroll Lock on the Sample or Instrument List
     Then Follow Mode stays ON (idempotent) and the Pattern Editor opens
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: The handler hands Glbl_F2 the dispatcher's own DS (no segment damage)
     # cite: IT_PE.ASM:13339 Push DS (dispatcher) / Push CS Pop DS (Pattern seg for
     #       TraceMsg) / ... / Pop DS (restore) before Jmp Glbl_F2
