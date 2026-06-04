@@ -15,6 +15,7 @@
 #   @code-verified    - verified by reading the code / its structure
 #   @runtime-verified - exercised for real (ran the script / observed the effect)
 #   @runtime-untested - NOT yet exercised end-to-end
+#   @fixed-pending-verify - a real failure was seen + fixed; awaiting a re-run to confirm
 #   @known-limit      - a real boundary, stated not hidden
 #
 # Source files linked back to this card:
@@ -45,15 +46,22 @@ Feature: A Convey conversation self-archives when it ends
     Then the sessions registry is regenerated
     And a per-session stub features/sessions/<id>.md is written (metadata only)
 
-  @shipped @runtime-untested
+  @shipped @runtime-verified @fixed-pending-verify
   Scenario: The SessionEnd HOOK fires the distiller when a real Convey session ends
     # cite: .claude/settings.json SessionEnd -> python3 $CLAUDE_PROJECT_DIR/features/convey-distill.py
-    # NOT yet observed firing on a real session end. Two preconditions: Claude Code
-    # must APPROVE the project hook (security prompt on first encounter), and a real
-    # Convey session must end. The .distill-log is the proof-of-fire to watch for.
+    # FIRED FOR REAL 2026-06-05 (Esa typed `exit`): the wiring is confirmed -- the
+    # hook DID invoke the distiller. BUT Claude reported "Hook cancelled" because
+    # the first version ran ~2.1s synchronously (it scanned every transcript via
+    # gen-sessions). An exit hook must return instantly.
+    # FIX (this commit): the distiller now reads stdin, then DETACHES (fork +
+    # setsid) and the PARENT returns in ~0.05s; the detached child does the
+    # stub + registry work in its own session, surviving `exit`. Measured: parent
+    # 0.046s; child still wrote the stub. @fixed-pending-verify until the NEXT
+    # real `exit` confirms no "Hook cancelled" and the stub/registry update.
     Given the project SessionEnd hook is approved and active
     When a Convey conversation in this repo ends (clear / exit / logout)
-    Then convey-distill.py runs automatically with the real payload
+    Then the hook returns instantly (detached) and never reports "Hook cancelled"
+    And the detached child writes the stub + refreshes the registry afterward
 
   @shipped @code-verified
   Scenario: Defensive, metadata-only, never touches git

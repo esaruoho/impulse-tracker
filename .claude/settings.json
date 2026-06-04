@@ -6,7 +6,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/features/convey-distill.py\""
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/features/convey-distill.py\"",
+            "timeout": 15
           }
         ]
       }
