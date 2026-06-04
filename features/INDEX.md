@@ -153,6 +153,11 @@ Note column: '1' stamps a note cut (^^^, 0FEh) as in stock IT, but pressing '1' 
 - `81e4819` '1' on a note cut toggles it off (NoteCutToggle)
 - Card + session authored same session
 
+### ✅ song-name-timestamp-default.feature  (+ .session.md, full triad)  [carded 2026-06-04]
+A blank song is born named with its creation timestamp "YYYY-MM-DD HH:MM" (e.g. "2026-06-04 15:07"). F_SetTimestampSongName reads DOS date/time (Int 21h AH=2Ah/2Ch) and writes SongData:4 when the name's first byte is 0 (blank-guard — a loaded name is never clobbered). Called at IT.ASM startup (the boot song) and after F_NewSong blanks the name. Build-verified, runtime-untested.
+- `87ad1dd` default blank song name to creation timestamp (YYYY-MM-DD HH:MM)
+- Card + session authored same session
+
 ## Uncarded features (the work surface)
 
 > Status flipped in place 2026-06-03: entries below marked ✅ are now carded, and

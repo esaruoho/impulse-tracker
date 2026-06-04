@@ -31,6 +31,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - [Shift-Enter Load from Sample List](#shift-enter-load-from-sample-list) — `shift-enter-load-from-sample-list.feature`
 - [Shift-F4 auto-builds a drumkit instrument alongside the 01-16 multitimbral set](#shift-f4-drumkit) — `shift-f4-drumkit.feature`
 - [Shift-F4 to enable Multitimbral mode also switches Samples -> Instruments](#shift-f4-enters-instrument-mode) — `shift-f4-enters-instrument-mode.feature`
+- [A blank song is born named with its creation timestamp](#song-name-timestamp-default) — `song-name-timestamp-default.feature`
 - [WAV Quicksave render filename](#wav-render-quicksave) — `wav-render-quicksave.feature`
 - [WAV render re-entry guard -- a second render gesture mid-render stops cleanly](#wav-render-reentry-guard) — `wav-render-reentry-guard.feature`
 
@@ -601,6 +602,28 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **Grade:** @build-verified ×3 · @runtime-untested ×2 · @shipped ×3
 
 **Commits:** `8c32fd2` Shift-F4 3-state cycle (the create dispatcher this extends)
+
+
+<a id="song-name-timestamp-default"></a>
+## A blank song is born named with its creation timestamp
+
+`features/song-name-timestamp-default.feature` · [session](song-name-timestamp-default.session.md)
+
+**What it does:** As a tracker user who wants to know when a tune was started, I want a fresh, unnamed song's name pre-filled with the date and time, So that I can save the moment of creation into the song without ever having to read a clock or type the date myself.
+
+**Behaviour (5 scenarios):**
+
+- The boot default song is named with the startup timestamp — `@shipped @build-verified @runtime-untested`
+- The format is fixed-width 16 chars, zero-padded, no seconds — `@shipped @build-verified @runtime-untested`
+- Making a fresh song re-stamps the name with the new time — `@shipped @build-verified @runtime-untested`
+- A name that already has content is never clobbered — `@shipped @build-verified @runtime-untested`
+- The stamped name is an ordinary editable name, not a locked field — `@shipped @build-verified @runtime-untested`
+
+**How it does it:** **Key procs:** `F_SetTimestampSongName`, `F_NewSong` · **Source files:** `IT.ASM`, `IT_F.ASM`
+
+**Grade:** @build-verified ×5 · @runtime-untested ×5 · @shipped ×5
+
+**Commits:** `87ad1dd` default blank song name to creation timestamp (YYYY-MM-DD HH:MM)
 
 
 <a id="wav-render-quicksave"></a>
