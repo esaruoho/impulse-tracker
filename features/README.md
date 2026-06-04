@@ -50,12 +50,12 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - Cursor above row 0 tiles the rows-above-cursor chunk downward — `@shipped @build-verified @runtime-verified @hw-verified`
 - Cursor on row 0 tiles row 0 down the whole channel — `@shipped @build-verified @runtime-verified @hw-verified`
 - No-op at the pattern edges — `@shipped @build-verified`
-- Shift-Alt-R replicates the whole PATTERN at cursor — `@shipped @build-verified @runtime-untested`
+- Shift-Alt-R replicates the whole PATTERN at cursor — `@shipped @build-verified @runtime-verified`
 - Both replicate ops are undoable and show a correct label in the undo list — `@shipped @build-verified @runtime-untested`
 
 **How it does it:** **Key procs:** `PEFunction_AltR_Dispatch`, `PEFunction_ReplicateAtCursor`, `PEFunction_ReplicatePatternAtCursor`, `PEFunction_ClearViews` · **Source files:** `IT_PE.ASM`
 
-**Grade:** @build-verified ×6 · @hw-verified ×3 · @runtime-untested ×2 · @runtime-verified ×2 · @shipped ×6
+**Grade:** @build-verified ×6 · @hw-verified ×3 · @runtime-untested ×1 · @runtime-verified ×3 · @shipped ×6
 
 **Commits:** `d506486` Alt-R = Replicate at Cursor · `aaada5e` Alt-R tile at row 0 + Shift-Alt-R = ClearViews (original Alt-R) · `3a3b7ff` Alt-R / Shift-Alt-R get their own undo labels (UndoBufferType23/24)
 
@@ -506,18 +506,18 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **Behaviour (9 scenarios):**
 
 - Scroll Lock inside the Pattern Editor still just toggles Follow Mode — `@stock @build-verified`
-- Scroll Lock in the Sample List opens the Pattern Editor with Follow Mode on — `@shipped @build-verified @runtime-untested`
-- Scroll Lock in the Instrument List does the same — `@shipped @build-verified @runtime-untested`
+- Scroll Lock in the Sample List opens the Pattern Editor with Follow Mode on — `@shipped @build-verified @runtime-verified`
+- Scroll Lock in the Instrument List does the same — `@shipped @build-verified @runtime-verified`
 - Ctrl-F in the Sample List (F3) or Instrument List (F4) — `@shipped @build-verified @runtime-verified`
 - Ctrl-F INSIDE the Pattern Editor (F2) toggles Follow Mode, not the config dialog — `@shipped @build-verified @runtime-untested`
-- Ctrl-F on the Order List (F11) or Song Variables (F12) enters the editor — `@shipped @build-verified @runtime-untested`
+- Ctrl-F on the Order List (F11) or Song Variables (F12) enters the editor — `@shipped @build-verified @runtime-verified`
 - Follow Mode is forced ON, never toggled off, from the lists — `@shipped @build-verified`
 - The handler hands Glbl_F2 the dispatcher's own DS (no segment damage) — `@shipped @build-verified`
 - (not built) Scroll Lock / Ctrl-F from other screens (Order list F11, Song vars F12) — `@todo`
 
 **How it does it:** **Key procs:** `PE_ScrollLockFollow`, `TracePlayback`, `PEFunction_ToggleTrace`, `Glbl_F2`, `K_SetScrollLock`, `SampleGlobalKeyList`, `InstrumentGlobalKeyList` · **Source files:** `IT_PE.ASM`
 
-**Grade:** @build-verified ×8 · @runtime-untested ×4 · @runtime-verified ×1 · @shipped ×7 · @stock ×1 · @todo ×1
+**Grade:** @build-verified ×8 · @runtime-untested ×1 · @runtime-verified ×4 · @shipped ×7 · @stock ×1 · @todo ×1
 
 **Commits:** `91dfc0b` Scroll Lock on F3/F4 lists -> Pattern Editor + Follow Mode
 
@@ -571,7 +571,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **Behaviour (5 scenarios):**
 
-- Shift-F4 Create builds the drumkit (01) + the 16 parts (02-17) — `@shipped @build-verified @runtime-untested`
+- Shift-F4 Create builds the drumkit (01) + the 16 parts (02-17) — `@shipped @build-verified @runtime-verified`
 - The drumkit maps each sample slot to a successive key — `@shipped @build-verified @runtime-untested`
 - The drumkit responds to MIDI channel 10 — `@shipped @build-verified @runtime-untested`
 - Each pad plays its sample at fixed base pitch (C-5), not transposed — `@shipped @build-verified @runtime-untested`
@@ -579,7 +579,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **How it does it:** **Key procs:** `MCMI_BuildDrumkit`, `Music_CreateMIDIInInstruments`, `Music_ClearInstrument`, `Glbl_Shift_F4` · **Source files:** `IT_MUSIC.ASM`
 
-**Grade:** @build-verified ×5 · @runtime-untested ×5 · @shipped ×5
+**Grade:** @build-verified ×5 · @runtime-untested ×4 · @runtime-verified ×1 · @shipped ×5
 
 **Commits:** `f94f63c` drumkit slot 99 (first cut) -> dee41bd moved to slot 01, multitimbral 02-17
 
@@ -634,19 +634,20 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **What it does:** As someone rendering a pattern to WAV while a tune plays, I want the render to barely interrupt playback and the song to resume, So that bouncing a pattern doesn't kill my groove for seconds at a time.
 
-**Behaviour (5 scenarios):**
+**Behaviour (6 scenarios):**
 
 - A single-pattern render runs faster than realtime (brief freeze) — `@shipped @build-verified @runtime-untested`
 - Whole-song render stays realtime — `@shipped @build-verified @runtime-untested`
 - A song that was playing resumes after the render, on the next MIDI clock — `@shipped @build-verified @runtime-untested`
+- Standalone Ctrl-O resumes on its own, with no external clock — `@shipped @build-verified @runtime-untested`
 - No resume if nothing was playing — `@shipped @build-verified @runtime-untested`
 - True simultaneous live-audio + render is NOT done
 
 **How it does it:** **Key procs:** `Music_ToggleWAVRender`, `Music_Poll`, `Music_ResumeAfterRender`, `Music_PlayPartSong`, `MIDISend` · **Source files:** `IT_MUSIC.ASM`, `SoundDrivers/WAVDRV.ASM`, `IT_K.ASM`
 
-**Grade:** @build-verified ×4 · @runtime-untested ×4 · @shipped ×4
+**Grade:** @build-verified ×5 · @runtime-untested ×5 · @shipped ×5
 
-**Commits:** `702727c` faster-than-realtime pattern render + MIDI-clock resume after
+**Commits:** `702727c` faster-than-realtime pattern render + MIDI-clock resume after · `ed62137` standalone auto-resume at render-complete (no external clock needed)
 
 
 <a id="wav-render-quicksave"></a>

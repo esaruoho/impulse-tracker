@@ -43,6 +43,7 @@
 #
 # Commit log (the ingest trail):
 #   702727c  faster-than-realtime pattern render + MIDI-clock resume after
+#   ed62137  standalone auto-resume at render-complete (no external clock needed)
 #
 # SESSION (the vibe record): features/wav-render-keep-playback.session.md
 #
@@ -90,6 +91,18 @@ Feature: WAV render keeps the music going (fast pattern render + MIDI-clock resu
     When the render finishes and the live driver is back
     And an external MIDI clock (or Start/Continue) arrives
     Then playback resumes from the saved order/row
+
+  @shipped @build-verified @runtime-untested @hw-untested
+  Scenario: Standalone Ctrl-O resumes on its own, with no external clock
+    # cite: IT_MUSIC.ASM WAV_LeaveMode latches WAV_DoResumeOnLeave (only when
+    #       single-pattern: not WAV_MultiMode, not WAV_SongMode, and armed), then
+    #       calls Music_ResumeAfterRender just before WAV_ToggleDone -- after the
+    #       live driver is back and the import is done. ; commit ed62137
+    Given a song was playing and the user presses Ctrl-O (single-pattern render)
+    And there is NO external MIDI clock feeding IT
+    When the render finishes and the live driver is back
+    Then playback resumes from the saved order/row on its own
+    And a whole-song render or a multi-WAV sweep does NOT auto-resume this way
 
   @shipped @build-verified @runtime-untested @hw-untested
   Scenario: No resume if nothing was playing
