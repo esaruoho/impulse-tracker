@@ -17,6 +17,7 @@
 #   test-impulse-tracker
 # =============================================================================
 set -euo pipefail
+# FEATURE-CARD >> features/convey-test-runner.feature
 SRC="${BASH_SOURCE[0]:-$0}"
 # resolve symlinks to find the real repo dir
 while [ -h "$SRC" ]; do

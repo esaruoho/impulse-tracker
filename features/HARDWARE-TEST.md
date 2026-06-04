@@ -2,7 +2,7 @@
 
 > **GENERATED** from the `.feature` cards by `features/gen-hwtest.py`. Do not hand-edit. A scenario is **🔴 RED-LINED** until its card is graded `@hw-verified`; flip the card tag (runtime→hardware) and regenerate.
 
-**Build under test:** `v2.354-2026-06-04 @a52a462`  ·  put this IT.EXE on the DOS machine and work the 🔴 list.
+**Build under test:** `v2.354-2026-06-04 @a317aa4`  ·  put this IT.EXE on the DOS machine and work the 🔴 list.
 
 **Record results without burning chat:** run `./test-impulse-tracker` from the repo (works from any dir) — the TUI walks these, takes works/failed/notes, flips passes to `@hw-verified`, and writes `features/HW-FAILURES.md` (the only thing to send back).
 

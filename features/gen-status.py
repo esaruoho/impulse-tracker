@@ -16,6 +16,7 @@ EXCLUDE = {
     'recent-features-2026-06-03_to_04.feature',  # digest (rolls up other cards)
     'day-2026-06-03.feature',              # day rollup
     'session-2026-06-03-multitimbral-and-whitelabel.feature',  # session rollup
+    'convey-test-runner.feature',          # host-side tool, not a tracker feature
 }
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

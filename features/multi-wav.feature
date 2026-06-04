@@ -43,6 +43,7 @@
 #
 # WATCH: PEFunction_StartMultiWAVKey Music_StartMultiWAV Music_StartFullSongWAV Music_StartFullSongMWAV K_TranslateCondition11 PE_ChannelIsEmpty
 # RESULT-LOG >> (auto-maintained by .githooks/pre-commit / post-merge)
+#   2026-06-04  direct-commit  touched: K_TranslateCondition11
 # =============================================================================
 
 Feature: Multi-WAV render

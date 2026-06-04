@@ -1,0 +1,54 @@
+{
+ "f2-resize-tiles-pattern::64 -> 128 duplicates the 64 rows once": {
+  "verdict": "pass",
+  "note": ""
+ },
+ "f2-resize-tiles-pattern::64 -> 192 duplicates the 64 rows twice": {
+  "verdict": "pass",
+  "note": ""
+ },
+ "f2-resize-tiles-pattern::Non-multiple lengths get a partial final copy (\"until the end\")": {
+  "verdict": "pass",
+  "note": ""
+ },
+ "sample-amplify-keeps-playback::Amplifying a sample mid-playback does not stop the song": {
+  "verdict": "pass",
+  "note": ""
+ },
+ "sample-amplify-keeps-playback::Alt-M Maximize/Normalize during playback keeps playing through OK/Process": {
+  "verdict": "pass",
+  "note": ""
+ },
+ "sample-amplify-keeps-playback::REGRESSION (reported 2026-06-03) - Alt-M still stopped F6 playback": {
+  "verdict": "pass",
+  "note": ""
+ },
+ "scrolllock-follow-from-lists::Ctrl-F in the Sample List (F3) or Instrument List (F4)": {
+  "verdict": "pass",
+  "note": ""
+ },
+ "wav-render-quicksave::Shift-Right at the order-list right edge renders to Quicksave only": {
+  "verdict": "pass",
+  "note": ""
+ },
+ "wav-render-quicksave::A single-pattern Quicksave render is named by wall-clock time": {
+  "verdict": "pass",
+  "note": ""
+ },
+ "wav-render-quicksave::The extension is a real .WAV, not the 3-digit pattern number": {
+  "verdict": "pass",
+  "note": ""
+ },
+ "wav-render-reentry-guard::Right starts the render, Shift-Right during it halts and finalizes": {
+  "verdict": "fail",
+  "note": "i was pressing right, then shift-right, then right, then right right shift-right and it finished with \"Finished writing file\", but the UI became unresponsive. needs a fix."
+ },
+ "wav-render-reentry-guard::Early-stop reuses the existing safe finalize, not a new teardown": {
+  "verdict": "fail",
+  "note": "described perviously"
+ },
+ "alt-r-replicate::Alt-R and Shift-Alt-R are disambiguated by live shift state": {
+  "verdict": "fail",
+  "note": "q"
+ }
+}

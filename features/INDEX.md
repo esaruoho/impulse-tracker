@@ -124,6 +124,11 @@ Shift-F4's Create step ALSO auto-builds a drumkit at slot 99 (MIDI ch 10): note 
 - `f94f63c` Shift-F4 also auto-builds a slot-99 drumkit (every sample → a key, ch 10)
 - Card + session authored same session
 
+### ✅ convey-test-runner.feature  (@tool; + .session.md, full triad)
+The Convey conveyance layer carded as a unit: hwtest.py + test-impulse-tracker DISPLAY each unverified fork scenario to the human, capture works/failed(+note), and route a "works" back to `@hw-verified` in the card (HW-FAILURES.md for the rest). Host-side `@tool` — EXCLUDEd from STATUS/HARDWARE-TEST (no @hw floor). Carded retroactively after Esa flagged it wasn't "done the Convey way".
+- `9ec40af` hwtest.py TUI · `e63518b` repo-anchored launcher
+- Card + session this commit (the Convey-way fix)
+
 ### ✅ f6-play-from-order-list-row.feature  (+ .session.md, full triad)
 F11 Order List: F6 LOOPS the pattern at the selected order row (PE_OrderListLoopPattern: Order→pattern→row count→Music_PlayPattern); F7 = "Playback from Cursor" = Music_PlayPartSong(selected Order, current Row). Gated on CurrentMode==11; stock elsewhere. Build-verified, runtime-untested. (First cut 8acb41f used Music_PlaySong — wrong, Esa corrected to loop.)
 - `8acb41f` first cut: F6 = Music_PlaySong(Order) *(superseded)*

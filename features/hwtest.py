@@ -19,6 +19,7 @@ Run:  python3 features/hwtest.py            # walk the unverified fork list
 """
 import glob, json, os, sys, subprocess
 
+# FEATURE-CARD >> features/convey-test-runner.feature
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FEAT = os.path.join(ROOT, 'features')
 RESULTS = os.path.join(FEAT, 'hwtest-results.json')
@@ -27,6 +28,7 @@ EXCLUDE = {
     'session-changes-codespace.feature', 'recent-features-2026-06-03_to_04.feature',
     'day-2026-06-03.feature', 'session-2026-06-03-multitimbral-and-whitelabel.feature',
     'session-2026-06-04-order-list-and-hw-test.feature',
+    'convey-test-runner.feature',  # this very runner -- don't list itself as a test
 }
 HW_OK = {'@hw-verified', '@hw-tested'}
 STEP_KW = ('Given', 'When', 'Then', 'And', 'But')

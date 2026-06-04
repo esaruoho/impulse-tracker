@@ -7,6 +7,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 ## Contents
 
 - [Alt-R replicate at cursor](#alt-r-replicate) — `alt-r-replicate.feature`
+- [Convey test-runner conveys the test situation to a User and routes the verdict back](#convey-test-runner) — `convey-test-runner.feature`
 - [User Presses F11 (Order List)](#f11-order-list) — `f11-order-list.feature`
 - [User Presses F12 (Song Variables & Directory Configuration)](#f12-song-variables) — `f12-song-variables.feature`
 - [User Presses F2 (Pattern Editor)](#f2-pattern-editor) — `f2-pattern-editor.feature`
@@ -50,6 +51,29 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **Grade:** @build-verified ×5 · @hw-verified ×3 · @runtime-untested ×1 · @runtime-verified ×2 · @shipped ×5
 
 **Commits:** `d506486` Alt-R = Replicate at Cursor · `aaada5e` Alt-R tile at row 0 + Shift-Alt-R = ClearViews (original Alt-R)
+
+
+<a id="convey-test-runner"></a>
+## Convey test-runner conveys the test situation to a User and routes the verdict back
+
+`features/convey-test-runner.feature` · [session](convey-test-runner.session.md)
+
+**What it does:** As the human who flashes a build to real DOS hardware, I want a runner that shows me each unverified behaviour, takes my works/failed call (with a note when it fails), and folds that straight back into the cards, So that confirming what works costs no chat tokens and the generated status matrices advance themselves — the human run becomes Convey truth.
+
+**Behaviour (6 scenarios):**
+
+- It displays each unverified fork scenario's Given/When/Then to the tester — `@shipped @build-verified @runtime-verified`
+- It captures the User's verdict: works / failed (+ how) / skip / back / quit — `@shipped @build-verified @runtime-verified`
+- A "works" verdict flips that scenario to @hw-verified in its card — `@shipped @build-verified @runtime-verified`
+- Failures are conveyed out as the single focused worklist — `@shipped @build-verified @runtime-verified`
+- The launcher runs from any directory — `@shipped @build-verified @runtime-verified`
+- The runner is excluded from the hardware test matrix — `@shipped @build-verified`
+
+**How it does it:** **Key procs:** `(host-side`, `python;`, `no`, `ASM`, `symbols)`
+
+**Grade:** @build-verified ×6 · @runtime-verified ×5 · @shipped ×6
+
+**Commits:** `9ec40af` hwtest.py interactive hardware-test TUI · `e63518b` repo-anchored ./test-impulse-tracker launcher
 
 
 <a id="f11-order-list"></a>

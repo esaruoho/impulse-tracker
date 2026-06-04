@@ -19,6 +19,7 @@ EXCLUDE = {
     'day-2026-06-03.feature',
     'session-2026-06-03-multitimbral-and-whitelabel.feature',
     'session-2026-06-04-order-list-and-hw-test.feature',
+    'convey-test-runner.feature',   # host-side tool, not a tracker feature
 }
 HW_OK = {'@hw-verified', '@hw-tested'}
 

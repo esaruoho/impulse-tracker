@@ -47,6 +47,7 @@
 #
 # WATCH: Glbl_F12 QuickSaveDirectoryInput D_PickModuleDir D_PickSampleDir D_PickInstrumentDir D_PickQuickSaveDir D_PickDir_Common F_SetControlInstrument Music_InstrumentIsReal
 # RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
+#   2026-06-04  direct-commit  touched: QuickSaveDirectoryInput D_PickSampleDir D_PickDir_Common
 #   2026-06-03  direct-commit  touched: F_SetControlInstrument
 #   2026-06-03  direct-commit  touched: F_SetControlInstrument Music_InstrumentIsReal
 #
