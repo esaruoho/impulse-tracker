@@ -368,9 +368,32 @@ clamp you can bump.** Don't promise longer patterns; the math forbids it.
 Full feasibility analysis (negative-result card, every claim cited by file:line):
 `features/pattern-length-beyond-200.feature` (+ `.session.md`), 2026-06-04.
 
-### Undo
+### Undo — and undo "messaging" (how a step gets NAMED)
 
-`PE_AddToUndoBuffer Far` in `IT_PE.ASM` (~line 11361) takes `DI = opaque category tag`. Snapshots the whole pattern into EMS or near-mem. Existing tags **1-22 are taken** (grep `^[[:space:]]*Mov[[:space:]]+DI,[[:space:]]*[0-9]+\s*$` in IT_PE.ASM for the table). Tag 23 was first used by `aaada5e` (Replicate at Cursor). Tag is purely a slot identifier — no name table indexes it.
+> Full teaching card + worked example: `features/undo-messaging.feature`.
+> Correcting an earlier note here: the tag is **NOT** "purely a slot identifier" — it
+> **is** a string-table index. Believing otherwise is what produced an unnamed/garbage
+> undo step (Esa, 2026-06-04).
+
+`PE_AddToUndoBuffer Far` (`IT_PE.ASM` ~13708) takes **`DI = TYPE`** and snapshots the
+whole pattern into EMS/near-mem, storing the type word at `[entry+2]` (~13794). The
+undo list (Ctrl-Backspace) is drawn by `PEFunction_DrawUndo` (~13865), which reads each
+slot's type, masks the low byte, doubles it, and looks up **`UndoBufferTypes[type]`**
+(~13887) — a table of `DW Offset UndoBufferTypeN` pointing at null-terminated label
+strings `UndoBufferType0..N` (~393+). So the type is BOTH the snapshot tag AND the name index.
+
+**Recipe — add a NAMED undo step (do all four, in order):**
+1. Add a string: `UndoBufferTypeN DB "My Label", 0` after the current last one.
+2. Add a matching `DW Offset UndoBufferTypeN` to the `UndoBufferTypes` table — **MANDATORY.**
+3. Make the op call `Mov DI, N` / `Call PE_AddToUndoBuffer` **before** it mutates the pattern.
+4. (Optional) string format codes: `0FDh,"D"` draws a decimal (e.g. type 22 "Pattern <n>");
+   `0FFh,N` pads/right-aligns a trailing key hint. Plain inline keys like `(Alt-R)` need no codes.
+
+**The trap:** if you bump the type number but forget step 2, `PEFunction_DrawUndo` indexes
+**past the end of the table** and draws garbage/blank for that step. This was the real bug:
+Alt-R/Shift-Alt-R passed `DI=23` while the table only listed `0..22`. Fixed in `3a3b7ff`
+(added types 23/24); relabelled in `d938ff4` to "Replicate Track Above (Alt-R)" /
+"Replicate Pattern Above (Sh-Alt-R)". To see current tags: grep `Mov     DI, ` in IT_PE.ASM.
 
 ### Network broadcast
 

@@ -163,6 +163,10 @@ A blank song is born named with its creation timestamp "YYYY-MM-DD HH:MM" (e.g. 
 - `87ad1dd` default blank song name to creation timestamp (YYYY-MM-DD HH:MM)
 - Card + session authored same session
 
+### ✅ undo-messaging.feature  (+ .session.md, full triad) — a @howto/TEACHING card
+How undo steps get NAMED in the Ctrl-Backspace list (UndoBufferTypes table + PE_AddToUndoBuffer DI=type + PEFunction_DrawUndo lookup) AND the 4-step recipe to add a new named undo step. Documents the off-the-end-of-the-table garbage trap. Reference knowledge for the impulse-tracker skill.
+- `3a3b7ff` add replicate undo labels (types 23/24) → `d938ff4` rename to "Replicate Track/Pattern Above"
+
 ## Uncarded features (the work surface)
 
 > Status flipped in place 2026-06-03: entries below marked ✅ are now carded, and
