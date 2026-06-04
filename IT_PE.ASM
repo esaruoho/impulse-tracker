@@ -380,7 +380,8 @@ UndoBufferTypes         Label   Word
         DW      Offset UndoBufferType16, Offset UndoBufferType17
         DW      Offset UndoBufferType18, Offset UndoBufferType19
         DW      Offset UndoBufferType20, Offset UndoBufferType21
-        DW      Offset UndoBufferType22
+        DW      Offset UndoBufferType22, Offset UndoBufferType23
+        DW      Offset UndoBufferType24
 
 UndoBufferType0         DB      "Empty", 0
 UndoBufferType1         DB      "Undo revert pattern data (Alt-BkSpace)", 0
@@ -405,6 +406,8 @@ UndoBufferType19        DB      "Remove inserted row(s)", 0FFh, 4, " (Alt-Insert
 UndoBufferType20        DB      "Replace deleted row(s)", 0FFh, 4, " (Alt-Delete)", 0
 UndoBufferType21        DB      "Redo", 0FFh, 28, " (Undo)", 0
 UndoBufferType22        DB      "Pattern ", 0FDh, "D", 0
+UndoBufferType23        DB      "Undo replicate track", 0FFh, 11, " (Alt-R)", 0
+UndoBufferType24        DB      "Undo replicate pattern (Sh-Alt-R)", 0
 
 SelectUndo              DW      0
 ShiftPressed            DB      0
@@ -8401,7 +8404,8 @@ PEFunction_ReplicateAtCursorHaveChunk:
                 JA      PEFunction_ReplicateAtCursorDone   ; nothing to fill
                 Mov     BP, AX                  ; BP = chunk_len (preserved)
 
-                Mov     DI, 23                  ; undo tag (next unused)
+                Mov     DI, 23                  ; undo tag (Alt-R, label
+                                                ; UndoBufferType23)
                 Call    PE_AddToUndoBuffer
 
                 Mov     BL, Byte Ptr Channel
@@ -8499,7 +8503,8 @@ PEFunction_RepPatHaveChunk:
                 JA      PEFunction_RepPatDone           ; nothing to fill
                 Mov     BP, AX                          ; BP = chunk_len = dest_start
 
-                Mov     DI, 23                          ; undo tag
+                Mov     DI, 24                          ; undo tag (Sh-Alt-R, own
+                                                        ; label UndoBufferType24)
                 Call    PE_AddToUndoBuffer
 
                 Mov     BL, 0                           ; whole-pattern block: ch 0..
