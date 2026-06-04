@@ -19,6 +19,28 @@ card."
 > playback
 > Then the selected Order List starts playing.
 
+## The correction (the vibe-diff: first cut was wrong)
+
+The first cut (commit `8acb41f`) made F6 = `Music_PlaySong(Order)` — play the song
+from the selected order ONWARD. Esa tested it, said "F6 + F7 work," then corrected
+the intent:
+
+> "F6 to loop at that one orders pattern, yes. F7 should be 'start playback from
+> selected pattern from user-selected row' meaning if i am on row 048 in
+> pattern000, and i navigate to orderlist pattern006 and press F7, it starts
+> playback on row 048. ... if the User is on Row 048 of Pattern 003 and they press
+> F7 in a new Order List Pattern 008 -> playback starts at Order List Pattern 008,
+> Row 048."
+
+So the corrected spec (commit `5b37353`):
+- **F6** = LOOP the pattern at the selected order (not play-song-onward).
+- **F7** = "Playback from Cursor" = `Music_PlayPartSong(selected Order, current Row)`
+  — the selected order, started at the row the edit cursor is on.
+
+This also overrode my earlier finding that "F7 already works" — stock `PE_F7`
+plays from the order containing the CURRENT pattern, not the user-SELECTED order.
+So F7 needed an order-list branch after all.
+
 ## The investigation (what I found before writing code)
 
 - **`Glbl_F6` (IT_G.ASM)** was `PE_GetCurrentPattern -> Music_PlayPattern` — i.e.
@@ -67,9 +89,13 @@ card."
 
 - `@build-verified` is real: DOSBox-X BUILDALL, IT_G.asm Error/Warning = None,
   IT.EXE links.
-- `@runtime-verified` (2026-06-04): Esa confirmed on a live IT.EXE — "F6 + F7
-  work." F6 starts the song from the selected order row; F7's pre-existing
-  order-aware from-row play also confirmed.
+- `@build-verified` (2026-06-04): DOSBox-X BUILDALL, IT_G.asm + IT_PE.asm
+  Error/Warning = None, IT.EXE links.
+- `@runtime-untested` for the CORRECTED behaviour: Esa confirmed the FIRST cut
+  (F6 = play-song-from-order) live, but that was the wrong spec. The corrected
+  F6 (loop the order's pattern) and F7 (Music_PlayPartSong(Order, Row)) are built
+  + relaunched but not yet re-confirmed. Watch: F6 LOOPS one pattern (doesn't
+  advance), and F7 starts at the selected order at the carried-over edit row.
 
 ## How to get back
 

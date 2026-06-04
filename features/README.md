@@ -13,7 +13,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - [F2 pattern-length increase duplicates (tiles) the existing content](#f2-resize-tiles-pattern) — `f2-resize-tiles-pattern.feature`
 - [User Presses F3 (Sample List)](#f3-sample-list) — `f3-sample-list.feature`
 - [User Presses F4 (Instrument List)](#f4-instrument-list) — `f4-instrument-list.feature`
-- [F6 in the Order List plays the song from the selected order row](#f6-play-from-order-list-row) — `f6-play-from-order-list-row.feature`
+- [Order List F6 loops the selected order's pattern; F7 plays from it at the cursor row](#f6-play-from-order-list-row) — `f6-play-from-order-list-row.feature`
 - [Multitimbral MIDI-In](#midi-in-multitimbral) — `midi-in-multitimbral.feature`
 - [External MIDI Real-Time Sync](#midi-realtime-sync) — `midi-realtime-sync.feature`
 - [Multi-WAV render](#multi-wav) — `multi-wav.feature`
@@ -186,24 +186,25 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 
 <a id="f6-play-from-order-list-row"></a>
-## F6 in the Order List plays the song from the selected order row
+## Order List F6 loops the selected order's pattern; F7 plays from it at the cursor row
 
 `features/f6-play-from-order-list-row.feature` · [session](f6-play-from-order-list-row.session.md)
 
-**What it does:** As someone arranging a song in the F11 Order List, I want F6 to start playback from the order row I have selected, So that I can audition the song from any point in the arrangement without jumping back to the pattern editor or to order 0.
+**What it does:** As someone arranging a song in the F11 Order List, I want F6 to loop the pattern at the order row I selected, and F7 to start playback from that order at the row my edit cursor is on, So that I can audition any order's pattern in place, and resume the song from any order at the exact row I was working on.
 
-**Behaviour (4 scenarios):**
+**Behaviour (5 scenarios):**
 
-- F6 on a selected order row starts the song from that order — `@shipped @build-verified @runtime-verified`
+- F6 loops the pattern at the selected order row — `@shipped @build-verified @runtime-untested`
 - F6 outside the Order List keeps its stock "play current pattern" — `@shipped @build-verified`
-- F7 already plays "from row" relative to the order list — `@stock @build-verified @runtime-verified`
-- Song-from-order, not a single looped pattern (design choice) — `@shipped @build-verified`
+- A skip/end marker order slot is a no-op — `@shipped @build-verified`
+- F7 plays from the SELECTED order at the current edit row — `@shipped @build-verified @runtime-untested`
+- F7 outside the Order List keeps its stock from-mark behaviour — `@stock @build-verified`
 
-**How it does it:** **Key procs:** `Glbl_F6`, `Music_PlaySong`, `PE_F7`, `PE_GetCurrentPattern`, `Music_PlayPattern` · **Source files:** `IT_G.ASM`, `IT_MUSIC.ASM`, `IT_PE.ASM`
+**How it does it:** **Key procs:** `Glbl_F6`, `PE_OrderListLoopPattern`, `PE_F7`, `Music_PlayPattern`, `Music_PlayPartSong`, `Music_GetPattern` · **Source files:** `IT_G.ASM`, `IT_PE.ASM`
 
-**Grade:** @build-verified ×4 · @runtime-verified ×2 · @shipped ×3 · @stock ×1
+**Grade:** @build-verified ×5 · @runtime-untested ×2 · @shipped ×4 · @stock ×1
 
-**Commits:** `8acb41f` F6 in the Order List plays the song from the selected order row
+**Commits:** `8acb41f` first cut: F6 = Music_PlaySong(Order) (superseded -- wrong: that · `5b37353` F6 loops the selected order's pattern; F7 plays from order+current row
 
 
 <a id="midi-in-multitimbral"></a>
@@ -336,20 +337,20 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **Behaviour (11 scenarios):**
 
 - Ctrl-F (and Scroll Lock) jump to the Pattern Editor with Follow ON — `@shipped @build-verified @runtime-verified`
-- Single-pattern Quicksave renders are LL<HHMMSS>.WAV — `@shipped @build-verified @runtime-untested`
-- A second render gesture mid-render no longer wedges IT — `@shipped @build-verified @runtime-untested`
+- Single-pattern Quicksave renders are LL<HHMMSS>.WAV — `@shipped @build-verified @runtime-verified`
+- A second render gesture mid-render no longer wedges IT — `@shipped @build-verified @runtime-verified`
 - Multi-WAV per-channel + whole-song WAV/MWAV  (NOT runtime-tested) — `@shipped @build-verified @runtime-untested`
 - Shift-Enter on a module row bulk-loads all its samples (.MOD hang fixed) — `@shipped @build-verified @runtime-untested`
 - Shift-F4 cycles multitimbral build + enters Instrument mode — `@shipped @build-verified @runtime-untested`
 - F4 instrument list shows live play dots in multitimbral Sample mode — `@shipped @build-verified @runtime-untested`
-- F2 pattern-length increase tiles the existing rows — `@shipped @build-verified @runtime-untested`
-- Sample Amplify (Alt-M) no longer stops the song — `@shipped @build-verified @runtime-untested`
+- F2 pattern-length increase tiles the existing rows — `@shipped @build-verified @runtime-verified`
+- Sample Amplify (Alt-M) no longer stops the song — `@shipped @build-verified @runtime-verified`
 - F12 Samples->Instruments envelope retention was removed (back to upstream) — `@shipped @build-verified`
 - Pre-existing features that received their triad card in this window — `@shipped @build-verified`
 
 **How it does it:** **Key procs:** ```, `line:`, `this`, `is`, `a`, `hand-maintained`, `digest`, `spanning`, `many`
 
-**Grade:** @build-verified ×11 · @runtime-untested ×8 · @runtime-verified ×1 · @shipped ×11
+**Grade:** @build-verified ×11 · @runtime-untested ×4 · @runtime-verified ×5 · @shipped ×11
 
 **Commits:** `e04be2c` Ctrl-F in Pattern Editor toggles Follow (not the F2 config dialog) · `eb6b4ea` Ctrl-F: one GlobalKeyList entry -> works F2/F3/F4/F11/F12 · `d437f78` Ctrl-F flag fix DB 0 -> DB 1 (was doing nothing) · `97b28e9` Ctrl-F on F3/F4 = Scroll-Lock action · `91dfc0b` Scroll Lock on F3/F4 -> Pattern Editor + Follow Mode · `460a6e1` e5e5c38 Sample Amplify (Alt-M) keeps playback · `3a6a434` 8c32fd2 Shift-F4 multitimbral 3-state cycle + enter Instrument mode · `478b638` F4 instrument-list play dots in multitimbral Sample mode · `05c70c9` F2 pattern-length increase tiles content (not blank rows) · `32e080c` Shift-Enter bulk-load .MOD hard-hang fix · `c9ff6b9` WAV render re-entry guard (2nd press early-stops to Quicksave) · `74c3fe8` be595b2 WAV Quicksave render -> LL<HHMMSS>.WAV (.000 -> .WAV)
 
@@ -475,18 +476,18 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **Behaviour (8 scenarios):**
 
-- Shift-Right at the order-list right edge renders to Quicksave only — `@shipped @build-verified @runtime-untested`
+- Shift-Right at the order-list right edge renders to Quicksave only — `@shipped @build-verified @runtime-verified`
 - Plain Right at the same edge renders AND auto-imports — `@shipped @build-verified @runtime-untested`
-- A single-pattern Quicksave render is named by wall-clock time — `@shipped @build-verified @runtime-untested`
+- A single-pattern Quicksave render is named by wall-clock time — `@shipped @build-verified @runtime-verified`
 - The prefix is a static "LL" (Lackluster), not derived from the song — `@shipped @build-verified`
-- The extension is a real .WAV, not the 3-digit pattern number — `@shipped @build-verified @runtime-untested`
+- The extension is a real .WAV, not the 3-digit pattern number — `@shipped @build-verified @runtime-verified`
 - The auto-import opens the exact file WAVDRV wrote — `@shipped @build-verified @runtime-untested`
 - Multi-WAV, full-song, and user-named renders keep <PFX><NNNN> — `@shipped @build-verified`
 - Two renders in the same second overwrite
 
 **How it does it:** **Key procs:** `WAV_BuildTimestampBasename`, `WAV_Store2Dec`, `Music_ToggleWAVRender`, `Music_ImportRenderedPattern`, `PE_OrderList_RightDispatch`, `PE_OrderList_RenderDispatch`, `PE_OrderList_RenderQuicksave`, `PE_OrderList_GDispatch`, `CopyFileName` · **Source files:** `IT_PE.ASM`, `IT_MUSIC.ASM`, `SoundDrivers/WAVDRV.ASM`
 
-**Grade:** @build-verified ×7 · @runtime-untested ×5 · @shipped ×7
+**Grade:** @build-verified ×7 · @runtime-untested ×2 · @runtime-verified ×3 · @shipped ×7
 
 **Commits:** `be595b2` WAV render: .000 (3-digit pattern number) -> real .WAV extension · `74c3fe8` single-pattern Quicksave render named LL<HHMMSS>.WAV by the clock · `3fd46da` (generative-seed preamble)
 

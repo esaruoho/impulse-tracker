@@ -113,8 +113,9 @@ Shift-F4 "Yes, enter Multitimbral Mode" now also flips Sample→Instrument mode 
 - *(this session)* create-confirm → Or [songseg:2Ch],4 + Jmp Glbl_F4
 
 ### ✅ f6-play-from-order-list-row.feature  (+ .session.md, full triad)
-F6 in the F11 Order List now starts the song from the SELECTED order row (Music_PlaySong from `Order`) instead of looping the editor's current pattern; gated on CurrentMode==11 so F6 stays stock elsewhere. F7 was already order-aware (PE_F7). Build-verified, runtime-untested.
-- `8acb41f` F6 in the Order List plays the song from the selected order row
+F11 Order List: F6 LOOPS the pattern at the selected order row (PE_OrderListLoopPattern: Order→pattern→row count→Music_PlayPattern); F7 = "Playback from Cursor" = Music_PlayPartSong(selected Order, current Row). Gated on CurrentMode==11; stock elsewhere. Build-verified, runtime-untested. (First cut 8acb41f used Music_PlaySong — wrong, Esa corrected to loop.)
+- `8acb41f` first cut: F6 = Music_PlaySong(Order) *(superseded)*
+- `5b37353` F6 loops the selected order's pattern; F7 plays from order+current row
 - Card + session authored same session
 
 ## Uncarded features (the work surface)
