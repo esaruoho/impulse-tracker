@@ -15,13 +15,16 @@
 #
 # Source files linked back to this card (grep "features/alt-r-replicate"):
 #   IT_PE.ASM  PEFunction_AltR_Dispatch     (8275) split on Left/Right shift
-#   IT_PE.ASM  PEFunction_ReplicateAtCursor (8308) tile current channel
-#   IT_PE.ASM  PEFunction_ClearViews        (Shift-Alt-R = original Alt-R)
-#   IT_PE.ASM  keymap entry 1300h (Alt-R) -> PEFunction_AltR_Dispatch (785)
+#   IT_PE.ASM  PEFunction_ReplicateAtCursor        (8386) tile current channel
+#   IT_PE.ASM  PEFunction_ReplicatePatternAtCursor (8488) Shift-Alt-R, whole pattern
+#   IT_PE.ASM  PEFunction_ClearViews               (11040) NO LONGER key-bound
+#   IT_PE.ASM  UndoBufferTypes table + UndoBufferType23/24 (undo-list labels)
+#   IT_PE.ASM  keymap entry 1300h (Alt-R) -> PEFunction_AltR_Dispatch (788)
 #
 # Commit log (the ingest trail):
 #   d506486  Alt-R = Replicate at Cursor
 #   aaada5e  Alt-R tile at row 0 + Shift-Alt-R = ClearViews (original Alt-R)
+#   3a3b7ff  Alt-R / Shift-Alt-R get their own undo labels (UndoBufferType23/24)
 #
 # RESULT (triad: .feature spec + .session convo + what shipped):
 #   Feature delivery : d506486, aaada5e   (direct to esaruoho/main, no PR)
@@ -34,7 +37,9 @@
 #   2026-06-04  direct-commit  touched: PEFunction_ReplicateAtCursor PEFunction_ClearViews
 #
 # IT.TXT source of truth: Alt-R historically = "clear all track views"; this fork
-#   repurposes plain Alt-R to Replicate and keeps the old behaviour on Shift-Alt-R.
+#   repurposes plain Alt-R to replicate the current TRACK and Shift-Alt-R to
+#   replicate the whole PATTERN. ClearViews is no longer bound to any key.
+#   Undo = Ctrl-Backspace (IT.TXT:1054); Alt-Z = Cut current block (IT.TXT:1152).
 # =============================================================================
 
 Feature: Alt-R replicate at cursor
@@ -97,3 +102,25 @@ Feature: Alt-R replicate at cursor
     Then Shift+Alt+R reaches the dispatcher (cond-11 keymap entry) and is routed here
     And if R > 0, rows 0..R-1 (ALL channels) tile down to fill rows R..MaxRow
     And if R == 0, row 0 (all channels) tiles down the whole pattern
+
+  @shipped @build-verified @runtime-untested @hw-untested
+  Scenario: Both replicate ops are undoable and show a correct label in the undo list
+    # Added 2026-06-04 per Esa ("Shift-Alt-R should create an undo step"). Both ops
+    # already snapshotted via PE_AddToUndoBuffer, so the data was always recoverable;
+    # the defect was that BOTH used undo tag 23 while the UndoBufferTypes offset table
+    # only labelled tags 0..22 -- so PEFunction_DrawUndo indexed past the table end and
+    # drew a garbage label for any replicate step in the Ctrl-Backspace undo list.
+    # FIX (3a3b7ff): UndoBufferType23 "Undo replicate track (Alt-R)" + UndoBufferType24
+    # "Undo replicate pattern (Sh-Alt-R)", extend UndoBufferTypes, move Shift-Alt-R to
+    # tag 24. NOTE: the undo key is Ctrl-Backspace (IT.TXT:1054), NOT Alt-Z -- Alt-Z is
+    # "Cut current block" (IT.TXT:1152).
+    # cite: IT_PE.ASM PEFunction_ReplicateAtCursor (DI=23) + PEFunction_ReplicatePatternAtCursor
+    #       (DI=24); UndoBufferTypes table + UndoBufferType23/24 strings ; commit 3a3b7ff
+    # cite: IT_PE.ASM PEFunction_DrawUndo (~13845) indexes UndoBufferTypes by tag low byte
+    Given the user has performed an Alt-R or Shift-Alt-R replicate
+    When they open the undo list with Ctrl-Backspace
+    Then the replicate step is listed with its own readable label
+    And selecting it reverts the pattern to its pre-replicate state
+    # @runtime-untested: assembles + links clean (IT.EXE 477096 bytes). Flip to
+    # @runtime-verified after a live DOSBox-X test: replicate, Ctrl-Backspace, confirm
+    # the label reads "Undo replicate track/pattern" and the revert restores the data.

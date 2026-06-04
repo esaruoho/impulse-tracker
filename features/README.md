@@ -38,19 +38,20 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **What it does:** As someone filling a pattern channel with a repeating figure, I want Alt-R to tile the rows above the cursor down to the end of the channel, So that I can lay down a one- or few-row loop and stamp it across the pattern without copy/paste — while Shift-Alt-R does the same across the WHOLE pattern (all channels).
 
-**Behaviour (5 scenarios):**
+**Behaviour (6 scenarios):**
 
 - Alt-R and Shift-Alt-R are disambiguated by live shift state — `@shipped @build-verified @hw-verified`
 - Cursor above row 0 tiles the rows-above-cursor chunk downward — `@shipped @build-verified @runtime-verified @hw-verified`
 - Cursor on row 0 tiles row 0 down the whole channel — `@shipped @build-verified @runtime-verified @hw-verified`
 - No-op at the pattern edges — `@shipped @build-verified`
 - Shift-Alt-R replicates the whole PATTERN at cursor — `@shipped @build-verified @runtime-untested`
+- Both replicate ops are undoable and show a correct label in the undo list — `@shipped @build-verified @runtime-untested`
 
 **How it does it:** **Key procs:** `PEFunction_AltR_Dispatch`, `PEFunction_ReplicateAtCursor`, `PEFunction_ReplicatePatternAtCursor`, `PEFunction_ClearViews` · **Source files:** `IT_PE.ASM`
 
-**Grade:** @build-verified ×5 · @hw-verified ×3 · @runtime-untested ×1 · @runtime-verified ×2 · @shipped ×5
+**Grade:** @build-verified ×6 · @hw-verified ×3 · @runtime-untested ×2 · @runtime-verified ×2 · @shipped ×6
 
-**Commits:** `d506486` Alt-R = Replicate at Cursor · `aaada5e` Alt-R tile at row 0 + Shift-Alt-R = ClearViews (original Alt-R)
+**Commits:** `d506486` Alt-R = Replicate at Cursor · `aaada5e` Alt-R tile at row 0 + Shift-Alt-R = ClearViews (original Alt-R) · `3a3b7ff` Alt-R / Shift-Alt-R get their own undo labels (UndoBufferType23/24)
 
 
 <a id="convey-test-runner"></a>
