@@ -72,8 +72,9 @@ External transport: FA/FB/FC Start/Stop/Continue, F8 Clock tempo sync, driver F8
 - `731e168` MIDI Transport toggle (independent FA/FB/FC gate)
 
 ### ✅ midi-out-stop-on-f8.feature  (+ .session.md, full triad)
-OUTBOUND: F8 (Stop) also transmits a single 0FCh MIDI Stop, gated by a Shift-F1 toggle. One transmit site (Glbl_F8) means no feedback loop is structurally possible. Build-verified; outbound byte hw-untested.
+OUTBOUND: F8 (Stop) also transmits a single 0FCh MIDI Stop, gated by a Shift-F1 toggle, persisted across restarts (IT.CFG ForkExtConfig +3). One transmit site (Glbl_F8) means no feedback loop is structurally possible. Build-verified; outbound byte hw-untested; persistence + button runtime-untested.
 - `67cdb60` Glbl_F8 transmits 0FCh out via Music_SendMIDIStop, gated by MIDIStopOnF8Enable (Shift-F1 toggle); IT_K.ASM flag+toggle+Far query, IT_OBJ1.ASM button
+- `222962f` persist toggle across restarts: PE_ForkExtConfig +3 force-off mirror byte (0=ON default), synced in D_InitDisk / D_SaveDirectoryConfiguration; MIDI_SetF8StopEnable setter
 
 ### ✅ scrolllock-follow-from-lists.feature  (+ .session.md, full triad)
 Scroll Lock — AND Ctrl-F — on F3 Sample List / F4 Instrument List force-enables Pattern Follow Mode and opens the Pattern Editor (= F2). Build-verified; Ctrl-F on F3/F4 runtime-verified (2026-06-04, Esa).

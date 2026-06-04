@@ -288,7 +288,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **What it does:** As a musician whose DOS PC is the master in a MIDI rig, I want pressing F8 (Stop) to also transmit a single MIDI Stop to slaved gear, So that one keypress halts both Impulse Tracker and everything downstream, with no risk of a transport feedback loop.
 
-**Behaviour (6 scenarios):**
+**Behaviour (8 scenarios):**
 
 - F8 transmits exactly one MIDI Stop byte out — `@shipped @build-verified`
 - The Stop byte does not disturb MIDI running status — `@shipped @build-verified`
@@ -296,12 +296,14 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - A MIDI-thru loopback cannot create a transport storm — `@shipped @build-verified`
 - The toggle defaults ON and is flipped on the Shift-F1 MIDI screen — `@shipped @build-verified @runtime-untested`
 - With the toggle OFF, F8 behaves exactly like stock — `@shipped @build-verified`
+- The toggle survives an Impulse Tracker restart — `@shipped @build-verified @runtime-untested`
+- Old IT.CFG files (and fresh installs) default the toggle ON — `@shipped @build-verified @runtime-untested`
 
-**How it does it:** **Key procs:** `Glbl_F8`, `Music_SendMIDIStop`, `Glbl_MIDIStopF8_Toggle`, `MIDI_F8StopEnabled` · **Source files:** `IT_G.ASM`, `IT_MUSIC.ASM`, `IT_K.ASM`, `IT_OBJ1.ASM`
+**How it does it:** **Key procs:** `Glbl_F8`, `Music_SendMIDIStop`, `Glbl_MIDIStopF8_Toggle`, `MIDI_F8StopEnabled`, `MIDI_SetF8StopEnable` · **Source files:** `IT_G.ASM`, `IT_MUSIC.ASM`, `IT_K.ASM`, `IT_OBJ1.ASM`, `IT_DISK.ASM`, `IT_PE.ASM`
 
-**Grade:** @build-verified ×6 · @runtime-untested ×1 · @shipped ×6
+**Grade:** @build-verified ×8 · @runtime-untested ×3 · @shipped ×8
 
-**Commits:** `67cdb60` 2026-06-04 Glbl_F8 transmits 0FCh out, gated by Shift-F1 toggle
+**Commits:** `67cdb60` 2026-06-04 Glbl_F8 transmits 0FCh out, gated by Shift-F1 toggle · `222962f` 2026-06-04 persist the toggle across restarts (IT.CFG +3)
 
 
 <a id="midi-realtime-sync"></a>

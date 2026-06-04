@@ -74,6 +74,36 @@ the Shift-F1 button is `@runtime-untested` (not yet run + watched in IT.EXE).
 The no-feedback-loop property is provable by reading the call graph (one
 caller), but exercising it on a real loopback is still `@hw-untested`.
 
+## Follow-up: "survive restarts" (commit 222962f)
+
+Esa: *"survive restarts"* — persist the toggle to IT.CFG.
+
+The fork already has the `PE_ForkExtConfig` 16-byte block in IT.CFG (read in
+`D_InitDisk`, written in `D_SaveDirectoryConfiguration`) with 13 reserved pad
+bytes. But the block's fields live in the **Pattern** segment, and our flag
+lives in the **Keyboard** segment — so the block can't store it directly.
+
+Decisions:
+- **Mirror + sync, not relocate.** Keep `MIDIStopOnF8Enable` where it is (its
+  toggle + query already work); add a mirror byte at block **offset +3** and
+  sync it ↔ the live flag at load (`D_InitDisk`) and save
+  (`D_SaveDirectoryConfiguration`). New Far setter `MIDI_SetF8StopEnable`
+  bridges into the Keyboard segment; the existing `MIDI_F8StopEnabled` reads it.
+- **FORCE-OFF sense (the backward-compat trap).** Pre-222962f IT.CFGs already
+  wrote offset +3 as a reserved **zero**, and files with no block at all keep
+  the static default zero. If 0 meant OFF, every existing user would boot to a
+  surprise OFF. So the byte stores the *non-default* state: **0 = ON (default),
+  nonzero = OFF.** Live `enable = (byte == 0)`, persisted `byte = NOT enable`.
+  Every old config and fresh install decodes to ON.
+- **Build catch: `[DX+3]` is illegal in 16-bit real mode** — DX is not a valid
+  base register (only BX/BP/SI/DI). First build failed with "Illegal indexing
+  mode" at both sync sites; routed through BX (load) and SI (save). DX stays
+  the DOS buffer pointer for the surrounding Int 21h / D_SaveBlock calls.
+
+Rebuilt: IT_PE / IT_K / IT_DISK all Error/Warning = None, IT.EXE links
+(477,470 bytes). Persistence scenarios graded `@build-verified @runtime-untested`
+(not yet round-tripped through a real save/quit/relaunch in IT.EXE).
+
 ## How to get back
 
 - Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/adf61574-f4a4-4fbc-b9db-dbcf7476fc40.jsonl

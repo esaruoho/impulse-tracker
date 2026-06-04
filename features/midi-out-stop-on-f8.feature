@@ -6,8 +6,9 @@
 #   codespace  - Glbl_F8 (IT_G.ASM) gains a single, gated transmit call;
 #                Music_SendMIDIStop (IT_MUSIC.ASM) is the lone transmit site;
 #                MIDIStopOnF8Enable flag + Glbl_MIDIStopF8_Toggle + the Far
-#                query MIDI_F8StopEnabled (IT_K.ASM); the Shift-F1 button
-#                (IT_OBJ1.ASM). This card is the build instruction for all five.
+#                query MIDI_F8StopEnabled + setter MIDI_SetF8StopEnable (IT_K.ASM);
+#                the Shift-F1 button (IT_OBJ1.ASM); the IT.CFG persistence mirror
+#                at PE_ForkExtConfig +3 (IT_PE.ASM) synced in IT_DISK.ASM.
 #   thinkspace - midi-out-stop-on-f8.session.md (why the transmit lives in the
 #                main-loop Glbl_F8 and NOT the IRQ F8 path; why one transmit
 #                site means no feedback loop is structurally possible).
@@ -31,17 +32,23 @@
 #   delivery     : direct-push to main, no PR
 #   feature commits:
 #     67cdb60  2026-06-04  Glbl_F8 transmits 0FCh out, gated by Shift-F1 toggle
+#     222962f  2026-06-04  persist the toggle across restarts (IT.CFG +3)
 #   card-authoring commit: (this commit)
 #   files: IT_G.ASM (transmit site), IT_MUSIC.ASM (Music_SendMIDIStop),
-#          IT_K.ASM (flag + toggle + query + messages), IT_OBJ1.ASM (button)
+#          IT_K.ASM (flag + toggle + query + setter + messages),
+#          IT_OBJ1.ASM (button), IT_PE.ASM (PE_ForkExtConfig +3 mirror byte),
+#          IT_DISK.ASM (load/save sync in D_InitDisk + D_SaveDirectoryConfiguration)
 #
 # Source files back-linked to this card (grep "features/midi-out-stop-on-f8"):
 #   IT_G.ASM      - Glbl_F8 (the singular transmit site)
 #   IT_MUSIC.ASM  - Music_SendMIDIStop (the transmit)
-#   IT_K.ASM      - MIDIStopOnF8Enable flag, Glbl_MIDIStopF8_Toggle, the gate query
+#   IT_K.ASM      - MIDIStopOnF8Enable flag, Glbl_MIDIStopF8_Toggle, gate query,
+#                   MIDI_SetF8StopEnable (persistence setter)
 #   IT_OBJ1.ASM   - MIDIStopF8ToggleButton on the Shift-F1 MIDI screen
+#   IT_PE.ASM     - PE_ForkExtConfig +3 (MIDIStopOnF8PersistOff mirror byte)
+#   IT_DISK.ASM   - D_InitDisk load-sync + D_SaveDirectoryConfiguration save-sync
 #
-# WATCH: Glbl_F8 Music_SendMIDIStop Glbl_MIDIStopF8_Toggle MIDI_F8StopEnabled
+# WATCH: Glbl_F8 Music_SendMIDIStop Glbl_MIDIStopF8_Toggle MIDI_F8StopEnabled MIDI_SetF8StopEnable
 # =============================================================================
 
 Feature: Send MIDI Stop (FC) out on F8
@@ -111,3 +118,24 @@ Feature: Send MIDI Stop (FC) out on F8
     When the user presses F8
     Then no MIDI byte is transmitted
     And playback stops via Music_Stop, identical to upstream behaviour
+
+  # --- Persistence across restarts (IT.CFG ForkExtConfig +3) ------------------
+  @shipped @build-verified @runtime-untested
+  Scenario: The toggle survives an Impulse Tracker restart
+    # cite: IT_DISK.ASM D_SaveDirectoryConfiguration stamps the live flag into
+    #       PE_ForkExtConfig +3 (force-off sense, 0=ON) before D_SaveBlock writes
+    #       the 16-byte block; D_InitDisk reads it back and calls MIDI_SetF8StopEnable.
+    # cite: commit 222962f ; IT_PE.ASM MIDIStopOnF8PersistOff at block offset +3
+    Given the user turns the toggle OFF and IT writes IT.CFG (any config save)
+    When IT.EXE is quit and relaunched
+    Then D_InitDisk reads block +3 and restores the toggle to OFF
+    And turning it back ON and saving restores ON on the next launch
+
+  @shipped @build-verified @runtime-untested
+  Scenario: Old IT.CFG files (and fresh installs) default the toggle ON
+    # cite: block +3 is FORCE-OFF: 0 -> ON. Pre-222962f IT.CFGs wrote that byte as
+    #       a reserved zero; files with no block at all keep the static default 0.
+    #       Both decode to ON, matching the in-code default MIDIStopOnF8Enable=1.
+    Given an IT.CFG written before this feature (block +3 byte is zero or absent)
+    When IT.EXE loads it at boot
+    Then the "Send MIDI Stop on F8" toggle comes up ON (no surprise OFF)
