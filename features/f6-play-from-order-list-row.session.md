@@ -67,11 +67,9 @@ card."
 
 - `@build-verified` is real: DOSBox-X BUILDALL, IT_G.asm Error/Warning = None,
   IT.EXE links.
-- `@runtime-untested` is honest: not yet confirmed by running IT.EXE, putting the
-  cursor on an order row, pressing F6, and hearing playback start from that order
-  and advance. IT.EXE is relaunched and ready. Watch: that it starts at the
-  RIGHT order (not order 0), and that it advances through the list rather than
-  looping one pattern.
+- `@runtime-verified` (2026-06-04): Esa confirmed on a live IT.EXE — "F6 + F7
+  work." F6 starts the song from the selected order row; F7's pre-existing
+  order-aware from-row play also confirmed.
 
 ## How to get back
 

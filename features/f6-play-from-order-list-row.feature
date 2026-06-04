@@ -51,8 +51,9 @@ Feature: F6 in the Order List plays the song from the selected order row
   So that I can audition the song from any point in the arrangement without
   jumping back to the pattern editor or to order 0.
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-verified
   Scenario: F6 on a selected order row starts the song from that order
+    # RUNTIME-VERIFIED 2026-06-04: Esa confirmed F6 (and F7) work on a live IT.EXE.
     # cite: IT_G.ASM Glbl_F6: Cmp CurrentMode,11 / JNE stock; in the order list
     #       it reads Order (Pattern seg) and calls Music_PlaySong(AX=Order)
     # cite: IT_MUSIC.ASM Music_PlaySong (9106) AX=Order ; commit 8acb41f
@@ -70,12 +71,13 @@ Feature: F6 in the Order List plays the song from the selected order row
     When the user presses F6
     Then the current pattern is played (stock behaviour), not an order
 
-  @stock @build-verified
+  @stock @build-verified @runtime-verified
   Scenario: F7 already plays "from row" relative to the order list
     # cite: IT_PE.ASM PE_F7 (13254): uses PlayMark (or current pattern+Row),
     #       maps it onto Order via the song's order array, plays Music_PlayPartSong
     # Note: F7 was already order-aware, so this feature only adds F6. F7 is
     # documented here for completeness, not changed.
+    # RUNTIME-VERIFIED 2026-06-04: Esa confirmed F7 works alongside F6.
     Given the user is in the Order List with a playback mark or current row
     When the user presses F7
     Then playback starts from that row at the corresponding order (pre-existing)

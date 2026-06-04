@@ -4,7 +4,7 @@
 
 **Intent:** As someone arranging a song in the F11 Order List, I want F6 to start playback from the order row I have selected, So that I can audition the song from any point in the arrangement without jumping back to the pattern editor or to order 0.
 
-**Grades:** @build-verified × 4 · @runtime-untested × 1 · @shipped × 3 · @stock × 1
+**Grades:** @build-verified × 4 · @runtime-verified × 2 · @shipped × 3 · @stock × 1
 
 **Scenarios: 4**
 
@@ -14,7 +14,7 @@
 
 ## 1. F6 on a selected order row starts the song from that order
 
-`@shipped @build-verified @runtime-untested`
+`@shipped @build-verified @runtime-verified`
 
 
 - Given the user is in the Order List (F11, CurrentMode==11)
@@ -40,7 +40,7 @@
 
 ## 3. F7 already plays "from row" relative to the order list
 
-`@stock @build-verified`
+`@stock @build-verified @runtime-verified`
 
 
 - Given the user is in the Order List with a playback mark or current row

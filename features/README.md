@@ -194,14 +194,14 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **Behaviour (4 scenarios):**
 
-- F6 on a selected order row starts the song from that order — `@shipped @build-verified @runtime-untested`
+- F6 on a selected order row starts the song from that order — `@shipped @build-verified @runtime-verified`
 - F6 outside the Order List keeps its stock "play current pattern" — `@shipped @build-verified`
-- F7 already plays "from row" relative to the order list — `@stock @build-verified`
+- F7 already plays "from row" relative to the order list — `@stock @build-verified @runtime-verified`
 - Song-from-order, not a single looped pattern (design choice) — `@shipped @build-verified`
 
 **How it does it:** **Key procs:** `Glbl_F6`, `Music_PlaySong`, `PE_F7`, `PE_GetCurrentPattern`, `Music_PlayPattern` · **Source files:** `IT_G.ASM`, `IT_MUSIC.ASM`, `IT_PE.ASM`
 
-**Grade:** @build-verified ×4 · @runtime-untested ×1 · @shipped ×3 · @stock ×1
+**Grade:** @build-verified ×4 · @runtime-verified ×2 · @shipped ×3 · @stock ×1
 
 **Commits:** `8acb41f` F6 in the Order List plays the song from the selected order row
 
