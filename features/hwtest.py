@@ -17,9 +17,15 @@ resumable -- quit any time, rerun, it picks up where you left off. On exit it
 regenerates STATUS.md + HARDWARE-TEST.md and writes HW-FAILURES.md (the only
 thing you need to send back). No dependencies, plain terminal.
 
+When testing finishes (quit or all-answered) it stages the test artifacts
+(card flips + generated sheets + the verdicts file) and `git commit`s them
+automatically — scoped, so it never sweeps in unrelated working-tree changes.
+Pass --no-commit to skip that and commit by hand.
+
 Run:  python3 features/hwtest.py            # walk the unverified fork list
       python3 features/hwtest.py --reset     # forget prior verdicts, start over
       python3 features/hwtest.py --failures   # just (re)write HW-FAILURES.md
+      python3 features/hwtest.py --no-commit  # don't auto-commit at the end
 """
 import glob, json, os, sys, subprocess
 
@@ -183,6 +189,32 @@ def write_duplicates(results):
     return len(dups)
 
 
+def git_commit_results(flipped, dup, nfail):
+    """When testing finishes, stage ONLY the test artifacts (card flips + the
+    generated sheets + the verdicts file) and commit. Scoped on purpose so it
+    never sweeps in unrelated working-tree changes. Returns the short hash, or
+    None if there was nothing to commit."""
+    files = sorted(glob.glob(os.path.join(FEAT, '*.feature')))
+    for extra in ('STATUS.md', 'HARDWARE-TEST.md', 'HW-FAILURES.md',
+                  'DUPLICATES.md', 'hwtest-results.json'):
+        p = os.path.join(FEAT, extra)
+        if os.path.exists(p):
+            files.append(p)
+    try:
+        subprocess.run(['git', '-C', ROOT, 'add'] + files, check=False,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # nothing staged -> diff --cached --quiet returns 0
+        if subprocess.run(['git', '-C', ROOT, 'diff', '--cached', '--quiet']).returncode == 0:
+            return None
+        msg = ('hwtest: record hardware verification (%d verified, %d duplicates, %d failures)'
+               % (flipped, dup, nfail))
+        subprocess.run(['git', '-C', ROOT, 'commit', '-m', msg], check=False,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return subprocess.check_output(['git', '-C', ROOT, 'rev-parse', '--short', 'HEAD']).decode().strip()
+    except Exception:
+        return None
+
+
 CLR = '\033[2J\033[H'
 
 
@@ -296,12 +328,18 @@ def main():
     nfail = write_failures(results)
     ndup = write_duplicates(results)
     regen()
+    committed = git_commit_results(flipped, dup, nfail) if '--no-commit' not in args else None
     print(CLR + 'Saved. %d hardware-verified, %d duplicates pruned, %d failures logged.'
           % (flipped, dup, nfail))
     print('  - features/HW-FAILURES.md  (send this back)')
     print('  - features/DUPLICATES.md   (scenarios you marked @duplicate)')
     print('  - features/STATUS.md + HARDWARE-TEST.md regenerated')
-    print('  - card tags flipped for passes + duplicates (commit them: git add -A && git commit)')
+    if committed:
+        print('  - committed as %s — push when ready:  git push' % committed)
+    elif '--no-commit' in args:
+        print('  - NOT committed (--no-commit). When ready:  git add features/ && git commit')
+    else:
+        print('  - nothing new to commit')
     return 0
 
 
