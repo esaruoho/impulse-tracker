@@ -7950,6 +7950,34 @@ LSWS_LoopAdvance:
 LSWS_LoopEnd:
                 Call    MIDI_ClearLoaderSuppress
 
+                                                ; FORK FIX (bulk-load left loader
+                                                ; parked inside the module):
+                                                ; having grabbed every sample we
+                                                ; are DONE with this module, so
+                                                ; exit it back to the directory it
+                                                ; was picked from -- the same move
+                                                ; LSWindow_Enter makes on a folder
+                                                ; row (LSWindow_EnterInModuleError).
+                                                ; Without this, SamplesInModule
+                                                ; stays 1 and the NEXT Load Sample
+                                                ; (D_InitLoadSamples ~5062) re-opens
+                                                ; the module's internal cache at the
+                                                ; stale CurrentSample instead of the
+                                                ; directory. D_InitLoadSamples
+                                                ; re-reads SampleDirectory into a
+                                                ; valid directory listing, so the
+                                                ; Glbl_F3 redraw walks a clean cache.
+                Push    CS
+                Pop     DS
+                        Assume DS:Disk
+                Mov     SamplesInModule, 0
+                Call    D_InitLoadSamples
+                        Assume DS:Nothing
+                Mov     CS:CurrentSample, 0
+
+                                                ; Set the "loaded N" info line AFTER
+                                                ; the dir re-read, so D_InitLoadSamples'
+                                                ; own redraw can't wipe it.
                 Push    CS
                 Pop     DS
                         Assume DS:Disk

@@ -36,6 +36,7 @@
 #
 # WATCH: Glbl_F3 Glbl_Ctrl_F3 MIDISyncLoaderSuppress MIDI_SetLoaderSuppress MIDI_ClearLoaderSuppress Music_SilenceSampleVoices D_PreLoadSampleWindow LSWindow_ShiftEnter
 # RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
+#   2026-06-04  direct-commit  touched: Glbl_F3
 #   2026-06-04  direct-commit  touched: MIDISyncLoaderSuppress
 #   2026-06-03  direct-commit  touched: Music_SilenceSampleVoices
 #   2026-06-03  direct-commit  touched: Glbl_F3
