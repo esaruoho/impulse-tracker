@@ -40,6 +40,8 @@ include switch.inc
                 Global  Glbl_MIDITransport_Toggle:Far
                 Global  Glbl_Alt_F12:Far
                 Global  Glbl_MIDIMulti_Toggle:Far
+                Global  Glbl_MIDIStopF8_Toggle:Far
+                Global  MIDI_F8StopEnabled:Far
 
                 Global  K_DrawTables:Far
                 Global  K_InitKeyBoard:Far
@@ -111,6 +113,14 @@ MIDITransportEnable     DB      1       ; default ON. Shift-F1 toggles. Gates
                                         ; (e.g. Logic 5.5.1 sending 125 BPM
                                         ; clock that fluctuates IT between
                                         ; 121-136 BPM is noise).
+; FEATURE-CARD >> features/midi-out-stop-on-f8.feature (the enable flag)
+MIDIStopOnF8Enable      DB      1       ; default ON. Shift-F1 toggles. When ON,
+                                        ; pressing F8 (stop) ALSO transmits a single
+                                        ; MIDI Stop (0FCh) out the MIDI port. The
+                                        ; transmit is sourced EXCLUSIVELY by the F8
+                                        ; keypress -- no received MIDI byte ever
+                                        ; triggers it -- so a MIDI-thru / loopback
+                                        ; cannot create a transport feedback storm.
 MIDISyncLoaderSuppress  DB      0       ; non-zero while F3 loader keyjazz is in
                                         ; flight (LoadSample -> PlaySample). Stops
                                         ; MIDISend from re-entering playback while
@@ -139,6 +149,8 @@ MIDIMultiPanelOnMsg     DB      "Multitimbral MIDI-In: ON", 0
 MIDIMultiPanelOffMsg    DB      "Multitimbral MIDI-In: OFF", 0
 MIDITransportOnMsg      DB      "MIDI Transport (FA/FB/FC): ON", 0
 MIDITransportOffMsg     DB      "MIDI Transport (FA/FB/FC): OFF", 0
+MIDIStopF8OnMsg         DB      "Send MIDI Stop (FC) on F8: ON", 0
+MIDIStopF8OffMsg        DB      "Send MIDI Stop (FC) on F8: OFF", 0
 
 TranslationTable        Label   DWord
 TranslationTableOffset  DW      Offset  USKeyboardTable
@@ -1821,6 +1833,56 @@ Glbl_MIDIMulti_Toggle_Off:
                 Mov     AX, 1
                 Ret
 EndP            Glbl_MIDIMulti_Toggle
+                Assume DS:Nothing
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
+; --- Fork: Glbl_MIDIStopF8_Toggle - flip "Send MIDI Stop (FC) on F8" on/off from
+; the Shift-F1 MIDI screen (sits beside Sync + Transport + Multitimbral toggles).
+; FEATURE-CARD >> features/midi-out-stop-on-f8.feature (Shift-F1 on/off toggle)
+Proc            Glbl_MIDIStopF8_Toggle Far
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Keyboard
+
+                Xor     Byte Ptr [MIDIStopOnF8Enable], 1
+                JZ      Glbl_MIDIStopF8_Toggle_Off
+
+                Mov     SI, Offset MIDIStopF8OnMsg
+                Call    SetInfoLine
+                Mov     AX, 1
+                Ret
+
+Glbl_MIDIStopF8_Toggle_Off:
+                Mov     SI, Offset MIDIStopF8OffMsg
+                Call    SetInfoLine
+                Mov     AX, 1
+                Ret
+
+EndP            Glbl_MIDIStopF8_Toggle
+                Assume DS:Nothing
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
+; --- Fork: MIDI_F8StopEnabled - Far query of the MIDIStopOnF8Enable flag for
+; cross-segment callers (Glbl_F8 in IT_G.ASM). Returns AL = flag, ZF=1 if OFF.
+; FEATURE-CARD >> features/midi-out-stop-on-f8.feature (F8 gate query)
+Proc            MIDI_F8StopEnabled Far
+
+                Push    DS
+                Push    CS
+                Pop     DS
+                        Assume DS:Keyboard
+
+                Mov     AL, [MIDIStopOnF8Enable]
+
+                Pop     DS
+                        Assume DS:Nothing
+                Or      AL, AL                  ; set ZF (ZF=1 -> disabled)
+                Ret
+
+EndP            MIDI_F8StopEnabled
                 Assume DS:Nothing
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½

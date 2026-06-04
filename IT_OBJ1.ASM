@@ -188,6 +188,7 @@ ENDIF
                 Extrn   Glbl_Alt_F12:Far
                 Extrn   Glbl_MIDITransport_Toggle:Far
                 Extrn   Glbl_MIDIMulti_Toggle:Far
+                Extrn   Glbl_MIDIStopF8_Toggle:Far
                 Extrn   Glbl_LoadSample:Far
                 Extrn   Glbl_LoadInstrument:Far
                 Extrn   PE_ScrollLockFollow:Far ; Scroll Lock on F3/F4 -> F2+Follow
@@ -8731,6 +8732,7 @@ O1_MIDIScreen           DW      7
                         DW      Near Ptr MIDISyncToggleButton           ; 23
                         DW      Near Ptr MIDITransportToggleButton      ; 24
                         DW      Near Ptr MIDIMultiToggleButton          ; 25
+                        DW      Near Ptr MIDIStopF8ToggleButton         ; 26
                         DW      Near Ptr SetHelpContext13
                         DW      0
 
@@ -8809,7 +8811,7 @@ MIDITransportToggleButton DW    2
 
 ; FEATURE-CARD >> features/midi-in-multitimbral.feature (Shift-F1 "Toggle Multitimbral MIDI-In" button)
 MIDIMultiToggleButton   DW      2
-                        DW      24, 0FFFFh, 0FFFFh, 0FFFFh
+                        DW      24, 26, 0FFFFh, 0FFFFh
                         DW      0
                         DW      0, 0
                         DW      2
@@ -8819,6 +8821,19 @@ MIDIMultiToggleButton   DW      2
                         DB      8
                         DB      0
                         DB      "  Toggle Multitimbral MIDI-In", 0
+
+; FEATURE-CARD >> features/midi-out-stop-on-f8.feature (Shift-F1 "Send MIDI Stop on F8" button)
+MIDIStopF8ToggleButton  DW      2
+                        DW      25, 0FFFFh, 0FFFFh, 0FFFFh
+                        DW      0
+                        DW      0, 0
+                        DW      2
+                        DD      DWord Ptr Glbl_MIDIStopF8_Toggle
+                        DW      0, 0, 0
+                        DB      2, 49, 32, 51
+                        DB      8
+                        DB      0
+                        DB      "  Toggle Send MIDI Stop (FC) on F8", 0
 
 ShowMIDIInput           DW      8
 MIDIIdleList            DD      DWord Ptr K_ShowMIDIInput

@@ -170,6 +170,7 @@ include network.inc
         Global  Music_PlaySample:Far
         Global  Music_PlayNote:Far
         Global  Music_Stop:Far
+        Global  Music_SendMIDIStop:Far
         Global  Music_SilenceSampleVoices:Far
         Global  Music_PlaySong:Far
         Global  Music_ToggleChannel:Far
@@ -1131,6 +1132,33 @@ MIDISendFilter2:
 
 EndP            MIDISendFilter
                 Assume DS:Nothing
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
+; --- Fork: Music_SendMIDIStop - transmit a single MIDI Stop (0FCh) out the MIDI
+; port. No-ops when the active driver has no MIDI output (MIDISendFilter's
+; DriverFlags bit-0 test). 0FCh is a System Real-Time byte (>= 0F0h), so
+; MIDISendFilter leaves running-status (LastMIDIByte) untouched, per the MIDI
+; spec. Called ONLY from Glbl_F8 (the F8 keypress) -- never from the MIDI-in
+; path -- so no received byte can ever trigger a transmit (no feedback loop).
+; FEATURE-CARD >> features/midi-out-stop-on-f8.feature (the transmit)
+Proc            Music_SendMIDIStop Far
+
+                Push    DS
+                Push    AX
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+
+                Mov     AL, 0FCh                ; MIDI System Real-Time Stop
+                Call    MIDISendFilter
+
+                Pop     AX
+                Pop     DS
+                        Assume DS:Nothing
+                Ret
+
+EndP            Music_SendMIDIStop
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 

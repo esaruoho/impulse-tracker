@@ -51,6 +51,8 @@ EndS
                 Extrn   Music_PlayPattern:Far
                 Extrn   Music_PlaySong:Far
                 Extrn   Music_Stop:Far
+                Extrn   Music_SendMIDIStop:Far
+                Extrn   MIDI_F8StopEnabled:Far
                 Extrn   Music_ToggleChannel:Far
                 Extrn   Music_GetSlaveChannelInformationTable:Far
                 Extrn   Music_IncreaseSpeed:Far
@@ -634,8 +636,14 @@ EndP            Glbl_Shift_F6
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
+; FEATURE-CARD >> features/midi-out-stop-on-f8.feature (the singular F8 transmit site)
 Proc            Glbl_F8 Far
 
+                Call    MIDI_F8StopEnabled      ; AL = flag, ZF=1 if OFF
+                JZ      Glbl_F8_NoMIDIStop
+                Call    Music_SendMIDIStop      ; transmit one 0FCh out (only here)
+
+Glbl_F8_NoMIDIStop:
                 Call    Music_Stop
 
                 Mov     AX, 1
