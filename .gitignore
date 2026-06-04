@@ -83,3 +83,6 @@ IT2354-esaruoho-*.zip
 IT-V*.zip
 dosbox-test/
 dosbox-test.conf
+
+# Convey SessionEnd distiller — local proof-of-fire log
+features/sessions/.distill-log
