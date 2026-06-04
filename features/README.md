@@ -613,15 +613,15 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **Behaviour (5 scenarios):**
 
-- The boot default song is named with the startup timestamp — `@shipped @build-verified @runtime-untested`
-- The format is fixed-width 16 chars, zero-padded, no seconds — `@shipped @build-verified @runtime-untested`
+- The boot default song is named with the startup timestamp — `@shipped @build-verified @runtime-verified`
+- The format is fixed-width 16 chars, zero-padded, no seconds — `@shipped @build-verified @runtime-verified`
 - Making a fresh song re-stamps the name with the new time — `@shipped @build-verified @runtime-untested`
 - A name that already has content is never clobbered — `@shipped @build-verified @runtime-untested`
 - The stamped name is an ordinary editable name, not a locked field — `@shipped @build-verified @runtime-untested`
 
 **How it does it:** **Key procs:** `F_SetTimestampSongName`, `F_NewSong` · **Source files:** `IT.ASM`, `IT_F.ASM`
 
-**Grade:** @build-verified ×5 · @runtime-untested ×5 · @shipped ×5
+**Grade:** @build-verified ×5 · @runtime-untested ×3 · @runtime-verified ×2 · @shipped ×5
 
 **Commits:** `87ad1dd` default blank song name to creation timestamp (YYYY-MM-DD HH:MM)
 

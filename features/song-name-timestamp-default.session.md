@@ -84,10 +84,15 @@ Global/Extrn wiring for `F_SetTimestampSongName` resolved.
 ## Honest grades
 
 - `@build-verified` is real: clean assemble + link in DOSBox-X.
-- Everything is `@runtime-untested` and `@hw-untested`. I did **not** launch
-  IT.EXE and read the F12 Song Name, and nothing ran on real DOS metal. The
-  logic is verified by reading + a clean build only. Flip to `@runtime-verified`
-  only after watching a booted IT.EXE show the timestamp on the F12 screen.
+- `@runtime-verified` (2026-06-04): Esa booted IT.EXE in DOSBox-X, opened F12,
+  and confirmed the Song Name showed the current date/time in "YYYY-MM-DD HH:MM"
+  form — "worked!". That directly exercises the date+time read, the formatting,
+  and the write to SongData:4, so the **boot-default** and **format** scenarios
+  are now `@runtime-verified`.
+- Still `@build-verified` only (not watched on screen): the New Song re-stamp
+  (second call site, structurally identical), the blank-name guard (a structural
+  Cmp/JNE), and the editable-field scenario (stock text-input behaviour).
+- Everything stays `@hw-untested`: DOSBox-X is emulation, not real DOS metal.
 
 ## Possible follow-ups (not done)
 
