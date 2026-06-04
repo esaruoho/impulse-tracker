@@ -139,6 +139,14 @@ F11 Order List: F6 LOOPS the pattern at the selected order row (PE_OrderListLoop
 - `5b37353` F6 loops the selected order's pattern; F7 plays from order+current row
 - Card + session authored same session
 
+### ✅ pattern-length-beyond-200.feature  (+ .session.md)  [carded 2026-06-04]
+Feasibility / negative-result card: 256- and 512-row patterns are blocked by the 64,000-byte PatternData segment (= 200 rows × 320 bytes/row exactly), 16-bit row offsets, and byte-width row fields. `@blocked-by-architecture`, source-cited. No code shipped.
+- `6208e79` feasibility card — 256/512-row patterns blocked by 64KB segment
+
+### 🛠️ convey-gardener.feature  (@tool; + .session.md, full triad)  [carded 2026-06-04]
+Read-only DETECTOR for Convey Principle 7: walks cards + sources, reports malformed branches (dead cites, orphan sessions, dead back-links, stale markers, grade anomalies, index drift) WITHOUT mutating anything. Pruning is a separate reasoned step. `features/gardener.py` → `features/GARDENER.md`.
+- *(this session)* build + harden the gardener detector
+
 ### ✅ note-cut-toggle.feature  (+ .session.md, full triad)  [carded 2026-06-04]
 Note column: '1' stamps a note cut (^^^, 0FEh) as in stock IT, but pressing '1' on a cell that ALREADY holds ^^^ wipes it (NoteCutToggle checks [ES:DI], falls through to WipeNote with AL=NONOTE — same erase as '.'). Note-off and '.' unchanged. Build-verified, runtime-untested.
 - `81e4819` '1' on a note cut toggles it off (NoteCutToggle)

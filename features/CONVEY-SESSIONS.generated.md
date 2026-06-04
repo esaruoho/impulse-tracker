@@ -39,13 +39,13 @@
 - Resume: `claude --resume e86aa106-2936-452b-805c-e3418c03140c`
 - Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/e86aa106-2936-452b-805c-e3418c03140c.jsonl
 - Convey tooling touched: .githooks/post-merge, .githooks/pre-commit, CONVEY-SITUATION.md, CONVEY.md, GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, STATUS.md, gen-status.py, report-card-stamp.sh
-- Cards touched (24): alt-r-replicate.feature, convey-test-runner.feature, day-2026-06-03.feature, f11-order-list.feature, f12-song-variables.feature, f2-pattern-editor.feature, f2-resize-tiles-pattern.feature, f3-sample-list.feature, f4-instrument-list.feature, f6-play-from-order-list-row.feature, midi-in-multitimbral.feature, midi-realtime-sync.feature, multi-wav.feature, multitimbral-instrument-play-dots.feature … (+10)
+- Cards touched (25): alt-r-replicate.feature, convey-test-runner.feature, day-2026-06-03.feature, f11-order-list.feature, f12-song-variables.feature, f2-pattern-editor.feature, f2-resize-tiles-pattern.feature, f3-sample-list.feature, f4-instrument-list.feature, f6-play-from-order-list-row.feature, midi-in-multitimbral.feature, midi-out-stop-on-f8.feature, midi-realtime-sync.feature, multi-wav.feature … (+11)
 
 ### `6ddcab86-2462-4295-9717-0b3f0e837425`  (2026-06-04)
 - Resume: `claude --resume 6ddcab86-2462-4295-9717-0b3f0e837425`
 - Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/6ddcab86-2462-4295-9717-0b3f0e837425.jsonl
-- Convey tooling touched: .githooks/post-merge, .githooks/pre-commit, CONVEY-SITUATION.md, CONVEY.md, GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, STATUS.md, gen-status.py
-- Cards touched (15): alt-r-replicate.feature, convey-test-runner.feature, day-2026-06-03.feature, f11-order-list.feature, f12-song-variables.feature, f2-pattern-editor.feature, f2-resize-tiles-pattern.feature, f3-sample-list.feature, f4-instrument-list.feature, f6-play-from-order-list-row.feature, midi-in-multitimbral.feature, note-cut-toggle.feature, pattern-length-beyond-200.feature, sample-amplify-keeps-playback.feature … (+1)
+- Convey tooling touched: .githooks/post-merge, .githooks/pre-commit, CONVEY-SITUATION.md, CONVEY.md, GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, STATUS.md, gen-sessions.py, gen-status.py, report-card-stamp.sh
+- Cards touched (17): alt-r-replicate.feature, convey-gardener.feature, convey-test-runner.feature, day-2026-06-03.feature, f11-order-list.feature, f12-song-variables.feature, f2-pattern-editor.feature, f2-resize-tiles-pattern.feature, f3-sample-list.feature, f4-instrument-list.feature, f6-play-from-order-list-row.feature, midi-in-multitimbral.feature, note-cut-toggle.feature, pattern-length-beyond-200.feature … (+3)
 
 ### `adf61574-f4a4-4fbc-b9db-dbcf7476fc40`  (2026-06-04)
 - Resume: `claude --resume adf61574-f4a4-4fbc-b9db-dbcf7476fc40`
