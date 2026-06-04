@@ -157,6 +157,7 @@ ENDIF
 
                 Global  PE_SetPatternModified:Far
                 Global  PE_TilePatternToLength:Far
+                Global  PE_OrderListLoopPattern:Far
                 Global  PE_GetLastInstrument:Far
                 Global  PE_ChannelIsEmpty:Far
                 Global  PE_SetLastInstrument:Far
@@ -13250,6 +13251,41 @@ EndP            PEFunction_SetPlayMark
                 Assume DS:Nothing
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+; PE_OrderListLoopPattern -- F6 in the Order List (F11). Loops the pattern at the
+; SELECTED order row: read `Order`, look up its pattern in the song's order array
+; (SongSeg:100h + Order), fetch that pattern's row count (Music_GetPattern returns
+; DS:SI; word[0]=packed length, word[1]=#rows), and Music_PlayPattern it (looped).
+; Skip/end markers (>=254) in the order slot -> no-op.
+; FEATURE-CARD >> features/f6-play-from-order-list-row.feature
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+Proc            PE_OrderListLoopPattern Far
+                Push    CS
+                Pop     DS
+                        Assume DS:Pattern
+
+                Mov     SI, Order               ; selected order row index
+                Call    Music_GetSongSegment    ; AX = song segment
+                Mov     ES, AX
+                Mov     AL, [ES:SI+100h]        ; AL = pattern at that order
+                Cmp     AL, 254                 ; 0FEh skip / 0FFh end -> no pattern
+                JAE     PE_OLLP_Done
+                Xor     AH, AH                  ; AX = pattern number
+
+                Call    Music_GetPattern        ; DS:SI -> pattern data; AX kept
+                Push    AX                      ; save pattern number
+                LodsW                           ; skip packed length
+                LodsW                           ; AX = number of rows
+                Mov     BX, AX                  ; BX = rows
+                Pop     AX                      ; AX = pattern
+                Xor     CX, CX                  ; start at row 0
+                Call    Music_PlayPattern       ; loop the selected order's pattern
+
+PE_OLLP_Done:
+                        Assume DS:Nothing
+                Ret
+EndP            PE_OrderListLoopPattern
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 Proc            PE_F7 Far                       ; If no mark is set, use
                                                 ; current pattern & row
@@ -13259,6 +13295,22 @@ Proc            PE_F7 Far                       ; If no mark is set, use
                 Pop     DS
                         Assume DS:Pattern
 
+                ; Fork: in the Order List (F11), F7 = "Playback from Cursor" ->
+                ; play from the SELECTED order at the current edit row, i.e.
+                ; Music_PlayPartSong(Order, Row). Esa's spec: on row 048, navigate
+                ; to a different order's pattern, press F7 -> playback starts at
+                ; that order, row 048. Other screens keep the stock PE_F7 below.
+                Call    Glbl_GetCurrentMode     ; AL = CurrentMode (DS untouched)
+                Cmp     AL, 11
+                JNE     PE_F7_Stock
+
+                Mov     AX, Order               ; selected order row
+                Mov     BX, Row                 ; current edit row
+                Call    Music_PlayPartSong
+                Mov     AX, 1
+                Ret
+
+PE_F7_Stock:
                 Mov     CX, PatternNumber
                 Mov     BX, Row
 

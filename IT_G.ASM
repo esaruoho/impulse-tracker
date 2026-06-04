@@ -65,6 +65,7 @@ EndS
                 Extrn   PE_GetCurrentPattern:Far
                 Extrn   PE_SetPatternModified:far
                 Extrn   PE_TilePatternToLength:Far
+                Extrn   PE_OrderListLoopPattern:Far
 
                 Extrn   O1_InstrumentListGeneral:Far
                 Extrn   O1_InstrumentListVolume:Far
@@ -527,21 +528,16 @@ Proc            Glbl_F6 Far
 
                 Call    I_ClearTables
 
-                ; Fork: in the Order List (F11, CurrentMode==11), F6 starts the
-                ; SONG from the selected order row -- Music_PlaySong from `Order`,
-                ; the highlighted order index -- so playback begins at that
-                ; order's pattern and continues through the order list. Anywhere
-                ; else F6 keeps its stock "play current pattern" behaviour.
+                ; Fork: in the Order List (F11, CurrentMode==11), F6 LOOPS the
+                ; pattern at the selected order row -- PE_OrderListLoopPattern
+                ; reads `Order`, fetches that order's pattern + its row count, and
+                ; Music_PlayPatterns it (looped). Anywhere else F6 keeps its stock
+                ; "play current pattern" behaviour.
                 ; FEATURE-CARD >> features/f6-play-from-order-list-row.feature
                 Cmp     Byte Ptr CS:CurrentMode, 11
                 JNE     Glbl_F6_CurrentPattern
 
-                Mov     AX, Pattern
-                Mov     DS, AX
-                        Assume DS:Pattern
-                Mov     AX, Order               ; selected order row index
-                        Assume DS:Nothing
-                Call    Music_PlaySong          ; play the song from that order
+                Call    PE_OrderListLoopPattern ; loop the selected order's pattern
                 Mov     AX, 1
                 Ret
 
