@@ -70,7 +70,8 @@
 
 - Given the cursor is on Row R of the pattern
 - When the user presses Shift-Alt-R
-- Then if R > 0, rows 0..R-1 (ALL channels) tile down to fill rows R..MaxRow
+- Then Shift+Alt+R reaches the dispatcher (cond-11 keymap entry) and is routed here
+- And if R > 0, rows 0..R-1 (ALL channels) tile down to fill rows R..MaxRow
 - And if R == 0, row 0 (all channels) tiles down the whole pattern
 
 <sub>cite: IT_PE.ASM PEFunction_ReplicatePatternAtCursor; commit 5fb263b</sub>
