@@ -40,7 +40,8 @@
 #
 # Commit log (the ingest trail):
 #   f541198  Shift-Enter on module row = bulk-load all samples (original feature)
-#   (this commit) MOD hard-hang fix: finalise loader cache before loop/teardown
+#   (earlier)     MOD hard-hang fix: finalise loader cache before loop/teardown
+#   e0b1643  bulk-load exits module back to its directory (this session)
 #
 # RESULT (third leg of the triad):
 #   Feature delivery : f541198 (original) + the hang fix in this session.
@@ -122,3 +123,38 @@ Feature: Shift-Enter Load from Sample List (bulk-load a module's samples)
     # @fixed-pending-verify: assembles + links clean and the cache state now equals
     # the proven stock path, but the no-hang outcome is NOT yet confirmed on a
     # running IT.EXE. Flip to @runtime-verified after a live DOSBox-X MOD test.
+
+  @bug @fixed-pending-verify
+  Scenario: REGRESSION (reported 2026-06-04) - after bulk-load the loader is parked
+            inside the module instead of its directory
+    # Reported by Esa: "if i now go down a few steps in Sample List (F3) and then
+    # press enter on a different slot to load the Load Sample dialog, what comes up
+    # is NOT the Load Sample view that i selected from but a few steps down sample
+    # inside the module that i shift-loaded... the Load Sample position does not get
+    # remembered after shift-load."
+    #
+    # ROOT CAUSE: the MOD-hang fix (scenario above) finalises the loader cache into
+    # the module-browse state and sets SamplesInModule=1, then Jmp Glbl_F3. That flag
+    # is the right end-state for SINGLE-load (you stay inside the module to pick
+    # another sample), but wrong for bulk-load (every sample is already grabbed). The
+    # next Load Sample open hits D_InitLoadSamples (~5062): Cmp SamplesInModule,0 /
+    # JNE -> Jmp LSWindow_EnterLoadInSampleData, re-opening the module's internal
+    # cache at the stale CurrentSample rather than re-reading the directory.
+    #
+    # FIX (e0b1643): at LSWS_LoopEnd, exit the module back to its directory before
+    # Jmp Glbl_F3 -- the same move LSWindow_Enter makes on a folder row
+    # (LSWindow_EnterInModuleError, IT_DISK.ASM:7562): SamplesInModule=0, call
+    # D_InitLoadSamples (re-reads SampleDirectory into a valid directory listing),
+    # CurrentSample=0. The "loaded N" info line is set AFTER the re-read so the
+    # redraw can't wipe it.
+    # cite: IT_DISK.ASM LSWS_LoopEnd exit-to-directory block (after the bulk loop);
+    #       mirrors LSWindow_EnterInModuleError (IT_DISK.ASM:7562) ; commit e0b1643
+    # cite: IT_DISK.ASM:5062 D_InitLoadSamples SamplesInModule gate (the symptom site)
+    Given the user has just bulk-loaded a module's samples with Shift-Enter
+    And IT has returned to the F3 Sample List
+    When they move the cursor to a different sample slot and press Enter
+    Then the Load Sample browser shows the directory the module was picked from
+    And NOT the module's internal sample list
+    # @fixed-pending-verify: assembles + links clean (IT_DISK.asm Error/Warning None,
+    # IT.EXE 477032 bytes). Flip to @runtime-verified after a live DOSBox-X test:
+    # bulk-load a module, F3-move, Enter -> confirm the directory reappears.

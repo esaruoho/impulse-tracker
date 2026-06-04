@@ -439,17 +439,18 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **What it does:** As someone who wants a module's instruments fast, I want Shift-Enter on a module file in the Load Sample browser to load every sample in that module into consecutive slots, one per row, keeping each sample's original name and loop mode, So that I can lift a whole module's sample set in a single keystroke.
 
-**Behaviour (3 scenarios):**
+**Behaviour (4 scenarios):**
 
 - Shift-Enter on a module bulk-loads its samples into consecutive slots — `@shipped @build-verified @runtime-untested`
 - Loaded samples keep their original module names and loop modes — `@shipped @build-verified @runtime-untested`
 - REGRESSION (reported 2026-06-03) - Shift-Enter on a .MOD hard-hangs IT
+- REGRESSION (reported 2026-06-04) - after bulk-load the loader is parked
 
-**How it does it:** **Key procs:** `LSWindow_ShiftEnter`, `LoadMODSamplesInModule`, `LSViewWindow_Enter2`, `LoadSample`, `ExitLibraryDirectory`, `SamplesInModule`, `SampleCacheFileComplete`
+**How it does it:** **Key procs:** `LSWindow_ShiftEnter`, `LoadMODSamplesInModule`, `LSViewWindow_Enter2`, `LoadSample`, `ExitLibraryDirectory`, `SamplesInModule`, `SampleCacheFileComplete` · **Source files:** `IT_DISK.ASM`
 
 **Grade:** @build-verified ×2 · @runtime-untested ×2 · @shipped ×2
 
-**Commits:** `f541198` Shift-Enter on module row = bulk-load all samples (original feature)
+**Commits:** `f541198` Shift-Enter on module row = bulk-load all samples (original feature) · `e0b1643` bulk-load exits module back to its directory (this session)
 
 
 <a id="shift-enter-load-from-sample-list"></a>

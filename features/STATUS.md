@@ -26,7 +26,7 @@
 | no-samples-to-instruments-envelope-retention | 5 | ✓ | ✗ | — | @build-verified @removed @runtime-untested @stock @todo |
 | sample-amplify-keeps-playback | 9 | ✓ | ✓ | ✗ | @bug @build-verified @hw-untested @runtime-verified @shipped @stock |
 | scrolllock-follow-from-lists | 9 | ✓ | ~ partial | ✗ | @bug @build-verified @hw-untested @runtime-untested @runtime-verified @shipped @stock @todo |
-| shift-enter-bulk-load-from-module | 3 | ✓ | ✗ | ✗ | @bug @build-verified @fixed-pending-verify @hw-untested @runtime-untested @shipped |
+| shift-enter-bulk-load-from-module | 4 | ✓ | ✗ | ✗ | @bug @build-verified @fixed-pending-verify @hw-untested @runtime-untested @shipped |
 | shift-enter-load-from-sample-list | 4 | ✓ | — | ✗ | @code-verified @hw-untested @shipped |
 | shift-f4-drumkit | 5 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped |
 | shift-f4-enters-instrument-mode | 4 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped |

@@ -99,3 +99,80 @@ because it only touches LSWindow_ShiftEnter.
 - Resume: `claude --resume 442513b6-4d90-4fef-959c-1ac9d79e8ec0`
 - Session timestamp: 2026-06-03 ~13:29 EEST (run `date` to confirm)
 - CWD: /Users/esaruoho/work (repo at /Users/esaruoho/work/impulse-tracker)
+
+---
+
+# Session 2 — bulk-load left the loader parked inside the module (2026-06-04)
+
+## The report (Esa, verbatim shape)
+
+> Given the user is using Shift-Enter to load a module's samples, when they press
+> Shift-Enter and the module gets loaded... if i now go down a few steps in Sample
+> List (F3) and then press enter on a different slot to load the "Load Sample"
+> dialog, what comes up is NOT the Load Sample view that i selected from but "a few
+> steps down" sample inside the module that i shift-loaded. The "Load Sample"
+> position does not get remembered after shift-load. And it is acting like it is
+> within the module itself.
+
+(Also flagged, as a separate wish: "ideally, shift-enter should just load to empty
+slots, instead of overwriting" — NOT addressed this session; logged as a follow-up.)
+
+## The trace
+
+1. `D_InitLoadSamples` (IT_DISK.ASM ~5062) is the loader-open dispatcher. It branches
+   on `SamplesInModule`: 0 -> re-read the directory (`D_InitLoadSamples4`); non-0 ->
+   `Jmp LSWindow_EnterLoadInSampleData`, which re-opens the module's internal sample
+   cache at the current `CurrentSample`.
+2. Session-1's MOD-hang fix finalises the cache to module-browse state and sets
+   `SamplesInModule=1`, then `Jmp Glbl_F3`. Correct for SINGLE-load (you stay inside
+   the module to grab another sample — see `LSWindow_Enter7`, which also leaves the
+   flag set by design). Wrong for BULK-load: everything's already grabbed, so the
+   loader should be back at the directory.
+3. So after Shift-Enter the flag is stuck at 1. Next Load Sample open -> module
+   internals, at the stale `CurrentSample`. Esa's "a few steps down inside the module"
+   is exactly that stale cursor. His read ("Sample List positioning affects Load
+   Sample") is slightly off — the F3 list cursor doesn't touch it; the loader simply
+   never exited the module — but the observation is dead on.
+
+## The fix
+
+At `LSWS_LoopEnd`, before `Jmp Glbl_F3`, do the exact exit-to-directory move the
+stock folder-row path uses (`LSWindow_EnterInModuleError`, IT_DISK.ASM:7562):
+`SamplesInModule=0` -> `Call D_InitLoadSamples` (re-reads `SampleDirectory` into a
+valid directory listing) -> `CurrentSample=0`. The "loaded N" info line is set AFTER
+the re-read so `D_InitLoadSamples`' own redraw can't wipe it. Mirroring proven stock
+code (rather than just clearing the flag) also means the cache the Glbl_F3 redraw
+walks is a clean directory listing, not a stale module cache.
+
+## The honest grade
+
+`@build-verified` + `@fixed-pending-verify`.
+
+- Build: real. `dosbox-x -conf buildall.conf` 2026-06-04 11:08 EEST. IT_DISK.asm
+  "Error messages: None / Warning messages: None"; tlink 3.01 linked; IT.EXE 477032
+  bytes.
+- Runtime: NOT confirmed. I did not launch IT.EXE, bulk-load a module, move the F3
+  cursor, and re-open Load Sample to watch the directory reappear. Grading it
+  @runtime-verified would be a lie. Needs a live DOSBox-X test.
+
+## Open follow-ups
+
+- Live test: bulk-load a module, F3-move, Enter -> directory reappears (not module
+  internals). Also confirm single-load still stays inside the module (no regression
+  on `LSWindow_Enter7`).
+- The "load to empty slots instead of overwriting" wish — separate feature, the bulk
+  loop currently writes consecutively from the F3 cursor (`PE_GetLastInstrument`)
+  regardless of occupancy.
+- Nicer UX option (deferred): return to the directory with the cursor ON the module
+  just loaded, instead of `CurrentSample=0` (top of list), to make picking the next
+  module easier.
+
+## How to get back
+
+- Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/6ddcab86-2462-4295-9717-0b3f0e837425.jsonl
+- Session ID: `6ddcab86-2462-4295-9717-0b3f0e837425`
+  (identified by content: 4 hits for the user's "a few steps down" phrasing in the
+  newest transcript — not guessed)
+- Resume: `claude --resume 6ddcab86-2462-4295-9717-0b3f0e837425`
+- Session timestamp: 2026-06-04 ~11:09 EEST (verified via `date`)
+- CWD: /Users/esaruoho/work/impulse-tracker

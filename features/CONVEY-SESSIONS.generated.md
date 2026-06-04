@@ -44,5 +44,5 @@
 ### `6ddcab86-2462-4295-9717-0b3f0e837425`  (2026-06-04)
 - Resume: `claude --resume 6ddcab86-2462-4295-9717-0b3f0e837425`
 - Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/6ddcab86-2462-4295-9717-0b3f0e837425.jsonl
-- Convey tooling touched: CONVEY-SITUATION.md, CONVEY.md, GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, STATUS.md, gen-status.py
+- Convey tooling touched: .githooks/post-merge, CONVEY-SITUATION.md, CONVEY.md, GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, STATUS.md, gen-status.py
 - Cards touched (2): midi-in-multitimbral.feature, shift-enter-bulk-load-from-module.feature
