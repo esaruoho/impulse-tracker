@@ -12,7 +12,6 @@
 | Card | Scn | Build | Runtime (DOSBox) | Hardware | Grades present |
 |------|----:|:-----:|:----------------:|:--------:|----------------|
 | alt-r-replicate | 6 | ✓ | ~ partial | ✓ | @build-verified @hw-untested @hw-verified @runtime-untested @runtime-verified @shipped |
-| convey-gardener | 3 | ✗ | ✓ | — | @runtime-verified @shipped @tool |
 | f11-order-list | 9 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
 | f12-song-variables | 4 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
 | f2-pattern-editor | 4 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
@@ -40,8 +39,8 @@
 | wav-render-reentry-guard | 7 | ✓ | ✓ | ✗ | @build-verified @hw-untested @runtime-verified @shipped |
 
 ## Tally (computed)
-- Cards: 27
+- Cards: 26
 - Build-verified: 25
-- Runtime-verified in DOSBox-X: 4 full + 6 partial
+- Runtime-verified in DOSBox-X: 3 full + 6 partial
 - **Hardware-verified: 1**  ·  hardware-untested: 23
 

@@ -149,9 +149,9 @@ F11 Order List: F6 LOOPS the pattern at the selected order row (PE_OrderListLoop
 Feasibility / negative-result card: 256- and 512-row patterns are blocked by the 64,000-byte PatternData segment (= 200 rows × 320 bytes/row exactly), 16-bit row offsets, and byte-width row fields. `@blocked-by-architecture`, source-cited. No code shipped.
 - `6208e79` feasibility card — 256/512-row patterns blocked by 64KB segment
 
-### 🛠️ convey-gardener.feature  (@tool; + .session.md, full triad)  [carded 2026-06-04]
-Read-only DETECTOR for Convey Principle 7: walks cards + sources, reports malformed branches (dead cites, orphan sessions, dead back-links, stale markers, grade anomalies, index drift) WITHOUT mutating anything. Pruning is a separate reasoned step. `features/gardener.py` → `features/GARDENER.md`.
-- *(this session)* build + harden the gardener detector
+> The Convey gardener detector (`gardener.py` + the `convey-gardener` card/session)
+> moved to its real home, the Convey repo (esaruoho/convey, 2026-06-05) — it is
+> generic Convey tooling, not tracker work.
 
 ### ✅ note-cut-toggle.feature  (+ .session.md, full triad)  [carded 2026-06-04]
 Note column: '1' stamps a note cut (^^^, 0FEh) as in stock IT, but pressing '1' on a cell that ALREADY holds ^^^ wipes it (NoteCutToggle checks [ES:DI], falls through to WipeNote with AL=NONOTE — same erase as '.'). Note-off and '.' unchanged. Build-verified, runtime-untested.

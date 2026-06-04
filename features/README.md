@@ -7,7 +7,6 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 ## Contents
 
 - [Alt-R replicate at cursor](#alt-r-replicate) — `alt-r-replicate.feature`
-- [Convey Gardener detector (read-only malformed-branch report)](#convey-gardener) — `convey-gardener.feature`
 - [Convey test-runner conveys the test situation to a User and routes the verdict back](#convey-test-runner) — `convey-test-runner.feature`
 - [User Presses F11 (Order List)](#f11-order-list) — `f11-order-list.feature`
 - [User Presses F12 (Song Variables & Directory Configuration)](#f12-song-variables) — `f12-song-variables.feature`
@@ -58,24 +57,6 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **Grade:** @build-verified ×6 · @hw-verified ×3 · @runtime-untested ×1 · @runtime-verified ×3 · @shipped ×6
 
 **Commits:** `d506486` Alt-R = Replicate at Cursor · `aaada5e` Alt-R tile at row 0 + Shift-Alt-R = ClearViews (original Alt-R) · `3a3b7ff` Alt-R / Shift-Alt-R get their own undo labels (UndoBufferType23/24)
-
-
-<a id="convey-gardener"></a>
-## Convey Gardener detector (read-only malformed-branch report)
-
-`features/convey-gardener.feature` · [session](convey-gardener.session.md)
-
-**What it does:** As the keeper of the card garden, I want a tool that REPORTS malformed branches without touching anything, So that pruning stays a deliberate, reasoned act and the situation stays wholesome.
-
-**Behaviour (3 scenarios):**
-
-- It reports, it never mutates — `@shipped @runtime-verified`
-- A faithfully-recorded wrong turn is never a finding — `@shipped @runtime-verified`
-- Findings are trustworthy — known false positives are suppressed — `@shipped @runtime-verified`
-
-**How it does it:** **Key procs:** `gardener`
-
-**Grade:** @runtime-verified ×3 · @shipped ×3
 
 
 <a id="convey-test-runner"></a>

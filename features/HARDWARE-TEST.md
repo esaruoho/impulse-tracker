@@ -10,8 +10,8 @@
 
 | | Count |
 |---|---:|
-| Total scenarios | 159 |
-| 🔴 Need hardware test | 156 |
+| Total scenarios | 156 |
+| 🔴 Need hardware test | 153 |
 | ✅ Hardware-verified | 3 |
 
 
@@ -27,11 +27,6 @@
 - 🔴 [ ] No-op at the pattern edges
 - 🔴 [ ] Shift-Alt-R replicates the whole PATTERN at cursor  — _DOSBox ✓ (quick re-confirm on metal)_
 - 🔴 [ ] Both replicate ops are undoable and show a correct label in the undo list  — _DOSBox ✗ — UNTESTED even in emulation_
-
-### `convey-gardener`
-- 🔴 [ ] It reports, it never mutates  — _DOSBox ✓ (quick re-confirm on metal)_
-- 🔴 [ ] A faithfully-recorded wrong turn is never a finding  — _DOSBox ✓ (quick re-confirm on metal)_
-- 🔴 [ ] Findings are trustworthy — known false positives are suppressed  — _DOSBox ✓ (quick re-confirm on metal)_
 
 ### `f11-order-list`
 - 🔴 [ ] Alt-D clones the current pattern to the first free slot

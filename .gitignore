@@ -49,6 +49,7 @@ BUILDALL.STAT
 
 # local DOSBox-X driver config (paths machine-specific; example shipped as buildall.conf.sample)
 buildall.conf
+run.conf
 
 # DOSBox-X build artifacts
 BUILD_ST.TXT
