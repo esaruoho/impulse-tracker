@@ -20,6 +20,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - [Multi-WAV render](#multi-wav) — `multi-wav.feature`
 - [F4 instrument-list play dots in multitimbral Sample mode](#multitimbral-instrument-play-dots) — `multitimbral-instrument-play-dots.feature`
 - [F12 Samples->Instruments uses upstream clear+remap (no envelope retention)](#no-samples-to-instruments-envelope-retention) — `no-samples-to-instruments-envelope-retention.feature`
+- ['1' toggles the note cut under the cursor](#note-cut-toggle) — `note-cut-toggle.feature`
 - [Impulse Tracker fork — what got baked in 2026-06-03 → 04](#recent-features-2026-06-03_to_04) — `recent-features-2026-06-03_to_04.feature`
 - [Sample Amplify keeps the song playing](#sample-amplify-keeps-playback) — `sample-amplify-keeps-playback.feature`
 - [User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument List)](#scrolllock-follow-from-lists) — `scrolllock-follow-from-lists.feature`
@@ -351,6 +352,26 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **Grade:** @build-verified ×4 · @runtime-untested ×1 · @stock ×2 · @todo ×1
 
 **Commits:** `d8ec842` (added) F12 Samples->Instruments preserves drawn envelopes · `b5a0c66` (PR #2, removed) revert envelope preservation -> upstream clear+remap · `c2094e6` a44a607 9a1142c (PR #3, re-added) IMPI-gated keep-envelopes policy
+
+
+<a id="note-cut-toggle"></a>
+## '1' toggles the note cut under the cursor
+
+`features/note-cut-toggle.feature` · [session](note-cut-toggle.session.md)
+
+**What it does:** As someone editing a pattern, I want pressing '1' on a cell that already shows ^^^ to clear it, So that the same key both places and removes a note cut without reaching for '.'.
+
+**Behaviour (3 scenarios):**
+
+- First '1' on an empty (or noted) cell stamps a note cut — `@shipped @build-verified @runtime-untested`
+- Second '1' on a note-cut cell wipes it — `@shipped @build-verified @runtime-untested`
+- Note-off and '.' are unchanged — `@stock @build-verified`
+
+**How it does it:** **Key procs:** `NoteCutToggle`, `WipeNote`, `PE_PatternCursorPos0` · **Source files:** `IT_PE.ASM`
+
+**Grade:** @build-verified ×3 · @runtime-untested ×2 · @shipped ×2 · @stock ×1
+
+**Commits:** `81e4819` '1' on a note cut toggles it off (NoteCutToggle)
 
 
 <a id="recent-features-2026-06-03_to_04"></a>

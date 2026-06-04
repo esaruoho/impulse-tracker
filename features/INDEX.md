@@ -135,6 +135,11 @@ F11 Order List: F6 LOOPS the pattern at the selected order row (PE_OrderListLoop
 - `5b37353` F6 loops the selected order's pattern; F7 plays from order+current row
 - Card + session authored same session
 
+### ✅ note-cut-toggle.feature  (+ .session.md, full triad)  [carded 2026-06-04]
+Note column: '1' stamps a note cut (^^^, 0FEh) as in stock IT, but pressing '1' on a cell that ALREADY holds ^^^ wipes it (NoteCutToggle checks [ES:DI], falls through to WipeNote with AL=NONOTE — same erase as '.'). Note-off and '.' unchanged. Build-verified, runtime-untested.
+- `81e4819` '1' on a note cut toggles it off (NoteCutToggle)
+- Card + session authored same session
+
 ## Uncarded features (the work surface)
 
 > Status flipped in place 2026-06-03: entries below marked ✅ are now carded, and
