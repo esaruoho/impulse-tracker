@@ -35,7 +35,7 @@
 | shift-f4-drumkit | 5 | ✓ | ~ partial | ✗ | @build-verified @hw-untested @runtime-untested @runtime-verified @shipped |
 | shift-f4-enters-instrument-mode | 4 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped |
 | song-name-timestamp-default | 5 | ✓ | ~ partial | ✗ | @build-verified @hw-untested @runtime-untested @runtime-verified @shipped |
-| wav-render-keep-playback | 6 | ✓ | ✗ | ✗ | @build-verified @hw-untested @known-limit @runtime-untested @shipped |
+| wav-render-keep-playback | 7 | ✓ | ✗ | ✗ | @build-verified @hw-untested @known-limit @runtime-untested @shipped |
 | wav-render-quicksave | 8 | ✓ | ~ partial | ✗ | @build-verified @hw-untested @known-limit @runtime-untested @runtime-verified @shipped |
 | wav-render-reentry-guard | 7 | ✓ | ✓ | ✗ | @build-verified @hw-untested @runtime-verified @shipped |
 

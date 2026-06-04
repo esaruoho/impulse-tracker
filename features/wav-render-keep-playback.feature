@@ -44,6 +44,9 @@
 # Commit log (the ingest trail):
 #   702727c  faster-than-realtime pattern render + MIDI-clock resume after
 #   ed62137  standalone auto-resume at render-complete (no external clock needed)
+#   ac3332f  mode-aware resume: pattern-play resumes the PATTERN at its row
+#            (was wrongly jumping to order 0 because Music_PlayPattern never
+#            sets CurrentOrder)
 #
 # SESSION (the vibe record): features/wav-render-keep-playback.session.md
 #
@@ -101,8 +104,20 @@ Feature: WAV render keeps the music going (fast pattern render + MIDI-clock resu
     Given a song was playing and the user presses Ctrl-O (single-pattern render)
     And there is NO external MIDI clock feeding IT
     When the render finishes and the live driver is back
-    Then playback resumes from the saved order/row on its own
+    Then playback resumes on its own from where it was
     And a whole-song render or a multi-WAV sweep does NOT auto-resume this way
+
+  @shipped @build-verified @runtime-untested @hw-untested
+  Scenario: Resume matches the play mode that was active at render enter
+    # cite: IT_MUSIC.ASM enter snapshots WAV_ResumePlayMode + CurrentPattern +
+    #       NumberOfRows + CurrentRow + CurrentOrder; Music_ResumeAfterRender
+    #       branches on WAV_ResumePlayMode. ; commit ac3332f
+    # Music_PlayPattern (PlayMode=1) never sets CurrentOrder, so resuming a
+    # pattern-loop via the order would wrongly jump to order 0.
+    Given the user was on pattern 022 row 32 in single-pattern play (PlayMode 1)
+    When Ctrl-O renders and finishes
+    Then playback resumes as pattern 022 from row 32 via Music_PlayPattern
+    But if a SONG was playing (PlayMode 2) it resumes the saved order/row via Music_PlayPartSong
 
   @shipped @build-verified @runtime-untested @hw-untested
   Scenario: No resume if nothing was playing
