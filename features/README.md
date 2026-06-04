@@ -296,14 +296,14 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - A MIDI-thru loopback cannot create a transport storm — `@shipped @build-verified`
 - The toggle defaults ON and is flipped on the Shift-F1 MIDI screen — `@shipped @build-verified @runtime-untested`
 - With the toggle OFF, F8 behaves exactly like stock — `@shipped @build-verified`
-- The toggle survives an Impulse Tracker restart — `@shipped @build-verified @runtime-untested`
+- The toggle survives an Impulse Tracker restart (no separate save step) — `@shipped @build-verified @runtime-untested`
 - Old IT.CFG files (and fresh installs) default the toggle ON — `@shipped @build-verified @runtime-untested`
 
 **How it does it:** **Key procs:** `Glbl_F8`, `Music_SendMIDIStop`, `Glbl_MIDIStopF8_Toggle`, `MIDI_F8StopEnabled`, `MIDI_SetF8StopEnable` · **Source files:** `IT_G.ASM`, `IT_MUSIC.ASM`, `IT_K.ASM`, `IT_OBJ1.ASM`, `IT_DISK.ASM`, `IT_PE.ASM`
 
 **Grade:** @build-verified ×8 · @runtime-untested ×3 · @shipped ×8
 
-**Commits:** `67cdb60` 2026-06-04 Glbl_F8 transmits 0FCh out, gated by Shift-F1 toggle · `222962f` 2026-06-04 persist the toggle across restarts (IT.CFG +3)
+**Commits:** `67cdb60` 2026-06-04 Glbl_F8 transmits 0FCh out, gated by Shift-F1 toggle · `222962f` 2026-06-04 persist the toggle across restarts (IT.CFG +3) · `7559a78` 2026-06-04 toggle auto-saves IT.CFG (persists immediately)
 
 
 <a id="midi-realtime-sync"></a>

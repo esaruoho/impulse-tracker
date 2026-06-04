@@ -33,6 +33,7 @@
 #   feature commits:
 #     67cdb60  2026-06-04  Glbl_F8 transmits 0FCh out, gated by Shift-F1 toggle
 #     222962f  2026-06-04  persist the toggle across restarts (IT.CFG +3)
+#     7559a78  2026-06-04  toggle auto-saves IT.CFG (persists immediately)
 #   card-authoring commit: (this commit)
 #   files: IT_G.ASM (transmit site), IT_MUSIC.ASM (Music_SendMIDIStop),
 #          IT_K.ASM (flag + toggle + query + setter + messages),
@@ -121,15 +122,18 @@ Feature: Send MIDI Stop (FC) out on F8
 
   # --- Persistence across restarts (IT.CFG ForkExtConfig +3) ------------------
   @shipped @build-verified @runtime-untested
-  Scenario: The toggle survives an Impulse Tracker restart
+  Scenario: The toggle survives an Impulse Tracker restart (no separate save step)
+    # cite: IT_K.ASM Glbl_MIDIStopF8_Toggle calls D_SaveDirectoryConfiguration
+    #       immediately after flipping the flag (commit 7559a78) -- same pattern
+    #       as F2-F2 default length.
     # cite: IT_DISK.ASM D_SaveDirectoryConfiguration stamps the live flag into
     #       PE_ForkExtConfig +3 (force-off sense, 0=ON) before D_SaveBlock writes
     #       the 16-byte block; D_InitDisk reads it back and calls MIDI_SetF8StopEnable.
     # cite: commit 222962f ; IT_PE.ASM MIDIStopOnF8PersistOff at block offset +3
-    Given the user turns the toggle OFF and IT writes IT.CFG (any config save)
-    When IT.EXE is quit and relaunched
+    Given the user turns the toggle OFF on the Shift-F1 screen
+    When IT.EXE is quit and relaunched (no explicit "save config" needed)
     Then D_InitDisk reads block +3 and restores the toggle to OFF
-    And turning it back ON and saving restores ON on the next launch
+    And turning it back ON likewise persists on the next launch
 
   @shipped @build-verified @runtime-untested
   Scenario: Old IT.CFG files (and fresh installs) default the toggle ON
