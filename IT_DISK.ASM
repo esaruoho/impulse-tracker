@@ -126,6 +126,8 @@ ENDIF
                 Extrn   PE_GetLastInstrument:Far
                 Extrn   PE_GetPatternConfigOffset:Far
                 Extrn   PE_GetForkExtConfigOffset:Far
+                Extrn   MIDI_F8StopEnabled:Far
+                Extrn   MIDI_SetF8StopEnable:Far
                 Extrn   PE_SaveCurrentPattern:Far
                 Extrn   PE_RestoreCurrentPattern:Far
 
@@ -1352,6 +1354,24 @@ D_InitDisk13:
 
                 Mov     AH, 3Eh         ; Close file.
                 Int     21h
+
+                ; Fork: push the persisted "Send MIDI Stop on F8" state into the
+                ; live Keyboard flag. Block +3 is a FORCE-OFF byte: 0 -> ON (the
+                ; default, and what every old pad-zero IT.CFG decodes to), nonzero
+                ; -> OFF. So F8 MIDI-Stop stays ON for every prior config + fresh
+                ; install, and only an explicit save of OFF flips it.
+                ; FEATURE-CARD >> features/midi-out-stop-on-f8.feature (persistence load)
+                Call    PE_GetForkExtConfigOffset       ; DS:DX -> block
+                Push    BX
+                Mov     BX, DX                          ; DX not a valid base reg
+                Mov     AL, [BX+3]                      ; persisted force-off byte
+                Pop     BX
+                Cmp     AL, 0
+                Mov     AL, 1                           ; assume ON (does not touch ZF)
+                JE      D_InitDiskF8On
+                Xor     AL, AL                          ; nonzero -> OFF
+D_InitDiskF8On:
+                Call    MIDI_SetF8StopEnable            ; AL = enable (0/1)
 
 D_InitDisk2:                                    ; Load font data.. and set it.
                 Push    CS
@@ -6710,7 +6730,21 @@ Proc            D_SaveDirectoryConfiguration Far
 
                 ; Fork: PE_ForkExtConfig block (16 bytes, persisted across
                 ; sessions; see paired read in D_InitDisk).
-                Call    PE_GetForkExtConfigOffset       ; DS:DX -> block
+                Call    PE_GetForkExtConfigOffset       ; DS:DX -> block (DS=Pattern)
+                ; Stamp the live "Send MIDI Stop on F8" state into block +3 as a
+                ; FORCE-OFF byte (0=ON, 1=OFF) before the block hits disk.
+                ; FEATURE-CARD >> features/midi-out-stop-on-f8.feature (persistence save)
+                Push    AX
+                Push    BX
+                Push    SI
+                Call    MIDI_F8StopEnabled              ; AL = enable (0/1), preserves DS/DX/SI/BX
+                Mov     SI, DX                          ; DX not a valid base reg
+                Mov     BL, AL
+                Xor     BL, 1                           ; force-off = NOT enable
+                Mov     [SI+3], BL
+                Pop     SI
+                Pop     BX
+                Pop     AX
                 Mov     CX, 16
                 Call    D_SaveBlock
 

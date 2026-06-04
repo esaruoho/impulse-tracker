@@ -31,6 +31,7 @@
 #
 # WATCH: Glbl_F2 NewPattern_ApplyDefaultLength DefaultNewPatternLength D_SaveDirectoryConfiguration O1_PEConfigList
 # RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
+#   2026-06-04  direct-commit  touched: D_SaveDirectoryConfiguration
 #   2026-06-03  direct-commit  touched: Glbl_F2
 #   2026-06-03  direct-commit  touched: Glbl_F2
 #   2026-06-03  direct-commit  touched: Glbl_F2

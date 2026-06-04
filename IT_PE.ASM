@@ -286,11 +286,18 @@ PE_CloneWipeMode        DB      0       ; latched wipe mode for the body;
 ; Layout (offsets from PE_ForkExtConfig):
 ;   +0 (W) DefaultNewPatternLength   new-empty-pattern row count, 32..200
 ;   +2 (B) ClonePatternMuteWipe      Alt-D clone M-toggle (0=verbatim, 1=wipe)
-;   +3..+15  reserved for future fork extensions
+;   +3 (B) MIDIStopOnF8PersistOff    "Send MIDI Stop on F8" persisted state, in
+;          FORCE-OFF sense: 0 = ON (the default; also what every old pad-zero
+;          IT.CFG and every fresh install decode to), nonzero = OFF. Mirror of
+;          the live Keyboard-segment MIDIStopOnF8Enable; synced at load (D_Init-
+;          Disk) and save (D_SaveDirectoryConfiguration) in IT_DISK.ASM.
+;          FEATURE-CARD >> features/midi-out-stop-on-f8.feature (persistence)
+;   +4..+15  reserved for future fork extensions
 PE_ForkExtConfig        Label
 DefaultNewPatternLength DW      64
 ClonePatternMuteWipe    DB      1
-PE_ForkExtConfigPad     DB      13 Dup (0)
+MIDIStopOnF8PersistOff  DB      0
+PE_ForkExtConfigPad     DB      12 Dup (0)
 PE_FORKEXTCONFIG_SIZE   EQU     16
 CloneOnMsg              DB      "Clone respects channel mutes: ON", 0
 CloneOffMsg             DB      "Clone respects channel mutes: OFF", 0

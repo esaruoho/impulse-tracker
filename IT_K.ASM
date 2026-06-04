@@ -42,6 +42,7 @@ include switch.inc
                 Global  Glbl_MIDIMulti_Toggle:Far
                 Global  Glbl_MIDIStopF8_Toggle:Far
                 Global  MIDI_F8StopEnabled:Far
+                Global  MIDI_SetF8StopEnable:Far
 
                 Global  K_DrawTables:Far
                 Global  K_InitKeyBoard:Far
@@ -1883,6 +1884,28 @@ Proc            MIDI_F8StopEnabled Far
                 Ret
 
 EndP            MIDI_F8StopEnabled
+                Assume DS:Nothing
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
+; --- Fork: MIDI_SetF8StopEnable - Far setter for the persistence pipeline
+; (IT_DISK.ASM D_InitDisk pushes the IT.CFG-persisted state in at boot). AL = 0/1.
+; FEATURE-CARD >> features/midi-out-stop-on-f8.feature (persistence load)
+Proc            MIDI_SetF8StopEnable Far
+
+                Push    DS
+                And     AL, 1                   ; normalize to 0/1
+                Push    CS
+                Pop     DS
+                        Assume DS:Keyboard
+
+                Mov     [MIDIStopOnF8Enable], AL
+
+                Pop     DS
+                        Assume DS:Nothing
+                Ret
+
+EndP            MIDI_SetF8StopEnable
                 Assume DS:Nothing
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
