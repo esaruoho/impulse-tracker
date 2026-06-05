@@ -86,3 +86,6 @@ dosbox-test.conf
 
 # Convey SessionEnd distiller — local proof-of-fire log
 features/sessions/.distill-log
+
+# Convey distiller: last raw SessionEnd payload (proof-of-fire, local)
+features/sessions/.last-payload.json
