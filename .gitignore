@@ -84,16 +84,6 @@ IT-V*.zip
 dosbox-test/
 dosbox-test.conf
 
-# Convey SessionEnd distiller — local proof-of-fire log
-features/sessions/.distill-log
-
-# Convey distiller: last raw SessionEnd payload (proof-of-fire, local)
-features/sessions/.last-payload.json
-
 # Python bytecode (Convey generators)
 features/__pycache__/
 *.pyc
-
-# Convey auto-written per-session stubs are LOCAL (promote to a real .session.md to keep)
-features/sessions/*.md
-!features/sessions/README.md

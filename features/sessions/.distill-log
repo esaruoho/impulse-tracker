@@ -1,0 +1,10 @@
+2026-06-05T01:22:56  TESTSID-1234  cards=24 tools=10
+2026-06-05T01:30:33  TIMETEST  cards=28 tools=10
+2026-06-05T01:33:36  DETACHTEST  cards=28 tools=10 full=True
+2026-06-05T01:34:58  227bcb50-c2eb-4f4e-8c73-116ad86c5e2f  cards=7 tools=5 full=True
+2026-06-05T22:04:35  FIRED  bytes=251
+2026-06-05T22:04:35  NOT-CONVEY  sid=SYNCTEST
+2026-06-05T22:04:56  FIRED  bytes=249
+2026-06-05T22:04:56  DONE  sid=CVTEST cards=28 tools=10 reason=other
+2026-06-05T22:13:23  FIRED  bytes=292
+2026-06-05T22:13:23  DONE  sid=8fdac3f9 cards=28 tools=10 reason=prompt_input_exit
