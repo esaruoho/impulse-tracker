@@ -93,3 +93,7 @@ features/sessions/.last-payload.json
 # Python bytecode (Convey generators)
 features/__pycache__/
 *.pyc
+
+# Convey auto-written per-session stubs are LOCAL (promote to a real .session.md to keep)
+features/sessions/*.md
+!features/sessions/README.md
