@@ -49,7 +49,7 @@ Feature: A Convey conversation self-archives when it ends
     Then a per-session stub features/sessions/<id>.md is written (metadata only), in ~0.2s
     And it does NOT regenerate the registry here (that happens on the next commit)
 
-  @shipped @runtime-verified @fixed-pending-verify
+  @shipped @runtime-verified
   Scenario: The SessionEnd HOOK fires the distiller when a real Convey session ends
     # cite: .claude/settings.json SessionEnd -> python3 $CLAUDE_PROJECT_DIR/features/convey-distill.py
     # FIRED FOR REAL 2026-06-05 (Esa typed `exit`): wiring confirmed -- the hook DID
@@ -62,8 +62,9 @@ Feature: A Convey conversation self-archives when it ends
     #   it would let the child be killed mid-work. REVERTED this commit.
     # FIX: do the work SYNCHRONOUSLY and FAST (~0.2s, one transcript, no registry
     #   regen), so it completes before teardown on a normal `exit`.
-    # @fixed-pending-verify until the NEXT real `exit` shows a fresh DONE line in
-    #   features/sessions/.distill-log and no "Hook cancelled".
+    # VERIFIED 2026-06-06: features/sessions/.distill-log shows a real
+    #   "DONE  sid=8fdac3f9 ... reason=prompt_input_exit" on a normal `exit`, with no
+    #   "Hook cancelled" -- the synchronous-and-fast fix works end-to-end.
     Given the project SessionEnd hook is approved and active
     When a Convey conversation in this repo ends via a normal `exit`
     Then the distiller runs synchronously, writes the stub, and logs FIRED + DONE

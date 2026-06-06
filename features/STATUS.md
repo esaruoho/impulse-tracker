@@ -17,8 +17,10 @@
 | f2-pattern-editor | 4 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
 | f2-resize-tiles-pattern | 6 | ✓ | ✓ | ✓ | @build-verified @hw-untested @hw-verified @runtime-verified @shipped |
 | f3-sample-list | 5 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
+| f4-f3-cursor-translate | 4 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped |
 | f4-instrument-list | 4 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
 | f6-play-from-order-list-row | 5 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped @stock |
+| loader-keyjazz-hang | 4 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped @stock |
 | midi-in-multitimbral | 9 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock @todo |
 | midi-out-stop-on-f8 | 8 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped |
 | midi-realtime-sync | 11 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @todo |
@@ -40,8 +42,8 @@
 | wav-render-reentry-guard | 7 | ✓ | ✓ | ✗ | @build-verified @hw-untested @runtime-verified @shipped |
 
 ## Tally (computed)
-- Cards: 27
-- Build-verified: 26
+- Cards: 29
+- Build-verified: 28
 - Runtime-verified in DOSBox-X: 3 full + 8 partial
-- **Hardware-verified: 10**  ·  hardware-untested: 14
+- **Hardware-verified: 10**  ·  hardware-untested: 16
 

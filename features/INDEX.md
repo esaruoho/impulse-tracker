@@ -173,8 +173,8 @@ How undo steps get NAMED in the Ctrl-Backspace list (UndoBufferTypes table + PE_
 > two are COVERED by an existing card. They'll migrate up to "Carded features" on
 > the next structural tidy; only ⬜ entries are still genuinely uncarded.
 
-### ⬜ loader-keyjazz-hang.feature
-F3/F4 loader keyjazz no longer kills playback; Music_SilenceSampleVoices.
+### ✅ loader-keyjazz-hang.feature  (+ .session.md, full triad)  [carded 2026-06-06]
+F3/F4 loader keyjazz no longer kills playback; Music_SilenceSampleVoices + MIDISyncLoaderSuppress. Build-verified, runtime/hw-untested.
 - `a44c41b` Music_SilenceSampleVoices (keep playback alive across reloads)
 - `ec91331` F3 loader keyjazz hang VRAM markers
 - `64fa1ce` F3 loader keyjazz hang fix via MIDISyncLoaderSuppress
@@ -210,13 +210,13 @@ NOT runtime-tested: every behaviour scenario is @runtime-untested and the card c
 plus an explicit "what would verify this card" scenario. Only the K_TranslateCondition11 keymap fact is @build-verified.
 - `9fb5ac1` Multi-WAV + F10 MWAV + F10 WAV + Shift+Alt keymap condition
 
-### ⬜ f2-pattern-editor-defaults.feature
-F2 Pattern Editor config (second F2): default pattern length + M flag, persisted in IT.CFG.
-One screen → one runnable scenario.
+### ✅ f2-pattern-editor-defaults — COVERED BY f2-pattern-editor.feature  (stale duplicate)
+Already carded inside f2-pattern-editor.feature (WATCH: DefaultNewPatternLength
+NewPattern_ApplyDefaultLength; commit 068648f). No separate card needed.
 - `068648f` F2-F2 default pattern length persists + M flag persists (IT.CFG ext block)
 
-### ⬜ f4-f3-cursor-translate.feature
-F4 Instrument list ↔ F3 Sample list: carry the cursor selection across the two screens.
+### ✅ f4-f3-cursor-translate.feature  (+ .session.md, full triad)  [carded 2026-06-06]
+F4 Instrument list ↔ F3 Sample list: carry the cursor selection across the two screens (Glbl_InstrumentToSample, note-60-first + scan-all). Build-verified, runtime/hw-untested.
 - `9d626b0` F4→F3 cursor translation
 - `672273b` F4→F3 translate: bounds + note-60-first then scan-all fallback
 
@@ -255,9 +255,10 @@ This session's reconciliation:
   f12-song-variables.feature. No separate cards needed.
 - **Still 🟡 partial:** wav-render-quicksave (core behaviour carded, but not every
   historical Ctrl-O commit has its own scenario, and it's runtime-untested).
-- **Genuinely still ⬜ uncarded:** loader-keyjazz-hang, f2-pattern-editor-defaults,
-  f4-f3-cursor-translate. Carding those three closes the audit (every
-  behaviour-bearing commit resolves to exactly one card).
+- **Genuinely still ⬜ uncarded: NONE** (2026-06-06). The last three are resolved:
+  loader-keyjazz-hang ✅ + f4-f3-cursor-translate ✅ carded; f2-pattern-editor-defaults
+  COVERED-BY f2-pattern-editor.feature. Every behaviour-bearing commit now resolves to
+  exactly one card — the audit is closed.
 
 Reverse-lookup note: `rg`/ugrep skip untracked + git-ignored files by default, so a
 freshly-written card won't resolve until committed (or use `grep -rlF <hash> features/`

@@ -89,3 +89,7 @@ features/sessions/.distill-log
 
 # Convey distiller: last raw SessionEnd payload (proof-of-fire, local)
 features/sessions/.last-payload.json
+
+# Python bytecode (Convey generators)
+features/__pycache__/
+*.pyc

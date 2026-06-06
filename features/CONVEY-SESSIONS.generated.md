@@ -23,23 +23,23 @@
 - Convey tooling touched: .githooks/post-merge, .githooks/pre-commit, CONVEY.md, GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, report-card-stamp.sh
 - Cards touched (7): f11-order-list.feature, f12-song-variables.feature, f2-pattern-editor.feature, f3-sample-list.feature, f4-instrument-list.feature, midi-in-multitimbral.feature, wav-render-quicksave.feature
 
-### `8fdac3f9-0da3-4d36-a1e1-7e0d3ed99894`  (2026-06-03 → 2026-06-05)
+### `8fdac3f9-0da3-4d36-a1e1-7e0d3ed99894`  (2026-06-03 → 2026-06-06)
 - Resume: `claude --resume 8fdac3f9-0da3-4d36-a1e1-7e0d3ed99894`
 - Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/8fdac3f9-0da3-4d36-a1e1-7e0d3ed99894.jsonl
 - Convey tooling touched: .githooks/post-merge, .githooks/pre-commit, CONVEY-SITUATION.md, CONVEY.md, GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, STATUS.md, gen-sessions.py, gen-status.py, report-card-stamp.sh
-- Cards touched (28): alt-r-replicate.feature, convey-session-distiller.feature, day-2026-06-03.feature, f11-order-list.feature, f12-song-variables.feature, f2-pattern-editor.feature, f2-resize-tiles-pattern.feature, f3-sample-list.feature, f4-instrument-list.feature, f6-play-from-order-list-row.feature, midi-in-multitimbral.feature, midi-realtime-sync.feature, multi-wav.feature, multitimbral-instrument-play-dots.feature … (+14)
+- Cards touched (30): alt-r-replicate.feature, convey-session-distiller.feature, day-2026-06-03.feature, f11-order-list.feature, f12-song-variables.feature, f2-pattern-editor.feature, f2-resize-tiles-pattern.feature, f3-sample-list.feature, f4-f3-cursor-translate.feature, f4-instrument-list.feature, f6-play-from-order-list-row.feature, loader-keyjazz-hang.feature, midi-in-multitimbral.feature, midi-realtime-sync.feature … (+16)
 
 ### `bfba3a95-7804-448c-b2be-5748a8bae097`  (2026-06-03)
 - Resume: `claude --resume bfba3a95-7804-448c-b2be-5748a8bae097`
 - Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/bfba3a95-7804-448c-b2be-5748a8bae097.jsonl
 - Convey tooling touched: GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md
-- Cards touched (3): midi-in-multitimbral.feature, midi-realtime-sync.feature, wav-render-quicksave.feature
+- Cards touched (4): loader-keyjazz-hang.feature, midi-in-multitimbral.feature, midi-realtime-sync.feature, wav-render-quicksave.feature
 
 ### `e86aa106-2936-452b-805c-e3418c03140c`  (2026-06-03 → 2026-06-04)
 - Resume: `claude --resume e86aa106-2936-452b-805c-e3418c03140c`
 - Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/e86aa106-2936-452b-805c-e3418c03140c.jsonl
 - Convey tooling touched: .githooks/post-merge, .githooks/pre-commit, CONVEY-SITUATION.md, CONVEY.md, GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, STATUS.md, gen-status.py, report-card-stamp.sh
-- Cards touched (26): alt-r-replicate.feature, convey-test-runner.feature, day-2026-06-03.feature, f11-order-list.feature, f12-song-variables.feature, f2-pattern-editor.feature, f2-resize-tiles-pattern.feature, f3-sample-list.feature, f4-instrument-list.feature, f6-play-from-order-list-row.feature, midi-in-multitimbral.feature, midi-out-stop-on-f8.feature, midi-realtime-sync.feature, multi-wav.feature … (+12)
+- Cards touched (27): alt-r-replicate.feature, convey-test-runner.feature, day-2026-06-03.feature, f11-order-list.feature, f12-song-variables.feature, f2-pattern-editor.feature, f2-resize-tiles-pattern.feature, f3-sample-list.feature, f4-instrument-list.feature, f6-play-from-order-list-row.feature, loader-keyjazz-hang.feature, midi-in-multitimbral.feature, midi-out-stop-on-f8.feature, midi-realtime-sync.feature … (+13)
 
 ### `2f145369-14b0-48b7-b4cb-1d15255dfcad`  (2026-06-04)
 - Resume: `claude --resume 2f145369-14b0-48b7-b4cb-1d15255dfcad`
@@ -57,4 +57,4 @@
 - Resume: `claude --resume adf61574-f4a4-4fbc-b9db-dbcf7476fc40`
 - Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/adf61574-f4a4-4fbc-b9db-dbcf7476fc40.jsonl
 - Convey tooling touched: CONVEY-SITUATION.md, CONVEY.md, GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, STATUS.md, gen-sessions.py, gen-status.py
-- Cards touched (16): alt-r-replicate.feature, convey-test-runner.feature, f11-order-list.feature, f2-resize-tiles-pattern.feature, midi-in-multitimbral.feature, midi-out-stop-on-f8.feature, midi-realtime-sync.feature, pattern-length-beyond-200.feature, sample-amplify-keeps-playback.feature, scrolllock-follow-from-lists.feature, shift-f4-drumkit.feature, song-name-timestamp-default.feature, undo-messaging.feature, wav-render-keep-playback.feature … (+2)
+- Cards touched (17): alt-r-replicate.feature, convey-test-runner.feature, f11-order-list.feature, f2-resize-tiles-pattern.feature, loader-keyjazz-hang.feature, midi-in-multitimbral.feature, midi-out-stop-on-f8.feature, midi-realtime-sync.feature, pattern-length-beyond-200.feature, sample-amplify-keeps-playback.feature, scrolllock-follow-from-lists.feature, shift-f4-drumkit.feature, song-name-timestamp-default.feature, undo-messaging.feature … (+3)
