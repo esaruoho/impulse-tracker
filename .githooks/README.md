@@ -1,65 +1,63 @@
-# `.githooks/` — version-controlled git hooks
+# `.githooks/` — self-maintaining report-card RESULT-LOG
 
-These hooks are committed to the repo so they travel with it. Git does **not**
-run hooks from a tracked directory automatically (a clone enabling arbitrary
-committed scripts would be a security hole), so each clone must opt in once:
+Installed by `convey hooks install`. These hooks keep the **RESULT leg** of every
+report card current straight from git: after each commit or merge, a dated line is
+appended to each `*.feature` card whose WATCHed symbols actually changed.
+
+Git does **not** run hooks from a tracked directory automatically (a clone running
+arbitrary committed scripts would be a security hole), so each clone opts in once:
 
 ```bash
 git config core.hooksPath .githooks
 ```
 
-Run that from the repo root after cloning. Verify with `git config core.hooksPath`
-(should print `.githooks`). To disable: `git config --unset core.hooksPath`.
+`convey hooks install` sets that for you in the target repo. Verify with
+`git config core.hooksPath` (should print `.githooks`). Disable with
+`git config --unset core.hooksPath`.
 
-## Self-maintaining report-card RESULT-LOG (two triggers, one engine)
+## What's here
 
-Closes the report-card triad: **`.feature` (spec) + `.session` (conversation) +
-RESULT (commits / PR / files-changed)**. The matching + appending logic lives
-once in **`report-card-stamp.sh`**; two hooks feed it the two ways this repo
-gains history:
-
-- **`pre-commit`** — the everyday **direct-to-main** path. Stamps each card whose
+- **`pre-commit`** — the everyday direct-to-commit path. Stamps cards whose
   WATCHed symbols are in the *staged* diff and `git add`s the card so the stamp
-  rides **into the same commit** (no second commit; ships + pushes with the
-  code). Direct-commit lines carry no self-sha — the commit doesn't exist yet —
-  but `git blame`/`git log -L` on the line recovers it exactly.
-- **`post-merge`** — the **merge / PR / non-ff-pull** path. Records the merge sha.
+  rides into the same commit. Direct lines carry no self-SHA (the commit doesn't
+  exist yet); recover it with `git blame` / `git log -L` on the line.
+- **`post-merge`** — the merge / PR / non-ff-pull path. Records the merge SHA and
+  PR number.
+- **`report-card-stamp.sh`** — the shared engine both hooks call. Scans **all**
+  tracked `*.feature` (via `git ls-files`), so cards under `features/` *and*
+  `principles/<id>/intent.feature` are stamped — not just one directory.
+- **`pre-commit.local`** *(optional, repo-owned)* — a repo's own extra commit-time
+  jobs. The canonical `pre-commit` SOURCEs it at the end (sharing `$DIR`/`$DATE`),
+  so a repo consumes Convey's stamp engine **without losing repo-specific work**
+  (e.g. regenerating a derived `STATUS.md` from card `@grade` tags). `convey hooks
+  install` never writes or clobbers it. Keep it defensive — never `exit`, never
+  abort the commit.
 
-Either way it appends a dated one-line entry to each `features/*.feature` card
-whose WATCHed symbols were actually changed.
+## How a card opts in
 
-**`pre-commit` also regenerates `features/STATUS.md`** (via `features/gen-status.py`)
-whenever a `*.feature` card is staged, and `git add`s it into the same commit. That
-makes the test-status matrix (build / runtime-DOSBox / hardware) COMPUTED from each
-card's `@grade` tags — the cards are the source of truth, the table is derived, and
-nobody hand-types "runtime-verified" into an index. Skips quietly if `python3` is
-absent.
-
-A card opts in with two header lines:
+Two header lines in any tracked `*.feature` (under `features/` or
+`principles/<id>/intent.feature`):
 
 ```
-# WATCH: Glbl_F11 PE_OrderList_ClonePattern Music_FindFreePattern ...
-# RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest below)
+# WATCH: SymbolA SymbolB SymbolC ...
+# RESULT-LOG >> (auto-maintained by convey hooks — newest below)
 ```
 
-- **Mapping is by symbol, not filename.** A card is logged only when one of its
-  WATCHed procs/symbols appears on a changed (`+`/`-`) line of the diff — so
-  touching an unrelated part of a shared file (e.g. `IT_G.ASM`) does not tag
-  every card.
-- **A WATCH line must be bare symbols, not prose.** Tokens are matched as
-  substrings; prose like `the` matches almost any diff and self-tags the card.
-  A card with no machine-watchable innards should carry NO `# WATCH:` line.
-- **`features/` and `.githooks/` are excluded** from the scanned diff, so a card
-  edit or a hook edit can't self-tag.
-- **It can't break a commit or a merge.** Both hooks are defensive and exit 0 on
-  any trouble; `post-merge` runs after the merge already succeeded, and
-  `pre-commit` never aborts.
-- **post-merge is safe to re-run** — each `(card, merge-sha)` pair logs at most
-  once. **pre-commit** logs once per commit by construction.
+- **Mapping is by symbol, not filename** — a card is logged only when one of its
+  WATCHed symbols appears on a changed (`+`/`-`) line, so touching an unrelated
+  part of a shared file doesn't tag every card.
+- **A WATCH line must be bare symbols, not prose** — tokens are matched as
+  substrings; a word like `the` would match almost any diff. A card with no
+  machine-watchable innards should carry no `# WATCH:` line.
+- **Card homes (`features/`, `principles/`) and `.githooks/` are excluded** from
+  the scanned diff, so a card edit or a hook edit can't self-tag.
+- **Neither hook can break a commit or a merge** — both are defensive and exit 0.
+- **Safe to re-run** — the merge path dedups by SHA; the commit path stamps once
+  per commit by construction.
 
-Appended lines look like:
+An appended line looks like:
 
 ```
 #   2026-06-03  PR #3  merge 9493101  touched: F_SetControlInstrument   <- merge path
-#   2026-06-03  direct-commit  touched: WAV_Store2Dec                    <- direct path
+#   2026-06-03  direct-commit  touched: Glbl_F11                        <- direct path
 ```

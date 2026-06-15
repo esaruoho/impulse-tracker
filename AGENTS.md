@@ -67,11 +67,15 @@ Rules: one Scenario = one behaviour; every Scenario graded with a tag; every cla
 **One-time per clone** (git won't auto-run committed hooks):
 
 ```
-git config core.hooksPath .githooks
+convey hooks install --target .   # or, manually: git config core.hooksPath .githooks
 ```
 
-This enables the `pre-commit` / `post-merge` hooks that auto-stamp a card's
-RESULT-LOG when its WATCHed symbols change. Without it the cards still work as
+These are **Convey's canonical hooks** (owned in `~/work/convey/templates/hooks/`),
+not a private fork: the `pre-commit` / `post-merge` hooks auto-stamp a card's
+RESULT-LOG when its WATCHed symbols change (scanning **all** tracked `*.feature`,
+not just `features/`). `pre-commit` also sources `.githooks/pre-commit.local` —
+this repo's own jobs (regenerating `features/STATUS.md` + the session registry),
+which Convey never clobbers. Without enabling the hooks the cards still work as
 docs but stop self-updating. Detail: `.githooks/README.md`.
 
 ## Hard rules

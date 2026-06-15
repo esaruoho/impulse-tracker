@@ -60,19 +60,20 @@ Feature: <behaviour title>
 
 Rules of the style: **one Scenario = one behaviour** (no 10-`And` grab-bags); **every Scenario carries a grade tag**; **every claim cites proc + line + commit** in a `# cite:` line; the `Then` is a *strong* criterion you can verify and walk away from (`Then only the preview voice falls silent, song keeps playing` — not `Then it works`); keep step phrasing consistent across cards so the vocabulary stays cross-referenceable. The reasoning behind the style is in `GHERKIN-FEATURE-WIKI-PATTERN.md`.
 
-The RESULT-LOG keeps itself current via **version-controlled git hooks in `.githooks/`**:
+The RESULT-LOG keeps itself current via **version-controlled git hooks in `.githooks/`**. These are now **Convey's canonical hooks** — the stamp engine is owned by Convey (`~/work/convey/templates/hooks/`) and dropped in here with `convey hooks install --target .`, so this repo benefits from one shared engine instead of a private fork:
 
-- `pre-commit` stamps cards whose WATCHed symbols are in the *staged* diff and `git add`s the card so the note rides into the same commit (the everyday direct-to-main path).
+- `pre-commit` stamps cards whose WATCHed symbols are in the *staged* diff and `git add`s the card so the note rides into the same commit (the everyday direct-to-main path); it also runs Convey's DreamGraph auto-feed, then **sources `pre-commit.local`** for repo-specific jobs (see below).
 - `post-merge` does the same for merges / PRs (records the merge SHA + PR number).
-- `report-card-stamp.sh` is the shared engine. Mapping is **by symbol** (each card's `# WATCH:` line lists the procs it cites), so touching an unrelated part of a shared file like `IT_G.ASM` doesn't tag every card. `features/` and `.githooks/` are excluded from the scanned diff so a card can't self-tag.
+- `report-card-stamp.sh` is the shared engine (Convey's). Mapping is **by symbol** (each card's `# WATCH:` line lists the procs it cites), so touching an unrelated part of a shared file like `IT_G.ASM` doesn't tag every card. It scans **all** tracked `*.feature` via `git ls-files` (not just `features/`), and excludes the card homes (`features/`, `principles/`) and `.githooks/` so a card can't self-tag.
+- `pre-commit.local` is **this repo's own** (Convey never writes or clobbers it). It is the drop-in that lets us consume Convey's stamp engine without losing repo features: when a `features/*.feature` is staged it regenerates the DERIVED indices from the cards' `@grade` tags — `features/STATUS.md` (`gen-status.py`) and the live-Claude session registry `CONVEY-SESSIONS.generated.md` (`gen-sessions.py`) — and stages them into the same commit.
 
 **ONE-TIME SETUP PER CLONE (REQUIRED — git won't auto-run committed hooks):**
 
 ```
-git config core.hooksPath .githooks
+convey hooks install --target .   # or, manually: git config core.hooksPath .githooks
 ```
 
-Run that once after cloning (e.g. on the Mac Mini). Without it the cards still work as docs, but they stop self-updating. Verify with `git config core.hooksPath` (should print `.githooks`). Full detail: `.githooks/README.md`.
+Run that once after cloning (e.g. on the Mac Mini). `convey hooks install` refreshes the canonical hooks AND sets `core.hooksPath` for you (it never touches `pre-commit.local`). Without it the cards still work as docs, but they stop self-updating. Verify with `git config core.hooksPath` (should print `.githooks`). Full detail: `.githooks/README.md`.
 
 ## User-Facing Keyboard Reference (from IT.TXT — DO NOT GUESS)
 

@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # -----------------------------------------------------------------------------
 # post-merge — RESULT-LOG stamp for the MERGE / non-ff-pull path.
+# Installed by `convey hooks install`. Canonical source: Convey templates/hooks/.
 #
 # After a merge or `git pull` that produced a merge, append a dated line to each
-# report card whose WATCHed symbols changed in the merge. The actual matching +
-# appending lives in report-card-stamp.sh (shared with pre-commit). This hook
-# just computes the merge's range/date/label and delegates.
+# report card whose WATCHed symbols changed in the merge. Matching + appending
+# lives in report-card-stamp.sh (shared with pre-commit); this hook just computes
+# the merge's range/date/label and delegates.
 #
-# Working tree only; never commits; never aborts the merge (post-merge runs
-# after the merge already succeeded). Enable per clone:
+# Working tree only; never commits; never aborts the merge (post-merge runs after
+# the merge already succeeded). Enable per clone:
 #   git config core.hooksPath .githooks
-# See .githooks/README.md.
 # -----------------------------------------------------------------------------
 git rev-parse -q --verify ORIG_HEAD >/dev/null 2>&1 || exit 0   # no merge => nothing
 HEAD_SHA="$(git rev-parse --short HEAD 2>/dev/null)" || exit 0

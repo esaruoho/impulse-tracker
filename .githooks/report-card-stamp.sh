@@ -1,45 +1,60 @@
 #!/usr/bin/env bash
 # -----------------------------------------------------------------------------
 # report-card-stamp.sh — shared RESULT-LOG stamper for the report-card hooks.
+# Installed by `convey hooks install`. Canonical source: Convey templates/hooks/.
 #
-# Called by .githooks/post-merge (merge / non-ff pull path) and .githooks/
-# pre-commit (the everyday direct-to-main path). Appends a dated one-line entry
-# to every features/*.feature card whose WATCHed symbols appear on a changed
-# line of the given diff. Mapping is BY SYMBOL, not filename. features/ and
-# .githooks/ are excluded from the scanned diff so a card edit can't self-tag.
+# Called by pre-commit (the everyday direct-to-commit path) and post-merge (the
+# merge / PR / non-ff-pull path). Appends a dated one-line entry to every report
+# card whose WATCHed symbols appear on a changed line of the given diff.
+#
+# A card opts in with two header lines (works for any *.feature in the repo,
+# whether under features/ or principles/<id>/intent.feature):
+#     # WATCH: SymbolA SymbolB SymbolC ...
+#     # RESULT-LOG >> (auto-maintained by convey hooks — newest below)
+#
+# Mapping is BY SYMBOL, not filename, so touching an unrelated part of a shared
+# file does not tag every card. The scanned diff excludes the card homes
+# (features/, principles/) and .githooks/ so a card edit can't self-tag.
 #
 # Args:
-#   $1  DIFF_SPEC   git-diff range/selector, e.g. "ORIG_HEAD..HEAD" or "--cached"
-#   $2  STAMP_DATE  YYYY-MM-DD to print
-#   $3  TAG         middle text of the line, e.g. "direct-merge  merge 6de8cd0"
-#                   or "direct-commit"
-#   $4  DEDUP_KEY   if non-empty, skip a card that already contains this string
-#                   (so re-runs don't double-log); empty = no dedup
-#   $5  GIT_ADD     "1" => `git add` each stamped card (so a pre-commit stamp
-#                   rides INTO the same commit); anything else => leave unstaged
+#   $1 DIFF_SPEC   git-diff range/selector, e.g. "ORIG_HEAD..HEAD" or "--cached"
+#   $2 STAMP_DATE  YYYY-MM-DD to print
+#   $3 TAG         middle text, e.g. "PR #3  merge 9493101" or "direct-commit"
+#   $4 DEDUP_KEY   skip a card already containing this string (empty = no dedup)
+#   $5 GIT_ADD     "1" => git add each stamped card (so a pre-commit stamp rides
+#                  into the same commit); anything else => leave unstaged
 #
 # Always exits 0 — a hook must never abort the user's commit/merge.
 # -----------------------------------------------------------------------------
 DIFF_SPEC="${1:-}"; STAMP_DATE="${2:-}"; TAG="${3:-}"; DEDUP_KEY="${4:-}"; GIT_ADD="${5:-0}"
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
-FEAT_DIR="$REPO_ROOT/features"
-[ -d "$FEAT_DIR" ] || exit 0
+cd "$REPO_ROOT" || exit 0
 
 # Changed (+/-) lines of the diff, source only. `^[-+]` is anchored & tiny (no
-# backtracking). Excludes features/ + .githooks/ so cards/hooks can't self-tag.
-CHANGED_LINES="$(git diff $DIFF_SPEC -- . ':(exclude)features/' ':(exclude).githooks/' 2>/dev/null | grep -E '^[-+]' || true)"
+# backtracking). Excludes card homes + .githooks/ so cards/hooks can't self-tag.
+CHANGED_LINES="$(git diff $DIFF_SPEC -- . \
+  ':(exclude)features/' ':(exclude)principles/' ':(exclude).githooks/' 2>/dev/null \
+  | grep -E '^[-+]' || true)"
 [ -n "$CHANGED_LINES" ] || exit 0
 
+# Report cards = tracked *.feature files that carry both opt-in markers.
+CARDS="$(git ls-files '*.feature' 2>/dev/null || true)"
+[ -n "$CARDS" ] || exit 0
+
 logged_any=0
-for card in "$FEAT_DIR"/*.feature; do
-  [ -e "$card" ] || continue
+while IFS= read -r card; do
+  [ -n "$card" ] && [ -e "$card" ] || continue
 
-  watch_line="$(grep -m1 '# WATCH:' "$card" 2>/dev/null || true)"
+  # Opt-in markers must be REAL header directives at column 0 — NOT a quoted
+  # mention inside Gherkin prose (e.g. a step that says `"# WATCH:" line`).
+  # Anchoring to ^# is what stops a card that merely *describes* the convention
+  # from accidentally opting itself in (and stamping junk like "the of it line").
+  watch_line="$(grep -m1 '^# WATCH:' "$card" 2>/dev/null || true)"
   [ -n "$watch_line" ] || continue                 # card not opted in
-  grep -Fq 'RESULT-LOG >>' "$card" || continue     # no append marker
+  grep -q '^#.*RESULT-LOG >>' "$card" || continue   # no real append marker
 
-  # Dedup (merge path uses the sha; commit path passes empty = always log).
+  # Dedup (merge path passes the sha; commit path passes empty = always log).
   if [ -n "$DEDUP_KEY" ] && grep -Fq "$DEDUP_KEY" "$card"; then
     continue
   fi
@@ -57,17 +72,21 @@ for card in "$FEAT_DIR"/*.feature; do
 
   line="#   $STAMP_DATE  $TAG  touched: $matched"
 
+  # Insert after the REAL col-0 marker line (same anchor as the opt-in check),
+  # never after a prose mention of "RESULT-LOG >>".
   tmp="$(mktemp)" || continue
-  awk -v m='RESULT-LOG >>' -v line="$line" '
+  awk -v line="$line" '
     { print }
-    (index($0, m) > 0 && !done) { print line; done = 1 }
+    ($0 ~ /^#.*RESULT-LOG >>/ && !done) { print line; done = 1 }
   ' "$card" > "$tmp" && mv "$tmp" "$card"
 
   [ "$GIT_ADD" = "1" ] && git add -- "$card" 2>/dev/null
 
-  echo "[report-card] stamped $(basename "$card") (touched:$matched)"
+  echo "[report-card] stamped $card (touched:$matched)"
   logged_any=1
-done
+done <<EOF
+$CARDS
+EOF
 
 if [ "$logged_any" = 1 ]; then
   if [ "$GIT_ADD" = "1" ]; then

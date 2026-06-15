@@ -1,0 +1,29 @@
+# -----------------------------------------------------------------------------
+# pre-commit.local — impulse-tracker repo-specific commit-time jobs.
+#
+# SOURCED (not exec'd) by the canonical Convey pre-commit (installed via
+# `convey hooks install`). Convey owns the report-card RESULT-LOG stamp + the
+# DreamGraph auto-feed; this file adds what is specific to THIS repo, so we
+# consume Convey's better stamp engine (scans ALL tracked *.feature via
+# `git ls-files`, not just features/) WITHOUT losing repo features.
+#
+# Shares $DIR and $DATE from the parent hook. Must NEVER `exit` (would abort the
+# parent hook) and must stay defensive — every step is a quiet no-op on failure.
+#
+# Job: when a features/*.feature card is staged, regenerate the DERIVED indices
+# from the cards' @grade tags — so test status is COMPUTED from the .feature
+# source of truth, never hand-typed into an index — and stage them into THIS
+# commit. (1) features/STATUS.md from gen-status.py; (2) the live-Claude session
+# registry CONVEY-SESSIONS.generated.md from gen-sessions.py.
+# -----------------------------------------------------------------------------
+if git diff --cached --name-only 2>/dev/null | grep -q '^features/.*\.feature$'; then
+  if command -v python3 >/dev/null 2>&1; then
+    REPO="$(git rev-parse --show-toplevel 2>/dev/null)"
+    python3 "$REPO/features/gen-status.py" >/dev/null 2>&1 \
+      && git add -- "$REPO/features/STATUS.md" 2>/dev/null || true
+    # Plug the live Claude conversations into Convey: regenerate the sessions
+    # registry from this machine's transcripts (defensive no-op if absent).
+    python3 "$REPO/features/gen-sessions.py" >/dev/null 2>&1 \
+      && git add -- "$REPO/features/CONVEY-SESSIONS.generated.md" 2>/dev/null || true
+  fi
+fi
