@@ -3488,6 +3488,22 @@ Proc            Music_GetPattern Far    ; AX = pattern number
 
                 Push    AX
 
+                ; GUARD (fork): a pattern number >= 200 is NOT a real pattern --
+                ; it is an order-list marker (0FEh '+++' skip / 0FFh end) or
+                ; garbage that leaked into CurrentPattern. The known leak path is
+                ; Music_PlayPartSong (resume-after-render): it stores OrderList[order]
+                ; straight into CurrentPattern with no marker check, so an EMPTY
+                ; order list (OrderList[0]=0FFh) yields CurrentPattern=255. Without
+                ; this bound, LEA SI,[63912+EAX*4] indexes PAST the 200-entry pattern
+                ; table and LodsW dereferences a wild segment -> on real hardware a
+                ; triple-fault that REBOOTS the machine (repro: zero patterns in the
+                ; order list, F6 playing, press Ctrl-O). Mirror the engine's own
+                ; threshold (UpdateData_Song: Cmp CL,200 / JB valid) and fall back to
+                ; the safe EmptyPattern instead of dereferencing out of bounds.
+                ; FEATURE-CARD >> features/ctrl-o-empty-orderlist-crash.feature
+                Cmp     AX, 200
+                JAE     Music_GetPattern_Empty
+
 ;                ShL     AX, 2
 ;                Mov     SI, 63912
 ;                Add     SI, AX
@@ -3500,6 +3516,7 @@ Proc            Music_GetPattern Far    ; AX = pattern number
                 JE      Music_GetPattern1
                 JA      Music_GetPattern2
 
+Music_GetPattern_Empty:
                 Push    CS
                 Pop     DS
                 Mov     SI, Offset EmptyPattern
