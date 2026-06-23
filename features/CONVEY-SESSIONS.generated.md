@@ -9,7 +9,7 @@
 > Metadata only -- no conversation content is copied into the repo. The list
 > reflects the machine it was generated on (transcripts are local).
 
-**8 Convey conversations** plugged in:
+**10 Convey conversations** plugged in:
 
 ### `1fa213d0-83aa-4fc1-a8fb-b38dbcdee53d`  (2026-06-03)
 - Resume: `claude --resume 1fa213d0-83aa-4fc1-a8fb-b38dbcdee53d`
@@ -58,3 +58,15 @@
 - Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/adf61574-f4a4-4fbc-b9db-dbcf7476fc40.jsonl
 - Convey tooling touched: CONVEY-SITUATION.md, CONVEY.md, GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, STATUS.md, gen-sessions.py, gen-status.py
 - Cards touched (17): alt-r-replicate.feature, convey-test-runner.feature, f11-order-list.feature, f2-resize-tiles-pattern.feature, loader-keyjazz-hang.feature, midi-in-multitimbral.feature, midi-out-stop-on-f8.feature, midi-realtime-sync.feature, pattern-length-beyond-200.feature, sample-amplify-keeps-playback.feature, scrolllock-follow-from-lists.feature, shift-f4-drumkit.feature, song-name-timestamp-default.feature, undo-messaging.feature … (+3)
+
+### `020aa82c-669a-419b-905e-63f1a1ac8c42`  (2026-06-15)
+- Resume: `claude --resume 020aa82c-669a-419b-905e-63f1a1ac8c42`
+- Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/020aa82c-669a-419b-905e-63f1a1ac8c42.jsonl
+- Convey tooling touched: GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, STATUS.md, report-card-stamp.sh
+- Cards touched (4): midi-out-stop-on-f8.feature, pattern-length-beyond-200.feature, recent-features-2026-06-03_to_04.feature, undo-messaging.feature
+
+### `3471aca0-a5df-4b96-82d0-78eafb943199`  (2026-06-15 → 2026-06-23)
+- Resume: `claude --resume 3471aca0-a5df-4b96-82d0-78eafb943199`
+- Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/3471aca0-a5df-4b96-82d0-78eafb943199.jsonl
+- Convey tooling touched: .githooks/post-merge, .githooks/pre-commit, CONVEY.md, GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, STATUS.md, gen-sessions.py, gen-status.py, report-card-stamp.sh
+- Cards touched (5): ctrl-o-empty-orderlist-crash.feature, sample-amplify-keeps-playback.feature, wav-render-keep-playback.feature, wav-render-quicksave.feature, wav-render-reentry-guard.feature

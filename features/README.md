@@ -7,14 +7,18 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 ## Contents
 
 - [Alt-R replicate at cursor](#alt-r-replicate) — `alt-r-replicate.feature`
+- [A Convey conversation self-archives when it ends](#convey-session-distiller) — `convey-session-distiller.feature`
 - [Convey test-runner conveys the test situation to a User and routes the verdict back](#convey-test-runner) — `convey-test-runner.feature`
+- [Order-list and Ctrl-O render gestures must never crash, reboot, or hang](#ctrl-o-empty-orderlist-crash) — `ctrl-o-empty-orderlist-crash.feature`
 - [User Presses F11 (Order List)](#f11-order-list) — `f11-order-list.feature`
 - [User Presses F12 (Song Variables & Directory Configuration)](#f12-song-variables) — `f12-song-variables.feature`
 - [User Presses F2 (Pattern Editor)](#f2-pattern-editor) — `f2-pattern-editor.feature`
 - [F2 pattern-length increase duplicates (tiles) the existing content](#f2-resize-tiles-pattern) — `f2-resize-tiles-pattern.feature`
 - [User Presses F3 (Sample List)](#f3-sample-list) — `f3-sample-list.feature`
+- [F4<->F3 carry the cursor selection across the two list screens](#f4-f3-cursor-translate) — `f4-f3-cursor-translate.feature`
 - [User Presses F4 (Instrument List)](#f4-instrument-list) — `f4-instrument-list.feature`
 - [Order List F6 loops the selected order's pattern; F7 plays from it at the cursor row](#f6-play-from-order-list-row) — `f6-play-from-order-list-row.feature`
+- [F3/F4 loader keyjazz keeps the song playing](#loader-keyjazz-hang) — `loader-keyjazz-hang.feature`
 - [Multitimbral MIDI-In](#midi-in-multitimbral) — `midi-in-multitimbral.feature`
 - [Send MIDI Stop (FC) out on F8](#midi-out-stop-on-f8) — `midi-out-stop-on-f8.feature`
 - [External MIDI Real-Time Sync](#midi-realtime-sync) — `midi-realtime-sync.feature`
@@ -31,6 +35,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - [Shift-F4 auto-builds a drumkit instrument alongside the 01-16 multitimbral set](#shift-f4-drumkit) — `shift-f4-drumkit.feature`
 - [Shift-F4 to enable Multitimbral mode also switches Samples -> Instruments](#shift-f4-enters-instrument-mode) — `shift-f4-enters-instrument-mode.feature`
 - [A blank song is born named with its creation timestamp](#song-name-timestamp-default) — `song-name-timestamp-default.feature`
+- [Undo steps are named via the UndoBufferTypes table](#undo-messaging) — `undo-messaging.feature`
 - [WAV render keeps the music going (fast pattern render + MIDI-clock resume)](#wav-render-keep-playback) — `wav-render-keep-playback.feature`
 - [WAV Quicksave render filename](#wav-render-quicksave) — `wav-render-quicksave.feature`
 - [WAV render re-entry guard -- a second render gesture mid-render stops cleanly](#wav-render-reentry-guard) — `wav-render-reentry-guard.feature`
@@ -48,15 +53,34 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - Alt-R and Shift-Alt-R are disambiguated by live shift state — `@shipped @build-verified @hw-verified`
 - Cursor above row 0 tiles the rows-above-cursor chunk downward — `@shipped @build-verified @runtime-verified @hw-verified`
 - Cursor on row 0 tiles row 0 down the whole channel — `@shipped @build-verified @runtime-verified @hw-verified`
-- No-op at the pattern edges — `@shipped @build-verified`
-- Shift-Alt-R replicates the whole PATTERN at cursor — `@shipped @build-verified @runtime-verified`
-- Both replicate ops are undoable and show a correct label in the undo list — `@shipped @build-verified @runtime-untested`
+- No-op at the pattern edges — `@shipped @build-verified @hw-verified`
+- Shift-Alt-R replicates the whole PATTERN at cursor — `@shipped @build-verified @runtime-verified @hw-verified`
+- Both replicate ops are undoable and show a correct label in the undo list — `@shipped @build-verified @runtime-untested @hw-verified`
 
 **How it does it:** **Key procs:** `PEFunction_AltR_Dispatch`, `PEFunction_ReplicateAtCursor`, `PEFunction_ReplicatePatternAtCursor`, `PEFunction_ClearViews` · **Source files:** `IT_PE.ASM`
 
-**Grade:** @build-verified ×6 · @hw-verified ×3 · @runtime-untested ×1 · @runtime-verified ×3 · @shipped ×6
+**Grade:** @build-verified ×6 · @hw-verified ×6 · @runtime-untested ×1 · @runtime-verified ×3 · @shipped ×6
 
 **Commits:** `d506486` Alt-R = Replicate at Cursor · `aaada5e` Alt-R tile at row 0 + Shift-Alt-R = ClearViews (original Alt-R) · `3a3b7ff` Alt-R / Shift-Alt-R get their own undo labels (UndoBufferType23/24)
+
+
+<a id="convey-session-distiller"></a>
+## A Convey conversation self-archives when it ends
+
+`features/convey-session-distiller.feature` · [session](convey-session-distiller.session.md)
+
+**What it does:** As someone running many parallel Convey conversations, I want each one to plug itself into the Convey base the moment it ENDS, So the sessions registry and per-session stubs are current without waiting for the next card-commit (the lag I hit when asking "how many sessions are linked").
+
+**Behaviour (6 scenarios):**
+
+- The distiller turns a SessionEnd payload into a per-session stub (fast) — `@shipped @runtime-verified`
+- The SessionEnd HOOK fires the distiller when a real Convey session ends — `@shipped @runtime-verified`
+- Defensive, metadata-only, never touches git — `@shipped`
+- The stub is metadata, not a full vibe-diff
+- Machine-local and approval-gated
+- Claude Code edge cases the distiller cannot fix
+
+**Grade:** @runtime-verified ×2 · @shipped ×3
 
 
 <a id="convey-test-runner"></a>
@@ -82,6 +106,29 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **Commits:** `9ec40af` hwtest.py interactive hardware-test TUI · `e63518b` repo-anchored ./test-impulse-tracker launcher
 
 
+<a id="ctrl-o-empty-orderlist-crash"></a>
+## Order-list and Ctrl-O render gestures must never crash, reboot, or hang
+
+`features/ctrl-o-empty-orderlist-crash.feature` · [session](ctrl-o-empty-orderlist-crash.session.md)
+
+**What it does:** As an Impulse Tracker user rendering a pattern to WAV, I want every render gesture to be safe regardless of order-list state, So that Ctrl-O, right-arrow, and Shift-right can't reboot DOS or wedge the program.
+
+**Behaviour (6 scenarios):**
+
+- an out-of-range pattern number resolves to EmptyPattern, never a wild pointer — `@shipped @build-verified @runtime-untested`
+- empty order list, F6 playing, Ctrl-O — no longer reboots — `@shipped @build-verified @runtime-untested`
+- a single-pattern render stops after one pass instead of hanging — `@shipped @build-verified @runtime-untested`
+- the render terminator never leaks into normal playback — `@shipped @build-verified @runtime-untested`
+- all three gestures share the one hardened render path — `@shipped @build-verified @runtime-untested`
+- the reboot leak SOURCE (Music_PlayPartSong) is documented, not yet hardened
+
+**How it does it:** **Key procs:** `Music_GetPattern`, `Music_GetPattern_Empty`, `Music_PlayPartSong`, `StopEndOfPlaySection` · **Source files:** `IT_MUSIC.ASM`, `IT_PE.ASM`
+
+**Grade:** @build-verified ×5 · @runtime-untested ×5 · @shipped ×5
+
+**Commits:** `4041e66` terminate single-pattern WAV render (hang)
+
+
 <a id="f11-order-list"></a>
 ## User Presses F11 (Order List)
 
@@ -94,7 +141,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - F11 opens the order list with channel panning — `@stock @build-verified`
 - A second F11 toggles to channel volume — `@stock @build-verified`
 - Stock order-list editing keys — `@stock @build-verified`
-- Alt-D clones the current pattern to the first free slot — `@shipped @build-verified`
+- Alt-D clones the current pattern to the first free slot — `@shipped @build-verified @hw-verified`
 - Alt-E doubles the current pattern's length by tiling — `@shipped @build-verified`
 - M toggles the clone mute-wipe mode — `@shipped @build-verified`
 - Ctrl-O renders the active pattern to WAV (Shift-Ctrl-O = no import) — `@shipped @build-verified`
@@ -103,7 +150,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **How it does it:** **Key procs:** `Glbl_F11`, `PE_OrderList_ClonePattern`, `PE_OrderList_ExtendPattern`, `PE_OrderList_ToggleMuteWipe`, `PE_OrderList_ApplyMuteWipe`, `PE_OrderList_RenderDispatch`, `PE_OrderList_RenderQuicksave`, `PE_OrderList_GDispatch`, `PE_OrderList_RightDispatch`, `PE_OrderList_LeftDispatch`, `Music_FindFreePattern`, `Music_GetMuteChannelTable`, `ClonePatternMuteWipe`
 
-**Grade:** @build-verified ×9 · @shipped ×6 · @stock ×3
+**Grade:** @build-verified ×9 · @hw-verified ×1 · @shipped ×6 · @stock ×3
 
 **Commits:** `fb47b32` Import code (upstream base: F11 order list / panning / volume) · `1a7aa16` F11 order list: render / clone / extend ops + mute-wipe toggle · `4eee4f8` F11 clone auto-insert + runtime status messages · `90cfd04` cursor-key edge gestures (note-cut at row 0 for mute-wipe clone) · `74c3fe8` Shift-Right single-pattern Quicksave render -> LL<HHMMSS>.WAV
 
@@ -159,16 +206,16 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **Behaviour (6 scenarios):**
 
-- 64 -> 128 duplicates the 64 rows once — `@shipped @build-verified @runtime-verified`
-- 64 -> 192 duplicates the 64 rows twice — `@shipped @build-verified @runtime-verified`
-- Non-multiple lengths get a partial final copy ("until the end") — `@shipped @build-verified @runtime-verified`
+- 64 -> 128 duplicates the 64 rows once — `@shipped @build-verified @runtime-verified @hw-verified`
+- 64 -> 192 duplicates the 64 rows twice — `@shipped @build-verified @runtime-verified @hw-verified`
+- Non-multiple lengths get a partial final copy ("until the end") — `@shipped @build-verified @runtime-verified @hw-verified`
 - Shrinking the pattern does not tile — `@shipped @build-verified`
 - Scope is the F2 config path only — `@shipped @build-verified`
 - The tiled buffer persists via the working-copy model — `@shipped @build-verified`
 
 **How it does it:** **Key procs:** `PE_TilePatternToLength`, `Glbl_F2`, `PE_OrderList_ExtendPattern`, `NumberOfRows`, `MaxRow` · **Source files:** `IT_G.ASM`, `IT_PE.ASM`
 
-**Grade:** @build-verified ×6 · @runtime-verified ×3 · @shipped ×6
+**Grade:** @build-verified ×6 · @hw-verified ×3 · @runtime-verified ×3 · @shipped ×6
 
 **Commits:** `05c70c9` F2 pattern-length increase tiles content instead of blank rows
 
@@ -193,6 +240,27 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **Grade:** @build-verified ×5 · @shipped ×3 · @stock ×2
 
 **Commits:** `fb47b32` Import code (upstream base: F3 sample list, Ctrl-F3 library) · `a44c41b` Music_SilenceSampleVoices: keep playback alive across (re)loads · `64fa1ce` F3 loader keyjazz hang fix: suppress MIDI sync during LoadSample · `ec91331` F3 loader keyjazz: instrument LoadSample + PlaySample w/ VRAM markers
+
+
+<a id="f4-f3-cursor-translate"></a>
+## F4<->F3 carry the cursor selection across the two list screens
+
+`features/f4-f3-cursor-translate.feature` · [session](f4-f3-cursor-translate.session.md)
+
+**What it does:** As someone moving between the Instrument List (F4) and Sample List (F3), I want the selection to follow me to the matching slot, So that switching screens lands on the related sample/instrument instead of resetting to wherever the other list's cursor happened to be.
+
+**Behaviour (4 scenarios):**
+
+- F3 from the Instrument List lands on the instrument's note-60 sample — `@shipped @build-verified @runtime-untested`
+- Note-60-first, then scan all 120 notes for the first non-empty — `@shipped @build-verified @runtime-untested`
+- The reverse maps a sample back to an instrument — `@shipped @build-verified @runtime-untested`
+- 16-bit safe (no 386-only instruction) — `@shipped @build-verified`
+
+**How it does it:** **Key procs:** `Glbl_InstrumentToSample`, `Glbl_SampleToInstrument` · **Source files:** `IT_G.ASM`
+
+**Grade:** @build-verified ×4 · @runtime-untested ×3 · @shipped ×4
+
+**Commits:** `9d626b0` F4 -> F3 cursor translation · `672273b` translate: bounds + note-60-first then scan-all fallback
 
 
 <a id="f4-instrument-list"></a>
@@ -236,6 +304,27 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **Grade:** @build-verified ×5 · @runtime-untested ×2 · @shipped ×4 · @stock ×1
 
 **Commits:** `8acb41f` first cut: F6 = Music_PlaySong(Order) (superseded -- wrong: that · `5b37353` F6 loops the selected order's pattern; F7 plays from order+current row
+
+
+<a id="loader-keyjazz-hang"></a>
+## F3/F4 loader keyjazz keeps the song playing
+
+`features/loader-keyjazz-hang.feature` · [session](loader-keyjazz-hang.session.md)
+
+**What it does:** As someone auditioning samples against a playing song from the loader browser, I want previewing or loading a sample to NOT stop playback, So that I can hear a candidate sample in the mix without the song halting and without IT hanging on a half-loaded sample header.
+
+**Behaviour (4 scenarios):**
+
+- (pre-fork) keyjazz / load in the browser used to kill the song — `@stock @build-verified`
+- Keyjazz preview in the browser silences only the preview voice — `@shipped @build-verified @runtime-untested`
+- Loading a sample silences only that slot, song continues — `@shipped @build-verified @runtime-untested`
+- The MIDI-sync mixer path is gated against a half-loaded header — `@shipped @build-verified @runtime-untested`
+
+**How it does it:** **Key procs:** `Music_SilenceSampleVoices`, `MIDISyncLoaderSuppress`, `MIDI_SetLoaderSuppress`, `MIDI_ClearLoaderSuppress` · **Source files:** `IT_MUSIC.ASM`, `IT_K.ASM`
+
+**Grade:** @build-verified ×4 · @runtime-untested ×3 · @shipped ×3 · @stock ×1
+
+**Commits:** `a44c41b` Music_SilenceSampleVoices (keep playback alive across reloads) · `ec91331` F3 loader keyjazz hang VRAM markers (triage) · `64fa1ce` F3 loader keyjazz hang fix via MIDISyncLoaderSuppress
 
 
 <a id="midi-in-multitimbral"></a>
@@ -460,9 +549,9 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **Behaviour (9 scenarios):**
 
-- Amplifying a sample mid-playback does not stop the song — `@shipped @build-verified @runtime-verified`
-- Alt-M Maximize/Normalize during playback keeps playing through OK/Process — `@shipped @build-verified @runtime-verified`
-- REGRESSION (reported 2026-06-03) - Alt-M still stopped F6 playback — `@runtime-verified`
+- Amplifying a sample mid-playback does not stop the song — `@shipped @build-verified @runtime-verified @hw-verified`
+- Alt-M Maximize/Normalize during playback keeps playing through OK/Process — `@shipped @build-verified @runtime-verified @hw-verified`
+- REGRESSION (reported 2026-06-03) - Alt-M still stopped F6 playback — `@runtime-verified @hw-verified`
 - Alt-M on the Sample List is the Amplify gesture — `@stock @build-verified`
 - The dialog pre-fills the no-clip (normalize) amplification — `@stock @build-verified`
 - Only the amplified sample's voices are silenced, not all channels — `@shipped @build-verified`
@@ -472,7 +561,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **How it does it:** **Key procs:** `I_AmplifySample`, `Music_SilenceSampleVoices`, `Music_Stop`, `Music_GetSampleLocation`, `Music_SoundCardLoadSample`, `Music_SoundCardLoadAllSamples` · **Source files:** `IT_I.ASM`, `IT_MUSIC.ASM`
 
-**Grade:** @build-verified ×8 · @runtime-verified ×3 · @shipped ×5 · @stock ×3
+**Grade:** @build-verified ×8 · @hw-verified ×3 · @runtime-verified ×3 · @shipped ×5 · @stock ×3
 
 **Commits:** `e5e5c38` Sample Amplify (Alt-M) no longer stops the song (entry: Music_Stop
 
@@ -487,18 +576,18 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **Behaviour (9 scenarios):**
 
 - Scroll Lock inside the Pattern Editor still just toggles Follow Mode — `@stock @build-verified`
-- Scroll Lock in the Sample List opens the Pattern Editor with Follow Mode on — `@shipped @build-verified @runtime-verified`
-- Scroll Lock in the Instrument List does the same — `@shipped @build-verified @runtime-verified`
-- Ctrl-F in the Sample List (F3) or Instrument List (F4) — `@shipped @build-verified @runtime-verified`
+- Scroll Lock in the Sample List opens the Pattern Editor with Follow Mode on — `@shipped @build-verified @runtime-verified @hw-verified`
+- Scroll Lock in the Instrument List does the same — `@shipped @build-verified @runtime-verified @hw-verified`
+- Ctrl-F in the Sample List (F3) or Instrument List (F4) — `@shipped @build-verified @runtime-verified @hw-verified`
 - Ctrl-F INSIDE the Pattern Editor (F2) toggles Follow Mode, not the config dialog — `@shipped @build-verified @runtime-untested`
-- Ctrl-F on the Order List (F11) or Song Variables (F12) enters the editor — `@shipped @build-verified @runtime-verified`
+- Ctrl-F on the Order List (F11) or Song Variables (F12) enters the editor — `@shipped @build-verified @runtime-verified @hw-verified`
 - Follow Mode is forced ON, never toggled off, from the lists — `@shipped @build-verified`
 - The handler hands Glbl_F2 the dispatcher's own DS (no segment damage) — `@shipped @build-verified`
 - (not built) Scroll Lock / Ctrl-F from other screens (Order list F11, Song vars F12) — `@todo`
 
 **How it does it:** **Key procs:** `PE_ScrollLockFollow`, `TracePlayback`, `PEFunction_ToggleTrace`, `Glbl_F2`, `K_SetScrollLock`, `SampleGlobalKeyList`, `InstrumentGlobalKeyList` · **Source files:** `IT_PE.ASM`
 
-**Grade:** @build-verified ×8 · @runtime-untested ×1 · @runtime-verified ×4 · @shipped ×7 · @stock ×1 · @todo ×1
+**Grade:** @build-verified ×8 · @hw-verified ×4 · @runtime-untested ×1 · @runtime-verified ×4 · @shipped ×7 · @stock ×1 · @todo ×1
 
 **Commits:** `91dfc0b` Scroll Lock on F3/F4 lists -> Pattern Editor + Follow Mode
 
@@ -552,7 +641,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **Behaviour (5 scenarios):**
 
-- Shift-F4 Create builds the drumkit (01) + the 16 parts (02-17) — `@shipped @build-verified @runtime-verified`
+- Shift-F4 Create builds the drumkit (01) + the 16 parts (02-17) — `@shipped @build-verified @runtime-verified @hw-verified`
 - The drumkit maps each sample slot to a successive key — `@shipped @build-verified @runtime-untested`
 - The drumkit responds to MIDI channel 10 — `@shipped @build-verified @runtime-untested`
 - Each pad plays its sample at fixed base pitch (C-5), not transposed — `@shipped @build-verified @runtime-untested`
@@ -560,7 +649,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **How it does it:** **Key procs:** `MCMI_BuildDrumkit`, `Music_CreateMIDIInInstruments`, `Music_ClearInstrument`, `Glbl_Shift_F4` · **Source files:** `IT_MUSIC.ASM`
 
-**Grade:** @build-verified ×5 · @runtime-untested ×4 · @runtime-verified ×1 · @shipped ×5
+**Grade:** @build-verified ×5 · @hw-verified ×1 · @runtime-untested ×4 · @runtime-verified ×1 · @shipped ×5
 
 **Commits:** `f94f63c` drumkit slot 99 (first cut) -> dee41bd moved to slot 01, multitimbral 02-17
 
@@ -574,14 +663,14 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **Behaviour (4 scenarios):**
 
-- From Sample mode, Shift-F4 + confirm enters Instrument mode with 16 instruments — `@shipped @build-verified @runtime-untested`
+- From Sample mode, Shift-F4 + confirm enters Instrument mode with 16 instruments — `@shipped @build-verified @runtime-verified @hw-verified`
 - The mode switch is a direct flag set, NOT the F12 clear/remap path — `@shipped @build-verified`
 - Declining the prompt changes nothing — `@shipped @build-verified`
 - (verify live) cursor + playback survive the mode switch — `@runtime-untested`
 
 **How it does it:** **Key procs:** `Glbl_Shift_F4`, `Music_CreateMIDIInInstruments`, `Glbl_F4` · **Source files:** `IT_G.ASM`
 
-**Grade:** @build-verified ×3 · @runtime-untested ×2 · @shipped ×3
+**Grade:** @build-verified ×3 · @hw-verified ×1 · @runtime-untested ×1 · @runtime-verified ×1 · @shipped ×3
 
 **Commits:** `8c32fd2` Shift-F4 3-state cycle (the create dispatcher this extends)
 
@@ -595,17 +684,40 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **Behaviour (5 scenarios):**
 
-- The boot default song is named with the startup timestamp — `@shipped @build-verified @runtime-verified`
-- The format is fixed-width 16 chars, zero-padded, no seconds — `@shipped @build-verified @runtime-verified`
+- The boot default song is named with the startup timestamp — `@shipped @build-verified @runtime-verified @hw-verified`
+- The format is fixed-width 16 chars, zero-padded, no seconds — `@shipped @build-verified @runtime-verified @hw-verified`
 - Making a fresh song re-stamps the name with the new time — `@shipped @build-verified @runtime-untested`
 - A name that already has content is never clobbered — `@shipped @build-verified @runtime-untested`
 - The stamped name is an ordinary editable name, not a locked field — `@shipped @build-verified @runtime-untested`
 
 **How it does it:** **Key procs:** `F_SetTimestampSongName`, `F_NewSong` · **Source files:** `IT.ASM`, `IT_F.ASM`
 
-**Grade:** @build-verified ×5 · @runtime-untested ×3 · @runtime-verified ×2 · @shipped ×5
+**Grade:** @build-verified ×5 · @hw-verified ×2 · @runtime-untested ×3 · @runtime-verified ×2 · @shipped ×5
 
 **Commits:** `87ad1dd` default blank song name to creation timestamp (YYYY-MM-DD HH:MM)
+
+
+<a id="undo-messaging"></a>
+## Undo steps are named via the UndoBufferTypes table
+
+`features/undo-messaging.feature` · [session](undo-messaging.session.md)
+
+**What it does:** As a maintainer adding a pattern-editing operation, I want a documented, repeatable way to give my operation a readable undo-list name, So that pressing Ctrl-Backspace shows "what this step was" instead of a blank or garbage label, and the knowledge of how to do it never gets lost.
+
+**Behaviour (6 scenarios):**
+
+- Each undo slot stores a TYPE number that indexes a string table — `@stock @build-verified @runtime-verified`
+- Recording an undo step assigns its type — `@stock @build-verified @runtime-verified`
+- The undo list draws each step's name from the table — `@stock @build-verified @runtime-verified`
+- Adding a new named undo step (the four-step recipe)
+- A type with no offset-table entry draws garbage (the trap) — `@runtime-verified`
+- Worked example - Alt-R / Shift-Alt-R replicate labels — `@shipped @build-verified @runtime-untested`
+
+**How it does it:** **Key procs:** `PE_AddToUndoBuffer`, `PEFunction_DrawUndo`, `UndoBufferTypes` · **Source files:** `IT_PE.ASM`
+
+**Grade:** @build-verified ×4 · @runtime-untested ×1 · @runtime-verified ×4 · @shipped ×1 · @stock ×3
+
+**Commits:** `3a3b7ff` give Alt-R / Shift-Alt-R replicate their own undo labels (added 23/24) · `d938ff4` rename 23/24 to "Replicate Track/Pattern Above" (Esa's wording)
 
 
 <a id="wav-render-keep-playback"></a>
@@ -620,14 +732,14 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - A single-pattern render runs faster than realtime (brief freeze) — `@shipped @build-verified @runtime-untested`
 - Whole-song render stays realtime — `@shipped @build-verified @runtime-untested`
 - A song that was playing resumes after the render, on the next MIDI clock — `@shipped @build-verified @runtime-untested`
-- Standalone Ctrl-O resumes on its own, with no external clock — `@shipped @build-verified @runtime-verified`
-- Resume matches the play mode that was active at render enter — `@shipped @build-verified @runtime-verified`
+- Standalone Ctrl-O resumes on its own, with no external clock — `@shipped @build-verified @runtime-verified @hw-verified`
+- Resume matches the play mode that was active at render enter — `@shipped @build-verified @runtime-verified @hw-verified`
 - No resume if nothing was playing — `@shipped @build-verified @runtime-untested`
 - True simultaneous live-audio + render is NOT done
 
 **How it does it:** **Key procs:** `Music_ToggleWAVRender`, `Music_Poll`, `Music_ResumeAfterRender`, `Music_PlayPartSong`, `MIDISend` · **Source files:** `IT_MUSIC.ASM`, `SoundDrivers/WAVDRV.ASM`, `IT_K.ASM`
 
-**Grade:** @build-verified ×6 · @runtime-untested ×4 · @runtime-verified ×2 · @shipped ×6
+**Grade:** @build-verified ×6 · @hw-verified ×2 · @runtime-untested ×4 · @runtime-verified ×2 · @shipped ×6
 
 **Commits:** `702727c` faster-than-realtime pattern render + MIDI-clock resume after · `ed62137` standalone auto-resume at render-complete (no external clock needed) · `ac3332f` mode-aware resume: pattern-play resumes the PATTERN at its row
 
@@ -641,18 +753,18 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **Behaviour (8 scenarios):**
 
-- Shift-Right at the order-list right edge renders to Quicksave only — `@shipped @build-verified @runtime-verified`
+- Shift-Right at the order-list right edge renders to Quicksave only — `@shipped @build-verified @runtime-verified @hw-verified`
 - Plain Right at the same edge renders AND auto-imports — `@shipped @build-verified @runtime-untested`
-- A single-pattern Quicksave render is named by wall-clock time — `@shipped @build-verified @runtime-verified`
+- A single-pattern Quicksave render is named by wall-clock time — `@shipped @build-verified @runtime-verified @hw-verified`
 - The prefix is a static "LL" (Lackluster), not derived from the song — `@shipped @build-verified`
-- The extension is a real .WAV, not the 3-digit pattern number — `@shipped @build-verified @runtime-verified`
+- The extension is a real .WAV, not the 3-digit pattern number — `@shipped @build-verified @runtime-verified @hw-verified`
 - The auto-import opens the exact file WAVDRV wrote — `@shipped @build-verified @runtime-untested`
 - Multi-WAV, full-song, and user-named renders keep <PFX><NNNN> — `@shipped @build-verified`
 - Two renders in the same second overwrite
 
 **How it does it:** **Key procs:** `WAV_BuildTimestampBasename`, `WAV_Store2Dec`, `Music_ToggleWAVRender`, `Music_ImportRenderedPattern`, `PE_OrderList_RightDispatch`, `PE_OrderList_RenderDispatch`, `PE_OrderList_RenderQuicksave`, `PE_OrderList_GDispatch`, `CopyFileName` · **Source files:** `IT_PE.ASM`, `IT_MUSIC.ASM`, `SoundDrivers/WAVDRV.ASM`
 
-**Grade:** @build-verified ×7 · @runtime-untested ×2 · @runtime-verified ×3 · @shipped ×7
+**Grade:** @build-verified ×7 · @hw-verified ×3 · @runtime-untested ×2 · @runtime-verified ×3 · @shipped ×7
 
 **Commits:** `be595b2` WAV render: .000 (3-digit pattern number) -> real .WAV extension · `74c3fe8` single-pattern Quicksave render named LL<HHMMSS>.WAV by the clock · `3fd46da` (generative-seed preamble)
 

@@ -24,6 +24,11 @@
 
 ## Carded features
 
+### ✅ ctrl-o-empty-orderlist-crash.feature
+Two crash fixes for the single-pattern WAV-render gestures (Ctrl-O / right-arrow / Shift-right). Build-verified, HW-untested.
+- `128ab04` bound-check Music_GetPattern — empty-order-list reboot (invalid pattern → wild pointer)
+- `4041e66` set StopEndOfPlaySection for the render — order-list render hang (looped forever)
+
 ### ✅ midi-in-multitimbral.feature
 Live 16-part sampler; per-instrument MIDI-In channel (hdr 1Fh); Shift-F4 3-state cycle; Shift-F1 router toggle.
 - `10c837b` per-instrument MIDI-In channel + Shift-F4 batch v1
