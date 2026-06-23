@@ -21,6 +21,7 @@ include network.inc
         Extrn   QuickSaveDirectory:Byte
         Extrn   SampleDirectory:Byte
         Extrn   D_GotoRenderDirectory:Far
+        Extrn   D_GotoImportStageDir:Far
         Extrn   D_GetActiveRenderDirPtr:Far
         Extrn   PE_ChannelIsEmpty:Far
         Extrn   K_IsKeyDown:Far
@@ -5848,7 +5849,17 @@ WAV_NoResumeArm:
                 ; failure case.
                 Push    AX
                 Call    D_SaveCwd
+                ; Import gestures (Ctrl-O / right-arrow) stage to LOCAL C:\TEMP so
+                ; the reload reads a LOCAL file -- reading a network file into the
+                ; EMS sample memory crashes real DOS. No-import (shift-right) keeps
+                ; rendering to the network Quicksave (write-only, that is fine).
+                Cmp     Byte Ptr [CS:WAV_NoImport], 0
+                JNE     WAV_PreflightUseQS
+                Call    D_GotoImportStageDir
+                Jmp     WAV_PreflightDidCd
+WAV_PreflightUseQS:
                 Call    D_GotoRenderDirectory
+WAV_PreflightDidCd:
                 PushF
                 Call    D_RestoreCwd
                 PopF
@@ -6121,7 +6132,13 @@ WAV_FNa_Ext:
                 Call    D_SaveCwd
                 Mov     Byte Ptr [CS:WAV_CwdSaved], 1
 WAV_SkipCwdSave:
+                Cmp     Byte Ptr [CS:WAV_NoImport], 0    ; same local-vs-Quicksave
+                JNE     WAV_ActualUseQS                  ; split as the pre-flight
+                Call    D_GotoImportStageDir
+                Jmp     WAV_ActualDidCd
+WAV_ActualUseQS:
                 Call    D_GotoRenderDirectory
+WAV_ActualDidCd:
                                                 ; Pre-flight above already
                                                 ; verified the path; we don't
                                                 ; expect this call to fail.
@@ -6763,7 +6780,9 @@ WAVI_HaveMax:
                 ; scan, sample-cache load). Without this re-cd, the Open below
                 ; runs in a stale cwd and reports "cannot open .NNN file" even
                 ; though the file is sitting safely in the render folder.
-                Call    D_GotoRenderDirectory
+                ; Import always staged to LOCAL C:\TEMP (see D_GotoImportStageDir),
+                ; so re-cd there to read the WAV back -- never the network Quicksave.
+                Call    D_GotoImportStageDir
                 PushF
                 Mov     AL, 25
                 Mov     AH, 'd'                 ; render-dir cd attempted

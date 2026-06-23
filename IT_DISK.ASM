@@ -171,6 +171,7 @@ ENDIF
                 Global  D_GetPreShellDirectory:Far
 
                 Global  D_GotoRenderDirectory:Far
+                Global  D_GotoImportStageDir:Far
 
                 Global  D_SaveInstrument:Far
                 Global  D_ClearFileName:Far
@@ -11447,6 +11448,61 @@ D_GotoRenderDirectory_Done:
                 Ret
 
 EndP            D_GotoRenderDirectory
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+; D_GotoImportStageDir -- cd to a LOCAL staging dir (C:\TEMP) for the Ctrl-O /
+; right-arrow render+reload. The rendered WAV must be read back into the sample
+; (EMS) memory, and reading a file off a NETWORK drive into the EMS page frame
+; crashes real DOS. So import gestures render to LOCAL C:\TEMP and load from
+; there (local reads work); only the no-import Quicksave export stays on the
+; network. Creates C:\TEMP if missing; falls back to C:\ root. CF=1 only if even
+; the C:\ root chdir fails. Same CF contract as D_GotoRenderDirectory.
+; FEATURE-CARD >> features/ctrl-o-empty-orderlist-crash.feature
+D_StageDirCTemp         DB      "C:\TEMP", 0
+D_StageDirCRoot         DB      "C:\", 0
+
+Proc            D_GotoImportStageDir Far
+                Push    AX
+                Push    DX
+                Push    DS
+
+                Push    CS
+                Pop     DS
+
+                Mov     DL, 2                   ; select drive C: (0=A,1=B,2=C)
+                Mov     AH, 0Eh
+                Int     21h
+
+                Mov     DX, Offset D_StageDirCTemp + 2   ; "\TEMP" (skip "C:")
+                Mov     AH, 3Bh                 ; chdir C:\TEMP
+                Int     21h
+                JNC     D_GotoImportStageDir_OK
+
+                Mov     DX, Offset D_StageDirCTemp + 2   ; create it, then retry
+                Mov     AH, 39h                 ; mkdir \TEMP
+                Int     21h
+                Mov     DX, Offset D_StageDirCTemp + 2
+                Mov     AH, 3Bh                 ; chdir \TEMP
+                Int     21h
+                JNC     D_GotoImportStageDir_OK
+
+                Mov     DX, Offset D_StageDirCRoot + 2   ; fallback: "\" root
+                Mov     AH, 3Bh
+                Int     21h
+                JC      D_GotoImportStageDir_Fail
+
+D_GotoImportStageDir_OK:
+                ClC
+                Jmp     D_GotoImportStageDir_Done
+D_GotoImportStageDir_Fail:
+                StC
+D_GotoImportStageDir_Done:
+                Pop     DS
+                Pop     DX
+                Pop     AX
+                Ret
+
+EndP            D_GotoImportStageDir
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
