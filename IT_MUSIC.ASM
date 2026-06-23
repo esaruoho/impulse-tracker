@@ -6625,6 +6625,7 @@ WAV_LogPrefix_LENMIS    DB      "LEN_MISMATCH file=", 0
                                                 ;     before a hang = the stage
                                                 ;     that wedged (no OK line) ---
 WAV_LogPrefix_ImpAlloc  DB      "IMP-alloc file=", 0    ; sample buffer allocated
+WAV_LogPrefix_ImpPG     DB      "PG file=", 0          ; per-page read breadcrumb (bytes=page)
 WAV_LogPrefix_ImpRead   DB      "IMP-read file=", 0     ; PCM read loop survived
 WAV_LogPrefix_ImpHdr    DB      "IMP-hdr file=", 0      ; IMPS header populated
 WAV_LogPrefix_ImpInst   DB      "IMP-inst file=", 0     ; instrument block done
@@ -6983,6 +6984,22 @@ WAVI_AllocOK:
 WAVI_ReadLoop:
                 Test    EBP, EBP
                 JZ      WAVI_ReadDone
+
+                ; PER-PAGE breadcrumb (diagnostic): log the page we are ABOUT to
+                ; map+read to CTRLOLOG.TXT, BEFORE the EMS map/read that may crash.
+                ; bytes=<page>. The LAST "PG" line in the log = the page that
+                ; wedged. Slow (one network write per 16KB) but it names the exact
+                ; failing page so the EMS read bug can be fixed with certainty.
+                Push    EBP                         ; preserve bytes-remaining
+                MovZX   AX, Byte Ptr [CS:WAV_Page]
+                Mov     [CS:WAV_LastReadBytes], AX
+                Push    DS
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_LogPrefix_ImpPG
+                Call    WAV_AppendErrorLog
+                Pop     DS
+                Pop     EBP
 
                 Mov     AX, [CS:WAV_TargetSlot]     ; 1-based
                 Mov     CH, [CS:WAV_Page]           ; load page for proc
