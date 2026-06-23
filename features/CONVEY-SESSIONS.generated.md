@@ -69,4 +69,4 @@
 - Resume: `claude --resume 3471aca0-a5df-4b96-82d0-78eafb943199`
 - Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/3471aca0-a5df-4b96-82d0-78eafb943199.jsonl
 - Convey tooling touched: .githooks/post-merge, .githooks/pre-commit, CONVEY.md, GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, STATUS.md, gen-sessions.py, gen-status.py, report-card-stamp.sh
-- Cards touched (5): ctrl-o-empty-orderlist-crash.feature, sample-amplify-keeps-playback.feature, wav-render-keep-playback.feature, wav-render-quicksave.feature, wav-render-reentry-guard.feature
+- Cards touched (6): ctrl-o-empty-orderlist-crash.feature, midi-out-stop-on-f8.feature, sample-amplify-keeps-playback.feature, wav-render-keep-playback.feature, wav-render-quicksave.feature, wav-render-reentry-guard.feature

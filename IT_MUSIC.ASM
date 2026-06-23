@@ -6620,6 +6620,14 @@ WAV_LogPrefix_OK        DB      "OK   file=", 0
 WAV_LogPrefix_START     DB      "START file=", 0
 WAV_LogPrefix_CLEANUP   DB      "CLEANUP 0-byte file=", 0
 WAV_LogPrefix_LENMIS    DB      "LEN_MISMATCH file=", 0
+                                                ; --- import-stage breadcrumbs:
+                                                ;     the LAST one in CTRLOLOG.TXT
+                                                ;     before a hang = the stage
+                                                ;     that wedged (no OK line) ---
+WAV_LogPrefix_ImpAlloc  DB      "IMP-alloc file=", 0    ; sample buffer allocated
+WAV_LogPrefix_ImpHdr    DB      "IMP-hdr file=", 0      ; IMPS header populated
+WAV_LogPrefix_ImpInst   DB      "IMP-inst file=", 0     ; instrument block done
+WAV_LogPrefix_ImpLoad   DB      "IMP-load file=", 0     ; SoundCardLoadSample done
 WAV_LogMidBytes         DB      " bytes=", 0
 WAV_LogMidSize          DB      " size=", 0
 WAV_LogMidWav           DB      " wav=", 0
@@ -6943,6 +6951,12 @@ WAVI_AllocOK:
                 Mov     AL, 22
                 Mov     AH, 'c'                 ; allocate ok
                 Call    WAV_DebugMark
+                Push    DS                      ; CTRLOLOG breadcrumb (back&forth)
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_LogPrefix_ImpAlloc
+                Call    WAV_AppendErrorLog
+                Pop     DS
 
                 ; --- Stream PCM in 16KB chunks via Music_GetSampleLocation ---
                 ; Page counter is held in [CS:WAV_Page] -- holding it in CH
@@ -7128,6 +7142,12 @@ WAVI_LoopEndDone:
                 Mov     AL, 24
                 Mov     AH, 'e'                 ; IMPS header populated
                 Call    WAV_DebugMark
+                Push    DS                      ; CTRLOLOG breadcrumb
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_LogPrefix_ImpHdr
+                Call    WAV_AppendErrorLog
+                Pop     DS
 
                 ; --- Auto-select the new sample (default for both modes) -----
                 ; LastInstrument is the F3/F4 cursor variable. Setting it to the
@@ -7181,6 +7201,12 @@ WAVI_AfterInstrument:
                 Mov     AL, 27
                 Mov     AH, 'h'                 ; instrument-mode block done
                 Call    WAV_DebugMark
+                Push    DS                      ; CTRLOLOG breadcrumb
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_LogPrefix_ImpInst
+                Call    WAV_AppendErrorLog
+                Pop     DS
 
                 ; --- Upload to active driver ---------------------------------
                 Mov     AX, [CS:WAV_TargetSlot]
@@ -7190,6 +7216,12 @@ WAVI_AfterInstrument:
                 Mov     AL, 28
                 Mov     AH, 'i'                 ; SoundCardLoadSample done
                 Call    WAV_DebugMark
+                Push    DS                      ; CTRLOLOG breadcrumb
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_LogPrefix_ImpLoad
+                Call    WAV_AppendErrorLog
+                Pop     DS
 
                 ; --- Status message ------------------------------------------
                 ; Log success to CTRLOLOG.TXT first so the user has a
