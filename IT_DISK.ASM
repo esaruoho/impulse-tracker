@@ -11460,6 +11460,7 @@ EndP            D_GotoRenderDirectory
 ; FEATURE-CARD >> features/ctrl-o-empty-orderlist-crash.feature
 D_StageDirCTemp         DB      "C:\TEMP", 0
 D_StageDirCRoot         DB      "C:\", 0
+D_EnvTempName           DB      "TEMP="
 
 Proc            D_GotoImportStageDir Far
                 Push    AX
@@ -11469,15 +11470,14 @@ Proc            D_GotoImportStageDir Far
                 Push    CS
                 Pop     DS
 
+                ; 1. C:\TEMP (create it if missing)
                 Mov     DL, 2                   ; select drive C: (0=A,1=B,2=C)
                 Mov     AH, 0Eh
                 Int     21h
-
                 Mov     DX, Offset D_StageDirCTemp + 2   ; "\TEMP" (skip "C:")
                 Mov     AH, 3Bh                 ; chdir C:\TEMP
                 Int     21h
                 JNC     D_GotoImportStageDir_OK
-
                 Mov     DX, Offset D_StageDirCTemp + 2   ; create it, then retry
                 Mov     AH, 39h                 ; mkdir \TEMP
                 Int     21h
@@ -11486,7 +11486,15 @@ Proc            D_GotoImportStageDir Far
                 Int     21h
                 JNC     D_GotoImportStageDir_OK
 
-                Mov     DX, Offset D_StageDirCRoot + 2   ; fallback: "\" root
+                ; 2. C:\TEMP unavailable -> honour the %TEMP% env var (Esa's ask)
+                Call    D_TryEnvTemp
+                JNC     D_GotoImportStageDir_OK
+
+                ; 3. last resort: C:\ root
+                Mov     DL, 2
+                Mov     AH, 0Eh
+                Int     21h
+                Mov     DX, Offset D_StageDirCRoot + 2   ; "\" root
                 Mov     AH, 3Bh
                 Int     21h
                 JC      D_GotoImportStageDir_Fail
@@ -11503,6 +11511,90 @@ D_GotoImportStageDir_Done:
                 Ret
 
 EndP            D_GotoImportStageDir
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+; D_TryEnvTemp -- find TEMP=<path> in the program's DOS environment and chdir
+; into it (handling an optional "X:" drive prefix). CF=0 if it landed there,
+; CF=1 if TEMP is unset / empty / the chdir failed. Preserves all registers.
+Proc            D_TryEnvTemp Near
+                Push    AX
+                Push    BX
+                Push    CX
+                Push    DX
+                Push    SI
+                Push    DI
+                Push    DS
+                Push    ES
+
+                Mov     AH, 62h                 ; get PSP segment (DOS 3.0+)
+                Int     21h                     ; BX = PSP
+                Mov     DS, BX
+                Mov     BX, 2Ch                 ; PSP:2Ch = environment segment word
+                Mov     AX, [BX]
+                Mov     DS, AX                  ; DS = environment
+                Push    CS
+                Pop     ES                      ; ES = CS (for the "TEMP=" literal)
+                Xor     SI, SI
+
+D_TryEnvTemp_Scan:
+                Cmp     Byte Ptr [SI], 0        ; empty string => end of environment
+                JE      D_TryEnvTemp_NotFound
+
+                Push    SI                      ; remember this entry's start
+                Mov     DI, Offset D_EnvTempName
+                Mov     CX, 5
+                ClD
+                Repe    CmpsB                   ; DS:SI vs ES:DI = "TEMP="
+                Pop     SI
+                JE      D_TryEnvTemp_Match
+
+D_TryEnvTemp_SkipName:                          ; not it -> skip to next entry
+                Lodsb
+                Or      AL, AL
+                JNZ     D_TryEnvTemp_SkipName
+                Jmp     D_TryEnvTemp_Scan
+
+D_TryEnvTemp_Match:
+                Add     SI, 5                   ; DS:SI -> the path value
+                Cmp     Byte Ptr [SI], 0        ; empty "TEMP=" -> treat as unset
+                JE      D_TryEnvTemp_NotFound
+
+                Cmp     Byte Ptr [SI+1], ':'    ; optional "X:" drive prefix
+                JNE     D_TryEnvTemp_Chdir
+                Mov     DL, [SI]
+                Cmp     DL, 'a'
+                JB      D_TryEnvTemp_Upper
+                Cmp     DL, 'z'
+                JA      D_TryEnvTemp_Upper
+                Sub     DL, 'a' - 'A'
+D_TryEnvTemp_Upper:
+                Sub     DL, 'A'                 ; DL = drive index (0=A)
+                Mov     AH, 0Eh                 ; select that drive
+                Int     21h
+                Add     SI, 2                   ; skip "X:"
+
+D_TryEnvTemp_Chdir:
+                Mov     DX, SI
+                Mov     AH, 3Bh                 ; chdir DS:DX
+                Int     21h
+                JC      D_TryEnvTemp_NotFound
+                ClC
+                Jmp     D_TryEnvTemp_Done
+
+D_TryEnvTemp_NotFound:
+                StC
+D_TryEnvTemp_Done:
+                Pop     ES
+                Pop     DS
+                Pop     DI
+                Pop     SI
+                Pop     DX
+                Pop     CX
+                Pop     BX
+                Pop     AX
+                Ret
+
+EndP            D_TryEnvTemp
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 

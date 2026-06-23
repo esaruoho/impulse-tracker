@@ -75,6 +75,7 @@ include network.inc
         Extrn   MaxRow
 
         Extrn   IdleUpdateInfoLine:Far
+        Extrn   UpdateInfoLine:Far
         Extrn   GlobalKeyList:Far
         Extrn   GetEnvironment:Far
 
@@ -6185,6 +6186,21 @@ WAV_ActualDidCd:
                 Mov     BX, 500
                 Call    SetInfoLine2
                         Assume DS:Nothing
+
+                ; Force-PAINT the info line NOW. SetInfoLine2 only STORES the text;
+                ; it's normally drawn by the main loop -- which the blocking sync
+                ; render below never reaches, so "Rendering..." otherwise appears
+                ; only AFTER the render finishes (looks like a freeze). Draw it
+                ; straight to the screen so the user sees it during the work. Draw
+                ; only -- no Music_Poll (that would poll the WAV driver before
+                ; playback has started). Same draw sequence IdleUpdateInfoLine uses.
+                Push    AX
+                Mov     AL, 1
+                Call    S_SetDirectMode
+                Call    UpdateInfoLine
+                Xor     AL, AL
+                Call    S_SetDirectMode
+                Pop     AX
 
                                                 ; Song-mode: WAV_SongMode
                                                 ; is set by D_FormatWAV /
