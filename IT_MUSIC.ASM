@@ -6952,14 +6952,17 @@ WAVI_AllocOK:
                 Mov     AL, 22
                 Mov     AH, 'c'                 ; allocate ok
                 Call    WAV_DebugMark
-                                                ; Stash import sizing into the log
-                                                ; fields so IMP-alloc shows them:
-                                                ; bytes=<target slot>, size=<low
-                                                ; word of WAV_DataLength>. A garbage
-                                                ; size here would explain a read-loop
-                                                ; overrun. (Overwritten by the real
-                                                ; read/seek further down.)
-                Mov     AX, [CS:WAV_TargetSlot]
+                                                ; Stash import diagnostics into the
+                                                ; log fields so IMP-alloc shows them:
+                                                ;   bytes = <mode>:<slot>  (high byte
+                                                ;     04 = INSTRUMENT mode, 00 = SAMPLE
+                                                ;     mode; low byte = target slot) --
+                                                ;     directly tests the mode theory.
+                                                ;   size  = low word of WAV_DataLength.
+                                                ; (Both overwritten by the real read/
+                                                ; seek further down -- log-only here.)
+                Call    Music_GetInstrumentMode         ; AH = 4 (inst) / 0 (sample)
+                Mov     AL, Byte Ptr [CS:WAV_TargetSlot]
                 Mov     [CS:WAV_LastReadBytes], AX
                 Mov     EAX, [CS:WAV_DataLength]
                 Mov     [CS:WAV_LastFileSize], AX
