@@ -6071,6 +6071,19 @@ WAV_SkipCwdSave:
                 Cmp     Byte Ptr [CS:WAV_SongMode], 0
                 JNE     WAV_PlaySongMode
 
+                ; HANG FIX (fork): render ONE pass then stop. Music_PlayPattern
+                ; LOOPS the pattern by default; the only stop-at-end mechanism is
+                ; StopEndOfPlaySection (read at UpdateData_Pattern1, ~line 8946).
+                ; That flag is otherwise NEVER set in the whole codebase, so without
+                ; this the pattern loops forever and the synchronous Music_Poll loop
+                ; below (WAV_SyncRenderLoop) spins to its 100000-iteration cap -- IT
+                ; appears HUNG ("unresponsive" after right-arrow / Ctrl-O on a one-
+                ; pattern order list). Set it so the pattern stops at its end ->
+                ; PlayMode hits 0 -> the sync loop exits and finalizes after one
+                ; pass. WAV_LeavePostImport clears it back to 0.
+                ; FEATURE-CARD >> features/ctrl-o-empty-orderlist-crash.feature
+                Mov     Word Ptr [CS:StopEndOfPlaySection], 1
+
                 Mov     AX, [CS:WAV_PendingPattern]
                 Xor     CX, CX
                 Call    Music_PlayPattern
@@ -6358,6 +6371,11 @@ WAV_LeavePostImport:
                                                 ; single-pattern behaviour.
                 Mov     Byte Ptr [CS:WAV_SongMode], 0
                 Mov     Byte Ptr [CS:WAV_UserFilenameSet], 0
+                                                ; Restore the one-pass render
+                                                ; terminator set at enter so it
+                                                ; never leaks into normal F5/F6
+                                                ; playback (which must loop).
+                Mov     Word Ptr [CS:StopEndOfPlaySection], 0
 
                 Mov     AL, 8
                 Mov     AH, '7'
