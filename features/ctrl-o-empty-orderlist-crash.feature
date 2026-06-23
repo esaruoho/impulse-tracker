@@ -60,7 +60,8 @@
 #               4041e66  terminate single-pattern WAV render (hang)
 # SESSION:      features/ctrl-o-empty-orderlist-crash.session.md
 # RESULT-LOG >> (auto-maintained by convey hooks — newest below)
-# WATCH: Music_GetPattern Music_GetPattern_Empty Music_PlayPartSong StopEndOfPlaySection
+#   2026-06-23  direct-commit  touched: StopEndOfPlaySection WAV_LogState
+# WATCH: Music_GetPattern Music_GetPattern_Empty Music_PlayPartSong StopEndOfPlaySection WAV_LogState
 # =============================================================================
 
 Feature: Order-list and Ctrl-O render gestures must never crash, reboot, or hang
@@ -112,6 +113,16 @@ Feature: Order-list and Ctrl-O render gestures must never crash, reboot, or hang
     When any of them triggers a single-pattern render
     Then all flow through Music_ToggleWAVRender with the bound guard and the terminator
     And none can reboot or hang on an empty or one-pattern order list
+
+  @shipped @build-verified @runtime-untested @hw-untested
+  Scenario: each render writes a back-and-forth debug line to CTRLOLOG.TXT
+    # cite: IT_MUSIC.ASM WAV_LogState — 'E' line after START (inputs), 'X' line at
+    #       sync exit (outcome); lands in the Quicksave dir E:\ITNU2026 = /Volumes/netdrive/ITNU2026
+    Given a render gesture runs with the Quicksave folder set to E:\ITNU2026
+    When the render enters and (for a single pattern) finishes its sync loop
+    Then CTRLOLOG.TXT gains an "E pat=.. o0=.. se=.." inputs line and an "X .. it=.." outcome line
+    And the operator on the Mac reads it at /Volumes/netdrive/ITNU2026/CTRLOLOG.TXT
+    And it=0000 on the X line flags a render that hit the cap (hung); o0=00FF flags an empty order list
 
   @known-limit
   Scenario: the reboot leak SOURCE (Music_PlayPartSong) is documented, not yet hardened

@@ -85,6 +85,21 @@ finalize. (Commit 4041e66.)
 5. After any render, press F5/F6  -> normal looping playback (terminator didn't leak).
    If anything still wedges, the row-0 debug markers + CTRLOLOG.TXT show how far it got.
 
+## Back-and-forth debug logging + deploy runbook (follow-up)
+Esa asked to (a) fold the build+deploy handoff into the skill and (b) "enable some
+sort of back&forth debug logging." Findings + actions:
+- The render dir = Quicksave folder = `E:\ITNU2026` (from IT.CFG.perfect), which the
+  Mac sees at `/Volumes/netdrive/ITNU2026`. CTRLOLOG.TXT already lands there =>
+  the back&forth channel already existed; the reboot/hang just killed it before flush.
+- Added `WAV_LogState` (IT_MUSIC.ASM): a self-contained CTRLOLOG appender emitting an
+  `E` (enter/inputs) and `X` (sync-exit/outcome) line per render — pat, pm, sm, mm,
+  o0 (OrderList[0], 00FF=empty), se (StopEndOfPlaySection, 0001=terminator armed),
+  it (sync iters left, 0000=hit cap=hung). Reuses WAV_WriteStringDSSI / WAV_WriteHexAX.
+- Runbook saved as `DEPLOY-TO-XP.md`; SKILL.md got a "Deploy to netdrive/ITNU2026"
+  section (target/mount, fast IT.EXE rebuild conf, minimal deploy, IT.CFG.perfect,
+  how to read CTRLOLOG `E`/`X` lines). IT.EXE 478223 deployed; perfect IT.CFG deployed.
+- Still @build-verified only. Next data point comes from Esa's CTRLOLOG.TXT after a repro.
+
 ## How to get back
 - Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/3471aca0-a5df-4b96-82d0-78eafb943199.jsonl
 - Session id: `3471aca0-a5df-4b96-82d0-78eafb943199`

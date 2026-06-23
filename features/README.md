@@ -113,18 +113,19 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **What it does:** As an Impulse Tracker user rendering a pattern to WAV, I want every render gesture to be safe regardless of order-list state, So that Ctrl-O, right-arrow, and Shift-right can't reboot DOS or wedge the program.
 
-**Behaviour (6 scenarios):**
+**Behaviour (7 scenarios):**
 
 - an out-of-range pattern number resolves to EmptyPattern, never a wild pointer — `@shipped @build-verified @runtime-untested`
 - empty order list, F6 playing, Ctrl-O — no longer reboots — `@shipped @build-verified @runtime-untested`
 - a single-pattern render stops after one pass instead of hanging — `@shipped @build-verified @runtime-untested`
 - the render terminator never leaks into normal playback — `@shipped @build-verified @runtime-untested`
 - all three gestures share the one hardened render path — `@shipped @build-verified @runtime-untested`
+- each render writes a back-and-forth debug line to CTRLOLOG.TXT — `@shipped @build-verified @runtime-untested`
 - the reboot leak SOURCE (Music_PlayPartSong) is documented, not yet hardened
 
-**How it does it:** **Key procs:** `Music_GetPattern`, `Music_GetPattern_Empty`, `Music_PlayPartSong`, `StopEndOfPlaySection` · **Source files:** `IT_MUSIC.ASM`, `IT_PE.ASM`
+**How it does it:** **Key procs:** `Music_GetPattern`, `Music_GetPattern_Empty`, `Music_PlayPartSong`, `StopEndOfPlaySection`, `WAV_LogState` · **Source files:** `IT_MUSIC.ASM`, `IT_PE.ASM`
 
-**Grade:** @build-verified ×5 · @runtime-untested ×5 · @shipped ×5
+**Grade:** @build-verified ×6 · @runtime-untested ×6 · @shipped ×6
 
 **Commits:** `4041e66` terminate single-pattern WAV render (hang)
 

@@ -172,6 +172,27 @@ Not what you asked, but worth noting: the original compiled `IT215.EXE` runs fin
 
 **My recommendation for your "I want to build IT.exe" goal:** Option A inside DOSBox-X. Once the round-trip edit→`MAKE`→run-in-DOSBox-X loop works, iterating on patches (including the MIDI sync one below) is minutes per cycle.
 
+## Deploy to `netdrive/ITNU2026` (XP / DOS workspace) + back-and-forth debug log
+
+**Full runbook: [`DEPLOY-TO-XP.md`](DEPLOY-TO-XP.md).** The operational essentials so a fresh agent can build + deploy + read debug logs without re-deriving them:
+
+- **Target:** `/Volumes/netdrive/ITNU2026/` on the Mac = `C:\netdrive\ITNU2026` on XP = `E:\ITNU2026` on the DOS PC (`E: → \\DROIDI\NETDRIVE`). Mount with `open "smb://fleet:Lackluster1%21@192.168.32.50/netdrive"`.
+- **Fast IT.EXE-only rebuild (~25 s)** to verify a code fix: a headless DOSBox-X conf that mounts the repo as `C:`, `tools-local/` as `T:`, and runs `del IT.EXE` + `make -f MAKEFILE.MAK > MAKE.LOG`. Verify with `grep -A2 IT_MUSIC.asm MAKE.LOG` (→ `Error messages: None`) and a fresh `IT.EXE`. Full build (all drivers) = `./safe-build.sh`. **Build = assemble+link only; it does NOT runtime-test** — the render reboot/hang reproduce only on the real DOS box, so grade such fixes `@build-verified`, never `@runtime-verified`.
+- **Deploy (minimal):** back up first, then copy. `cp`/`rm` are interactive-aliased — use `/bin/cp` / `/bin/rm`:
+  ```bash
+  DST=/Volumes/netdrive/ITNU2026
+  /bin/cp -p "$DST/IT.EXE" "$DST/IT_PREV.EXE"        # one-step rollback
+  /bin/rm -f "$DST/IT.EXE"; /bin/cp IT.EXE "$DST/IT.EXE"
+  /bin/cp -f IT.CFG.perfect "$DST/IT.CFG"            # perfect settings
+  ```
+- **The perfect `IT.CFG`** is versioned in-repo as **`IT.CFG.perfect`** (deploy it as `IT.CFG`). Its Quicksave dir = **`E:\ITNU2026`**, so renders + the debug log land in the same folder the Mac reads. After tuning settings on XP/DOS, pull `IT.CFG` back into `IT.CFG.perfect` and commit to keep it canonical.
+- **Back-and-forth debug log:** the WAV-render path writes **`CTRLOLOG.TXT` to the Quicksave folder (`E:\ITNU2026`)** → read it from the Mac at `/Volumes/netdrive/ITNU2026/CTRLOLOG.TXT`. The fork's `WAV_LogState` proc emits two state lines per render: an `E` (enter/inputs) and an `X` (sync-exit/outcome) line:
+  ```
+  E pat=HHHH pm=HHHH sm=HHHH mm=HHHH o0=HHHH se=HHHH it=FFFF
+  X pat=HHHH pm=HHHH sm=HHHH mm=HHHH o0=HHHH se=HHHH it=HHHH
+  ```
+  `o0` = OrderList[0] (`00FF` = empty order list), `se` = StopEndOfPlaySection (`0001` = one-pass terminator armed), `it` = sync-loop iters remaining at exit (**`0000` = hit the 100000 cap = HUNG**, non-zero = healthy one-pass render). Pair with the row-0 VRAM markers (see "VRAM Debug Markers") when there's no file to read.
+
 ## MIDI Architecture (current state)
 
 Impulse Tracker upstream is MIDI-out centric. MIDI input was originally used only for note entry. **The fork now also implements external MIDI sync** — Start/Stop/Continue + F8 Clock-derived tempo — by intercepting System Real-Time bytes inside `MIDISend`. Default ON since `ad5d840`, toggleable on the Shift-F1 MIDI Monitor screen.

@@ -5020,6 +5020,108 @@ WAV_LogDone:
 EndP            WAV_AppendErrorLog
 
 ;-------------------------------------------------------------------------------
+; WAV_LogState -- append a one-line render-STATE snapshot to CTRLOLOG.TXT. This
+; is the back&forth debug channel: the render dir IS the Quicksave folder
+; (E:\ITNU2026), which the Mac sees at /Volumes/netdrive/ITNU2026 -- so every
+; render's inputs + outcome come straight back without touching the DOS box.
+;
+; In:  AL = label char ('E' = render enter / inputs, 'X' = sync-loop exit / outcome)
+; Line: "<L> pat=HHHH pm=HHHH sm=HHHH mm=HHHH o0=HHHH se=HHHH it=HHHH" + CRLF
+;   pat = pattern being rendered            pm = PlayMode snapshot at enter (1=pat,2=song)
+;   sm  = WAV_SongMode   mm = WAV_MultiMode  o0 = OrderList[0] (0FFh = empty order list)
+;   se  = StopEndOfPlaySection (0001 = one-pass terminator armed -- the hang fix)
+;   it  = sync-loop iterations remaining at exit (0000 = hit the 100000 cap = HUNG)
+; All regs preserved; silent no-op on any DOS error. No rotation (START rotates).
+; FEATURE-CARD >> features/ctrl-o-empty-orderlist-crash.feature
+;-------------------------------------------------------------------------------
+Proc            WAV_LogState Near
+                PushF
+                PushAD
+                Push    DS
+                Push    ES
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+                Push    CS
+                Pop     ES
+
+                Mov     [WAV_LogLabelBuf], AL   ; stash label char into "X \0"
+
+                Mov     DX, Offset WAV_ErrorLogName
+                Mov     AX, 3D02h               ; open r/w
+                Int     21h
+                JNC     WLS_Opened
+                Mov     AH, 3Ch                 ; missing -> create
+                Xor     CX, CX
+                Int     21h
+                JC      WLS_Done                ; can't open/create -> no-op
+WLS_Opened:
+                Mov     BX, AX                  ; BX = handle (preserved by writers)
+                Mov     AX, 4202h               ; seek end -> append
+                Xor     CX, CX
+                Xor     DX, DX
+                Int     21h
+
+                Mov     SI, Offset WAV_LogLabelBuf
+                Call    WAV_WriteStringDSSI
+
+                Mov     SI, Offset WAV_Log_pat
+                Call    WAV_WriteStringDSSI
+                Mov     AX, [WAV_PendingPattern]
+                Call    WAV_WriteHexAX
+
+                Mov     SI, Offset WAV_Log_pm
+                Call    WAV_WriteStringDSSI
+                Mov     AX, [WAV_ResumePlayMode]
+                Call    WAV_WriteHexAX
+
+                Mov     SI, Offset WAV_Log_sm
+                Call    WAV_WriteStringDSSI
+                Xor     AX, AX
+                Mov     AL, [WAV_SongMode]
+                Call    WAV_WriteHexAX
+
+                Mov     SI, Offset WAV_Log_mm
+                Call    WAV_WriteStringDSSI
+                Xor     AX, AX
+                Mov     AL, [WAV_MultiMode]
+                Call    WAV_WriteHexAX
+
+                Mov     SI, Offset WAV_Log_o0
+                Call    WAV_WriteStringDSSI
+                Xor     AX, AX
+                Push    DS
+                Mov     DS, [CS:SongDataArea]
+                Mov     AL, [DS:100h]           ; OrderList[0] (0FFh = empty)
+                Pop     DS
+                Call    WAV_WriteHexAX
+
+                Mov     SI, Offset WAV_Log_se
+                Call    WAV_WriteStringDSSI
+                Mov     AX, [StopEndOfPlaySection]
+                Call    WAV_WriteHexAX
+
+                Mov     SI, Offset WAV_Log_it
+                Call    WAV_WriteStringDSSI
+                Mov     AX, [WAV_SyncItLeft]
+                Call    WAV_WriteHexAX
+
+                Mov     SI, Offset WAV_LogCRLF
+                Call    WAV_WriteStringDSSI
+
+                Mov     AH, 3Eh                 ; close
+                Int     21h
+WLS_Done:
+                Pop     ES
+                Pop     DS
+                PopAD
+                PopF
+                Ret
+                        Assume DS:Nothing
+EndP            WAV_LogState
+
+;-------------------------------------------------------------------------------
 ; WAV_WriteStringDSSI -- write the null-terminated string at DS:SI to file
 ; handle in BX. Strlen via scan, then one AH=40h Write. Preserves all regs
 ; except: SI walks the string (still valid pointer to null on return).
@@ -6037,6 +6139,13 @@ WAV_SkipCwdSave:
                 Mov     SI, Offset WAV_LogPrefix_START
                 Call    WAV_AppendErrorLog
 
+                ; Back&forth debug: record this render's INPUTS (pattern, play
+                ; mode snapshot, mode flags, order-list head). Lands in CTRLOLOG.TXT
+                ; in the Quicksave folder (E:\ITNU2026 -> /Volumes/netdrive/ITNU2026).
+                Mov     Word Ptr [CS:WAV_SyncItLeft], 0FFFFh    ; FFFF = not-yet-run
+                Mov     AL, 'E'
+                Call    WAV_LogState
+
                 ; Latch the dispatcher-armed no-import flag into the per-
                 ; session copy. Shift-Ctrl-O sets WAV_NoImport before this
                 ; call; plain Ctrl-O clears it. Consuming the latch at
@@ -6117,6 +6226,13 @@ WAV_SyncRenderLoop:
                 Dec     ECX
                 JNZ     WAV_SyncRenderLoop
 WAV_SyncRenderEnded:
+                                                             ; Stash remaining loop
+                                                             ; count for the debug
+                                                             ; log: 0000 = hit the
+                                                             ; 100000 cap (the HANG);
+                                                             ; non-zero = terminated
+                                                             ; after one pass (good).
+                Mov     [CS:WAV_SyncItLeft], CX
                                                              ; PlayMode hit 0 -- a
                                                              ; few more Polls so
                                                              ; WAVDRV Poll(AX=0)
@@ -6128,6 +6244,12 @@ WAV_SyncCloseLoop:
                 Call    Music_Poll
                 Pop     CX
                 Loop    WAV_SyncCloseLoop
+
+                ; Back&forth debug: record the sync render OUTCOME (it=iters left,
+                ; se=terminator, pm/o0/flags) to CTRLOLOG.TXT before the driver
+                ; swap-back. it=0000 here means the render never terminated.
+                Mov     AL, 'X'
+                Call    WAV_LogState
                                                              ; finalize inline:
                                                              ; swap the live driver
                                                              ; back + import.
@@ -6505,6 +6627,18 @@ WAV_LogMidSample        DB      " sample=", 0
 WAV_LogCRLF             DB      13, 10, 0
 WAV_LogOldName          DB      "CTRLOLOG.OLD", 0
 WAV_LogRotateThreshold  EQU     32768           ; rotate when log >= 32 KB
+                                                ; --- WAV_LogState back&forth
+                                                ;     debug fields (see proc) ---
+WAV_LogLabelBuf         DB      0, ' ', 0       ; [0] = label char ('E'/'X'), space
+WAV_Log_pat             DB      "pat=", 0
+WAV_Log_pm              DB      " pm=", 0
+WAV_Log_sm              DB      " sm=", 0
+WAV_Log_mm              DB      " mm=", 0
+WAV_Log_o0              DB      " o0=", 0
+WAV_Log_se              DB      " se=", 0
+WAV_Log_it              DB      " it=", 0
+WAV_SyncItLeft          DW      0               ; sync-loop iters left at exit
+                                                ; (0000 = hit 100000 cap = HUNG)
 WAV_LastFileSize        DW      0               ; LSEEK-to-end result (low 16)
                                                 ; logged as " size=<HHHH>"
 WAV_FailAlloc           DB      "Import failed: out of memory for sample", 0

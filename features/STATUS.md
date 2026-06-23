@@ -12,7 +12,7 @@
 | Card | Scn | Build | Runtime (DOSBox) | Hardware | Grades present |
 |------|----:|:-----:|:----------------:|:--------:|----------------|
 | alt-r-replicate | 6 | ✓ | ~ partial | ✓ | @build-verified @hw-verified @runtime-untested @runtime-verified @shipped |
-| ctrl-o-empty-orderlist-crash | 6 | ✓ | ✗ | ✗ | @build-verified @hw-untested @known-limit @runtime-untested @shipped |
+| ctrl-o-empty-orderlist-crash | 7 | ✓ | ✗ | ✗ | @build-verified @hw-untested @known-limit @runtime-untested @shipped |
 | f11-order-list | 9 | ✓ | — | ✓ | @build-verified @hw-untested @hw-verified @shipped @stock |
 | f12-song-variables | 4 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
 | f2-pattern-editor | 4 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
