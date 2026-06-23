@@ -6625,6 +6625,7 @@ WAV_LogPrefix_LENMIS    DB      "LEN_MISMATCH file=", 0
                                                 ;     before a hang = the stage
                                                 ;     that wedged (no OK line) ---
 WAV_LogPrefix_ImpAlloc  DB      "IMP-alloc file=", 0    ; sample buffer allocated
+WAV_LogPrefix_ImpRead   DB      "IMP-read file=", 0     ; PCM read loop survived
 WAV_LogPrefix_ImpHdr    DB      "IMP-hdr file=", 0      ; IMPS header populated
 WAV_LogPrefix_ImpInst   DB      "IMP-inst file=", 0     ; instrument block done
 WAV_LogPrefix_ImpLoad   DB      "IMP-load file=", 0     ; SoundCardLoadSample done
@@ -6951,6 +6952,17 @@ WAVI_AllocOK:
                 Mov     AL, 22
                 Mov     AH, 'c'                 ; allocate ok
                 Call    WAV_DebugMark
+                                                ; Stash import sizing into the log
+                                                ; fields so IMP-alloc shows them:
+                                                ; bytes=<target slot>, size=<low
+                                                ; word of WAV_DataLength>. A garbage
+                                                ; size here would explain a read-loop
+                                                ; overrun. (Overwritten by the real
+                                                ; read/seek further down.)
+                Mov     AX, [CS:WAV_TargetSlot]
+                Mov     [CS:WAV_LastReadBytes], AX
+                Mov     EAX, [CS:WAV_DataLength]
+                Mov     [CS:WAV_LastFileSize], AX
                 Push    DS                      ; CTRLOLOG breadcrumb (back&forth)
                 Push    CS
                 Pop     DS
@@ -7015,6 +7027,12 @@ WAVI_NotTruncated:
                 Mov     AL, 23
                 Mov     AH, 'd'                 ; read loop done
                 Call    WAV_DebugMark
+                Push    DS                      ; CTRLOLOG breadcrumb: PCM read loop
+                Push    CS                      ; survived. If this logs but IMP-hdr
+                Pop     DS                      ; does not, the wedge is the IMPS
+                Mov     SI, Offset WAV_LogPrefix_ImpRead   ; header build, not the EMS read.
+                Call    WAV_AppendErrorLog
+                Pop     DS
 
                 ; --- Close file ----------------------------------------------
                 Mov     BX, [CS:WAV_FileHandle]
