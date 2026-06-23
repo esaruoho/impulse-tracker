@@ -228,6 +228,14 @@ include network.inc
 Segment         SongData PARA Public 'Data'
 EndS
 
+; Dedicated 16KB conventional bounce buffer for the Ctrl-O sample import. IT owns
+; all conventional memory at startup, so a DOS Int21h/48h alloc fails -- this
+; static segment is part of IT's own image, so it is ALWAYS present. The import
+; reads the (possibly network-drive) WAV here, then CPU-copies into the EMS sample.
+Segment         WAVBounce PARA Public 'Data'
+WAV_BounceBuffer        DB      16384 DUP (?)
+EndS
+
 Segment                 Music DWORD Public 'Code' USE16
                         Assume CS:Music
 
@@ -6997,14 +7005,8 @@ WAVI_AllocOK:
                 ; "diskwriter -> buffer -> sampleslot + quicksave" split. If the 16KB
                 ; conventional alloc fails, fall back to the old direct read.
                 ; FEATURE-CARD >> features/ctrl-o-empty-orderlist-crash.feature
-                Mov     BX, 1024                   ; 1024 paragraphs = 16384 bytes
-                Mov     AH, 48h
-                Int     21h
-                JC      WAVI_BounceNone
-                Mov     [CS:WAV_BounceSeg], AX
-                Jmp     WAVI_ReadLoop
-WAVI_BounceNone:
-                Mov     Word Ptr [CS:WAV_BounceSeg], 0
+                Mov     AX, SEG WAV_BounceBuffer    ; dedicated static segment in IT's
+                Mov     [CS:WAV_BounceSeg], AX      ; image -- always present, no DOS alloc
 
 WAVI_ReadLoop:
                 Test    EBP, EBP
@@ -7069,18 +7071,7 @@ WAVI_ReadShort:
                 Movzx   EAX, AX
                 Sub     EBP, EAX
 WAVI_ReadDone:
-                ; Free the conventional bounce buffer if we allocated one.
-                Cmp     Word Ptr [CS:WAV_BounceSeg], 0
-                JE      WAVI_BounceFreed
-                Push    EBP
-                Push    ES
-                Mov     ES, [CS:WAV_BounceSeg]
-                Mov     AH, 49h
-                Int     21h
-                Pop     ES
-                Pop     EBP
-                Mov     Word Ptr [CS:WAV_BounceSeg], 0
-WAVI_BounceFreed:
+                ; (bounce buffer is a static segment in IT's image -- nothing to free)
                 ; Remaining bytes in EBP -- if non-zero, we hit the safety
                 ; cap (1MB) before reading everything. Subtract from
                 ; WAV_DataLength so the IMPS length field reflects the
