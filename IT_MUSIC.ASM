@@ -6649,6 +6649,10 @@ WAV_Log_se              DB      " se=", 0
 WAV_Log_it              DB      " it=", 0
 WAV_SyncItLeft          DW      0               ; sync-loop iters left at exit
                                                 ; (0000 = hit 100000 cap = HUNG)
+WAV_BounceSeg           DW      0               ; conventional bounce buffer segment
+                                                ; (0 = none; import reads here, not EMS)
+WAV_ChunkReq            DW      0               ; bytes requested this read iteration
+WAV_BytesRead           DW      0               ; bytes actually read into the buffer
 WAV_LastFileSize        DW      0               ; LSEEK-to-end result (low 16)
                                                 ; logged as " size=<HHHH>"
 WAV_FailAlloc           DB      "Import failed: out of memory for sample", 0
@@ -6981,30 +6985,30 @@ WAVI_AllocOK:
                 ; tripping the safety cap and bailing after one chunk).
                 Mov     EBP, [CS:WAV_DataLength]    ; bytes remaining
                 Mov     Byte Ptr [CS:WAV_Page], 0
+
+                ; BOUNCE BUFFER (fix): the rendered WAV may live on a NETWORK drive
+                ; (Quicksave = e:\2logic). Reading a network file STRAIGHT into the
+                ; EMS page frame (upper memory) wedges/crashes real DOS -- the
+                ; redirector can't transfer into UMA (proven: the import died on the
+                ; very first page-0 read, file on E:\2logic). So read each chunk into
+                ; a CONVENTIONAL 16KB buffer, then CPU-copy it into the EMS sample.
+                ; The render already wrote the WAV to Quicksave, so the sample slot
+                ; (from the buffer) AND the Quicksave WAV both land -- exactly the
+                ; "diskwriter -> buffer -> sampleslot + quicksave" split. If the 16KB
+                ; conventional alloc fails, fall back to the old direct read.
+                ; FEATURE-CARD >> features/ctrl-o-empty-orderlist-crash.feature
+                Mov     BX, 1024                   ; 1024 paragraphs = 16384 bytes
+                Mov     AH, 48h
+                Int     21h
+                JC      WAVI_BounceNone
+                Mov     [CS:WAV_BounceSeg], AX
+                Jmp     WAVI_ReadLoop
+WAVI_BounceNone:
+                Mov     Word Ptr [CS:WAV_BounceSeg], 0
+
 WAVI_ReadLoop:
                 Test    EBP, EBP
                 JZ      WAVI_ReadDone
-
-                ; PER-PAGE breadcrumb (diagnostic): log the page we are ABOUT to
-                ; map+read to CTRLOLOG.TXT, BEFORE the EMS map/read that may crash.
-                ; bytes=<page>. The LAST "PG" line in the log = the page that
-                ; wedged. Slow (one network write per 16KB) but it names the exact
-                ; failing page so the EMS read bug can be fixed with certainty.
-                Push    EBP                         ; preserve bytes-remaining
-                MovZX   AX, Byte Ptr [CS:WAV_Page]
-                Mov     [CS:WAV_LastReadBytes], AX
-                Push    DS
-                Push    CS
-                Pop     DS
-                Mov     SI, Offset WAV_LogPrefix_ImpPG
-                Call    WAV_AppendErrorLog
-                Pop     DS
-                Pop     EBP
-
-                Mov     AX, [CS:WAV_TargetSlot]     ; 1-based
-                Mov     CH, [CS:WAV_Page]           ; load page for proc
-                Call    Music_GetSampleLocation     ; DS:ESI = page base
-                JC      WAVI_ReadDone
 
                 ; Chunk size = min(EBP, 16384)
                 Mov     EAX, EBP
@@ -7012,15 +7016,48 @@ WAVI_ReadLoop:
                 JBE     WAVI_ChunkSize
                 Mov     EAX, 16384
 WAVI_ChunkSize:
-                Mov     CX, AX                  ; CX = bytes to read
-                Mov     DX, SI                  ; DS:DX = page base (SI = 0)
-                Mov     BX, [CS:WAV_FileHandle]
-                Push    AX                      ; save requested length
-                Mov     AH, 3Fh
-                Int     21h                     ; AX = bytes read
-                Pop     CX                      ; CX = requested length
+                Mov     [CS:WAV_ChunkReq], AX      ; requested chunk (<= 16384)
 
-                Cmp     AX, CX
+                Cmp     Word Ptr [CS:WAV_BounceSeg], 0
+                JE      WAVI_DirectRead
+
+                ; --- bounce path: read file -> conventional buffer, copy -> EMS ---
+                Mov     DS, [CS:WAV_BounceSeg]
+                Xor     DX, DX                     ; DS:DX = bounce:0 (conventional)
+                Mov     CX, [CS:WAV_ChunkReq]
+                Mov     BX, [CS:WAV_FileHandle]
+                Mov     AH, 3Fh
+                Int     21h                        ; AX = bytes read into the buffer
+                Mov     [CS:WAV_BytesRead], AX
+                Mov     AX, [CS:WAV_TargetSlot]
+                Mov     CH, [CS:WAV_Page]
+                Call    Music_GetSampleLocation    ; DS = frame seg, SI = 0
+                JC      WAVI_ReadDone
+                Push    DS
+                Pop     ES                         ; ES = EMS frame segment
+                Mov     DS, [CS:WAV_BounceSeg]      ; DS = conventional buffer
+                Xor     SI, SI
+                Xor     DI, DI                     ; DS:SI = buffer, ES:DI = frame:0
+                Mov     CX, [CS:WAV_BytesRead]
+                ClD
+                Rep     MovsB                      ; CPU copy buffer -> EMS sample
+                Mov     AX, [CS:WAV_BytesRead]
+                Jmp     WAVI_AfterRead
+
+WAVI_DirectRead:
+                ; --- fallback (bounce alloc failed): old direct read into frame ---
+                Mov     AX, [CS:WAV_TargetSlot]
+                Mov     CH, [CS:WAV_Page]
+                Call    Music_GetSampleLocation
+                JC      WAVI_ReadDone
+                Mov     CX, [CS:WAV_ChunkReq]
+                Mov     DX, SI                     ; DS:DX = page base (SI = 0)
+                Mov     BX, [CS:WAV_FileHandle]
+                Mov     AH, 3Fh
+                Int     21h                        ; AX = bytes read
+
+WAVI_AfterRead:
+                Cmp     AX, [CS:WAV_ChunkReq]
                 JNE     WAVI_ReadShort
                 Movzx   EAX, AX
                 Sub     EBP, EAX
@@ -7032,6 +7069,18 @@ WAVI_ReadShort:
                 Movzx   EAX, AX
                 Sub     EBP, EAX
 WAVI_ReadDone:
+                ; Free the conventional bounce buffer if we allocated one.
+                Cmp     Word Ptr [CS:WAV_BounceSeg], 0
+                JE      WAVI_BounceFreed
+                Push    EBP
+                Push    ES
+                Mov     ES, [CS:WAV_BounceSeg]
+                Mov     AH, 49h
+                Int     21h
+                Pop     ES
+                Pop     EBP
+                Mov     Word Ptr [CS:WAV_BounceSeg], 0
+WAVI_BounceFreed:
                 ; Remaining bytes in EBP -- if non-zero, we hit the safety
                 ; cap (1MB) before reading everything. Subtract from
                 ; WAV_DataLength so the IMPS length field reflects the
