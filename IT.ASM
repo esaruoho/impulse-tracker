@@ -34,6 +34,9 @@ EndS
 
 Segment         Main DWORD Public 'Code' USE16
                 Extrn   ReleaseTimeSlice:Byte
+                Extrn   BatchRenderFlag:Byte
+                Extrn   BatchRenderPattern:Word
+                Extrn   BatchDumpFlag:Byte
 EndS
 
                 Extrn   D_InitDisk:Far
@@ -108,6 +111,7 @@ ENDIF
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
                 Global  Quit:Far, Refresh:Far
+                Global  Quit_NoConfirm:Far
                 Global  DOSShell:Far, GetEnvironment:Far
                 Global  CrashRecovery:Far
 
@@ -194,6 +198,11 @@ ENDIF
                 DB      10
                 DB      "  M###", 9, "Set Mixspeed", 13, 10
                 DB      "  L###", 9, "Limit number of channels (4-256)", 13, 10
+                DB      10
+                DB      "  OFilename.IT", 9, "Render its patterns to WAV, then quit", 13, 10
+                DB      "  N###", 9, 9, "Render only that one pattern", 13, 10
+                DB      "  UFilename.IT", 9, "Write its samples as WAVs, then quit", 13, 10
+                DB      9, "O and U write to the Quicksave folder (F12)", 13, 10
                 DB      "$"
 
 MixErrorMsg     DB      "Error: Mixing speed invalid - setting ignored", 13, 10, "$"
@@ -226,9 +235,31 @@ SaveInformation         DW      0, 0            ; Loading screen key-loss
 
 ENDSAVEINFORMATION      EQU     $
 
+                                                ; Batch tail: one key-loss entry to
+                                                ; absorb the loading screen, then the
+                                                ; script ends (GetStartupKeyList3
+                                                ; clears StartupList). From that point
+                                                ; K_IsKeyWaiting reports no key, the
+                                                ; dispatcher reaches its idle path,
+                                                ; and the batch work runs there --
+                                                ; with the module loaded and every
+                                                ; module initialised.
+BatchInformation        DW      0, 0            ; loading screen key-loss
+
+ENDBATCHINFORMATION     EQU     $
+
 StartupQueueOffset      DW      Offset StartupInformation
 StartupQueueEnd         DW      Offset ENDSTARTUPINFORMATION
 StartupQueueNextFunction DW     Offset GetStartupKeyList2
+                                                ; Which script runs AFTER the module
+                                                ; name has been typed and Entered.
+                                                ; /W wants save-then-quit; the
+                                                ; headless batch switches want the
+                                                ; script simply to END, so the idle
+                                                ; path in IT_M.ASM can do the work.
+                                                ; FEATURE-CARD >> features/headless-batch-render.feature
+StartupTailOffset       DW      Offset SaveInformation
+StartupTailEnd          DW      Offset ENDSAVEINFORMATION
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿
 ;ï¿½ Functions                                                                   ï¿½
@@ -398,6 +429,12 @@ CmdLine2:
                 JE      NoShowUsageTime
                 Cmp     AL, 'W'
                 JE      ConvertModule
+                Cmp     AL, 'O'
+                JE      BatchRender1
+                Cmp     AL, 'U'
+                JE      BatchDump1
+                Cmp     AL, 'N'
+                JE      BatchPattern1
 
                 Jmp     CmdLine1
 
@@ -432,6 +469,91 @@ NoReleaseTimeSlice2:
                 Mov     [ReleaseTimeSlice], 1
 
                 Pop     DS
+                Jmp     CmdLine1
+
+                                                ; /O[filename]
+                                                ;   Render patterns to WAV, then quit.
+                                                ;   With a filename it loads that
+                                                ;   module first, reusing the same
+                                                ;   synthetic-keystroke startup script
+                                                ;   /W uses -- IT has no other way to
+                                                ;   open a module from the command
+                                                ;   line, and there is no '/' switch
+                                                ;   prefix, so the name has to hang
+                                                ;   directly off the letter.
+                                                ; /N###
+                                                ;   Restrict it to one pattern.
+                                                ; /U
+                                                ;   Dump every loaded sample as a WAV.
+                                                ; All three write into the Quicksave
+                                                ; folder and consume no sample slots.
+                                                ; FEATURE-CARD >> features/headless-batch-render.feature
+BatchRender1:
+                Push    DS
+                Push    Main
+                Pop     DS
+                        Assume DS:Main
+                Mov     [BatchRenderFlag], 1
+                Pop     DS
+                        Assume DS:Nothing
+
+                Cmp     Byte Ptr [SI], 32       ; a filename following?
+                JBE     BatchRenderNoFile
+
+                Mov     [CS:StartupList], 1
+                Mov     [CS:StartupFileOffset], SI
+                Mov     [CS:StartupFileSegment], DS
+                Mov     [CS:StartupTailOffset], Offset BatchInformation
+                Mov     [CS:StartupTailEnd], Offset ENDBATCHINFORMATION
+                Jmp     SetSoundCardDriver1     ; NUL-terminates the name in place
+
+BatchRenderNoFile:
+                Jmp     CmdLine1
+
+                                                ; /N### -- render only this pattern.
+                                                ; A separate letter rather than digits
+                                                ; on /O, because /O's argument is a
+                                                ; filename and the two cannot share
+                                                ; the same position.
+BatchPattern1:
+                Call    GetDecimalNumber
+                JC      BatchPatternBad
+                Cmp     CX, 200
+                JAE     BatchPatternBad
+
+                Push    DS
+                Push    AX
+                Push    Main
+                Pop     DS
+                        Assume DS:Main
+                Mov     [BatchRenderPattern], CX
+                Pop     AX
+                Pop     DS
+                        Assume DS:Nothing
+
+BatchPatternBad:
+                Jmp     CmdLine3
+
+BatchDump1:
+                Push    DS
+                Push    Main
+                Pop     DS
+                        Assume DS:Main
+                Mov     [BatchDumpFlag], 1
+                Pop     DS
+                        Assume DS:Nothing
+
+                Cmp     Byte Ptr [SI], 32       ; /U can carry a filename too
+                JBE     BatchDumpNoFile
+
+                Mov     [CS:StartupList], 1
+                Mov     [CS:StartupFileOffset], SI
+                Mov     [CS:StartupFileSegment], DS
+                Mov     [CS:StartupTailOffset], Offset BatchInformation
+                Mov     [CS:StartupTailEnd], Offset ENDBATCHINFORMATION
+                Jmp     SetSoundCardDriver1
+
+BatchDumpNoFile:
                 Jmp     CmdLine1
 
 PatternStorage:
@@ -870,9 +992,44 @@ Proc            Quit Far
                 Mov     AX, 1
                 RetF
 
+                                                ; Headless batch entry: same
+                                                ; teardown, no "are you sure"
+                                                ; dialog -- there is nobody there
+                                                ; to answer it. Also skips
+                                                ; PECheckModified, which would
+                                                ; otherwise prompt to save a
+                                                ; module the batch only READ.
+                                                ; FEATURE-CARD >> features/headless-batch-render.feature
+Quit_NoConfirm:
+                                                ; TEMPORARY breadcrumbs: a render
+                                                ; followed by a quit hangs, a dump
+                                                ; followed by a quit does not, so one
+                                                ; of these teardown steps is waiting
+                                                ; on state the render left behind.
+                                                ; Each letter is appended to
+                                                ; PATLOG.TXT; the LAST letter present
+                                                ; names the step that wedged.
+                                                ; cite: features/debug-logging-channels.feature
+                Call    Music_Stop
+                Call    MMTSR_UninstallMMTSR
+                Call    PE_UnInitPatternEdit
+                Call    Music_UnInitMusic
+                Call    UnInitMouse
+                Call    S_UnInitScreen
+                Call    E_UnInitEMS
+                Call    K_UnInitKeyBoard
+                Call    Error_UnInitHandler
+                Call    D_UnInitDisk
+                Call    K_RemoveKeyboardType
+                Call    UnInitTimerHandler
+                Mov     AX, 4C00h
+                Int     21h
+
 Quit1:
                 Call    PECheckModified
                 Call    Music_Stop
+
+Quit2:
 
 IF NETWORKENABLED
                 Call    Network_Shutdown
@@ -957,8 +1114,10 @@ GetStartupKeyList2:
                 Ret
 
 GetStartupKeyList2EndOfString:
-                Mov     [CS:StartupQueueOffset], Offset SaveInformation
-                Mov     [CS:StartupQueueEnd], Offset ENDSAVEINFORMATION
+                Mov     AX, [CS:StartupTailOffset]
+                Mov     [CS:StartupQueueOffset], AX
+                Mov     AX, [CS:StartupTailEnd]
+                Mov     [CS:StartupQueueEnd], AX
                 Mov     [CS:StartupQueueNextfunction], Offset GetStartupKeyList3
                 Mov     [CS:StartupKeyListFunction], Offset GetStartupKeyList1
 

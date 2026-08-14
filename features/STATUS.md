@@ -24,6 +24,7 @@
 | f4-instrument-list | 4 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
 | f5-info-page-shift-right-quicksave | 8 | ✓ | — | ✓ | @build-verified @corrected @design-note @hw-untested @hw-verified @shipped @todo |
 | f6-play-from-order-list-row | 5 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped @stock |
+| headless-batch-render | 10 | ✓ | — | ✗ | @build-verified @corrected @design-note @dosbox-verified @hw-untested @shipped @todo |
 | invert-channel-mutes | 4 | ✓ | — | ✗ | @build-verified @design-note @hw-untested @shipped @todo |
 | loader-keyjazz-hang | 4 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped @stock |
 | midi-in-multitimbral | 9 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock @todo |
@@ -36,7 +37,7 @@
 | pattern-length-beyond-200 | 5 | ✗ | — | — | @analysis-verified @blocked-by-architecture @stock |
 | right-shift-tap | 9 | ✓ | — | ✓ | @build-verified @corrected @design-note @hw-verified @shipped @todo |
 | sample-amplify-keeps-playback | 9 | ✓ | ✓ | ✓ | @bug @build-verified @hw-untested @hw-verified @runtime-verified @shipped @stock |
-| schismtracker-port-backlog | 15 | ✓ | — | ✗ | @already @build-verified @done @hw-untested @impossible @todo |
+| schismtracker-port-backlog | 15 | ✓ | — | ✓ | @already @build-verified @done @dosbox-verified @hw-untested @hw-verified @impossible @todo |
 | scrolllock-follow-from-lists | 9 | ✓ | ~ partial | ✓ | @bug @build-verified @hw-untested @hw-verified @runtime-untested @runtime-verified @shipped @stock @todo |
 | shift-enter-bulk-load-from-module | 4 | ✓ | ✗ | ✗ | @bug @build-verified @fixed-pending-verify @hw-untested @runtime-untested @shipped |
 | shift-enter-load-from-sample-list | 4 | ✓ | — | ✗ | @code-verified @hw-untested @shipped |
@@ -49,8 +50,8 @@
 | wav-render-reentry-guard | 7 | ✓ | ✓ | ✗ | @build-verified @hw-untested @runtime-verified @shipped |
 
 ## Tally (computed)
-- Cards: 36
-- Build-verified: 34
+- Cards: 37
+- Build-verified: 35
 - Runtime-verified in DOSBox-X: 3 full + 8 partial
-- **Hardware-verified: 13**  ·  hardware-untested: 20
+- **Hardware-verified: 14**  ·  hardware-untested: 20
 

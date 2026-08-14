@@ -59,6 +59,9 @@ EndS
                 Extrn   K_IsKeyWaiting:Far
                 Extrn   K_IsAnyKeyDown:Far
                 Extrn   K_PollRightShiftTap:Far
+                Extrn   Music_BatchRenderPatterns:Far
+                Extrn   D_DumpAllSamplesWAV:Far
+                Extrn   Quit_NoConfirm:Far
 
                 Extrn   PE_DrawOrderList:Far
                 Extrn   PE_PreOrderList:Far
@@ -85,6 +88,12 @@ EndS
                 Global  M_Object1List:Far
                 Global  M_Object1ListDefault:Far
                 Public  ReleaseTimeSlice
+                                                ; headless batch flags, set by the
+                                                ; command line in IT.ASM
+                                                ; FEATURE-CARD >> features/headless-batch-render.feature
+                Public  BatchRenderFlag
+                Public  BatchRenderPattern
+                Public  BatchDumpFlag
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
@@ -161,6 +170,9 @@ PostFunctionList        Label   DWord
 
 GlobalKeyList           DD      ?
 ReleaseTimeSlice        DB      0
+BatchRenderFlag         DB      0       ; 1 = render then quit  (cmdline /O)
+BatchRenderPattern      DW      0FFFFh  ;     0FFFFh = every pattern with data
+BatchDumpFlag           DB      0       ; 1 = dump samples then quit (cmdline /U)
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿
 ;ï¿½ Functions                                                                   ï¿½
@@ -387,6 +399,37 @@ M_KeyBoardInput1:
                 Test    AX, AX
                 JNZ     M_FunctionHandler8
 
+                ; --- headless batch work, then quit ----------------------------
+                ; Runs on the FIRST idle pass, which is the earliest moment that is
+                ; safe: the sound driver is loaded (the render swaps it out for
+                ; WAVDRV and back), the module named on the command line is loaded,
+                ; and the screen is up. Doing it earlier in IT.ASM's startup would
+                ; race all three. The flags are cleared before the work so a render
+                ; that somehow re-enters the idle path cannot loop forever.
+                ; FEATURE-CARD >> features/headless-batch-render.feature
+                Cmp     Byte Ptr CS:BatchRenderFlag, 0
+                JNE     M_RunBatch
+                Cmp     Byte Ptr CS:BatchDumpFlag, 0
+                JE      M_NoBatch
+
+M_RunBatch:
+                Cmp     Byte Ptr CS:BatchDumpFlag, 0
+                JE      M_BatchNoDump
+                Mov     Byte Ptr CS:BatchDumpFlag, 0
+                Call    D_DumpAllSamplesWAV
+
+M_BatchNoDump:
+                Cmp     Byte Ptr CS:BatchRenderFlag, 0
+                JE      M_BatchDone
+                Mov     Byte Ptr CS:BatchRenderFlag, 0
+                Mov     AX, CS:BatchRenderPattern
+                Call    Music_BatchRenderPatterns
+
+M_BatchDone:
+                Jmp     Quit_NoConfirm          ; no "are you sure" prompt: there is
+                                                ; nobody there to answer it
+
+M_NoBatch:
                 ; --- bare right-shift TAP -> dispatch as Scroll Lock -----------
                 ; THIS is the idle path: no key is queued, so we are about to run
                 ; the IdleList. A bare modifier never reaches the translate chain

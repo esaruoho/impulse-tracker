@@ -77,8 +77,10 @@ Feature: Porting the schismtracker August 2026 work into Impulse Tracker
 
   # --- TODO: genuinely new, ranked roughly by value ---------------------------
 
-  @todo
+  @done @hw-verified
   Scenario: Ctrl-Shift-Right dumps every sample in the song as a WAV
+    # card: features/dump-all-samples-wav.feature -- also on 'D', and headless
+    # via the /U switch (features/headless-batch-render.feature)
     # schism: song_samples_to_quicksave_files() in disko.c, bound on the order
     # list, the info page and the sample loader. Files named
     # <song>-smpNNN-<name>.wav so the folder is browsable afterwards.
@@ -90,8 +92,10 @@ Feature: Porting the schismtracker August 2026 work into Impulse Tracker
     When the user presses Ctrl-Shift-Right
     Then every non-empty sample is written to the Quicksave folder as a WAV
 
-  @todo
+  @done @hw-verified
   Scenario: Right shift tapped on its own drops you into the playing pattern
+    # card: features/right-shift-tap.feature -- and the NOTE below was right: it
+    # became an extra trigger for scrolllock-follow-from-lists, not a new handler
     # schism: a tap (pressed and released with nothing else in between) opens
     # the playing pattern with follow mode on; in the pattern editor it toggles
     # following. Held as a modifier it does nothing, so Shift-Right still works.
@@ -104,8 +108,9 @@ Feature: Porting the schismtracker August 2026 work into Impulse Tracker
     When they tap and release right shift without pressing anything else
     Then the pattern editor opens on the playing pattern with follow mode on
 
-  @todo
+  @done @hw-verified
   Scenario: Enter on the Info Page opens the playing pattern at the playing row
+    # card: features/f5-info-page-shift-right-quicksave.feature
     # schism: lands on the highlighted channel, at the row playback reached,
     # with follow mode off so it stays put.
     # IT approach: PE_GotoPattern is already Extrn in IT_DISPL.ASM and
@@ -115,8 +120,10 @@ Feature: Porting the schismtracker August 2026 work into Impulse Tracker
     When they press Enter
     Then the pattern editor opens on that pattern, channel and row
 
-  @todo
+  @done
   Scenario: Tiling a pattern clears the pattern breaks it carries into repeats
+    # PE_TilePatternToLength clears cmd 2 (Bxx) / 3 (Cxx) on each repeat boundary
+    # except the new final row, and only when the source's last row carried one
     # THIS IS A LATENT BUG HERE TOO, not just a schism feature. A C00 on the
     # source's last row is the usual end-of-pattern marker; tiling copies it into
     # every repeat, so an extended pattern still stops dead at the first copy.
@@ -129,8 +136,10 @@ Feature: Porting the schismtracker August 2026 work into Impulse Tracker
     When it is extended or tiled to a greater length
     Then the carried breaks are cleared except the one on the new final row
 
-  @todo
+  @done
   Scenario: Alt-D clones verbatim and Shift-Alt-D clones wiping muted channels
+    # Condition 11 (Shift+Alt) row DB 11 / DW 2020h -> PE_OrderList_ClonePatternWipe.
+    # Decision: M is KEPT as well, on both trackers -- Esa asked for both
     # schism moved this from a remembered mode to the modifier, on the grounds
     # that a key which silently changes what another key does is worse than two
     # keys. IT currently has Alt-D plus an M toggle (ClonePatternMuteWipe).
@@ -141,8 +150,9 @@ Feature: Porting the schismtracker August 2026 work into Impulse Tracker
     When they press Alt-D, then Shift-Alt-D
     Then the first clone is verbatim and the second has muted channels wiped
 
-  @todo
+  @done
   Scenario: A shortcut inverts every channel mute at once
+    # card: features/invert-channel-mutes.feature -- Ctrl-F9, in GlobalKeyList
     # schism: Ctrl-Shift-F9, exactly reversible -- pressing twice returns to the
     # starting state, so it flips between two halves of an arrangement.
     # IT approach: MuteChannelTable is reachable via Music_GetMuteChannelTable;
@@ -162,21 +172,28 @@ Feature: Porting the schismtracker August 2026 work into Impulse Tracker
     When they press Ctrl-O
     Then the current pattern is rendered, as it would be from F2
 
-  @todo
+  @done @dosbox-verified
   Scenario: Rendering from the command line, without the interactive screens
-    # schism: --diskwrite=OUT --pattern=N | all, and --samples to dump the
-    # sample set; a 56-pattern module gave 55 WAVs in about five seconds.
-    # IT approach: IT.EXE already parses a command line for the module to load
-    # (IT.ASM startup). A switch could load, arm WAV render on a chosen pattern,
-    # run the render to completion and exit. HARD PART: the render path is a
-    # state machine driven by Music_Poll and the WAVDRV driver swap, so "run to
-    # completion then exit" needs a headless pump loop, and every failure mode
-    # currently surfaces as an on-screen message or a VRAM marker.
-    # Worth doing only if batch rendering is actually wanted on the DOS box --
-    # otherwise the Quicksave folder handoff already covers the use case.
-    Given a module and a pattern number on the command line
+    # card: features/headless-batch-render.feature
+    #   IT.EXE S0 Osong.it        every pattern with data -> one WAV each
+    #   IT.EXE S0 N005 Osong.it   just pattern 5
+    #   IT.EXE S0 Usong.it        every sample -> SMPnn.WAV
+    #
+    # This card's original entry rated it HARD and near-pointless, because "the
+    # render is a state machine driven by Music_Poll and the WAVDRV driver swap"
+    # and would need a headless pump loop. That was already stale when written:
+    # the single-pattern render had become SYNCHRONOUS (WAV_SyncRenderLoop pumps
+    # Music_Poll until the driver closes its file), so the pump loop existed and
+    # the work was mostly plumbing -- a keymap-free entry point on the idle path
+    # plus command-line parsing. Two assembly traps cost more than the design did.
+    #
+    # It also paid for itself immediately: driving the render in a loop exposed
+    # that Music_PlayPattern was being called with BX (the row count) never set,
+    # which is what had been making INTERACTIVE renders write no file at all,
+    # intermittently. cite: features/wav-render-quicksave.feature
+    Given a module and optionally a pattern number on the command line
     When IT is started with the render switch
-    Then that pattern is rendered to a WAV and IT exits without drawing a screen
+    Then the patterns are rendered to WAVs and IT quits on its own
 
   @todo
   Scenario: Shift-Enter loads a whole folder, or the module you are inside

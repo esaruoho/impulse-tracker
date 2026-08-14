@@ -418,6 +418,54 @@ So bind the Shift form and test the extra modifier live inside the handler with
 post-dispatch test the F11 order-list edge uses at `IT_PE.ASM:2308`. A "Ctrl+Shift
 row" does not exist and cannot be faked with row ordering.
 
+## Headless / batch operation (fork, since 2026-08-14)
+
+`features/headless-batch-render.feature` is the authority. The schism equivalents
+are `--diskwrite` / `--pattern` / `--samples`.
+
+```
+IT.EXE S0 Osong.it        every pattern with data -> one WAV each, then quit
+IT.EXE S0 N005 Osong.it   just pattern 5
+IT.EXE S0 Usong.it        every loaded sample -> SMPnn.WAV, then quit
+```
+
+Files land in the Quicksave folder; `S0` (no sound card) is the right way to invoke
+it, since a disk render never touches the audio hardware.
+
+Two things about IT's command line that are easy to get wrong:
+
+- **There is no `/` or `-` switch prefix.** `CmdLine2` (`IT.ASM`) capitalises every
+  character and compares it against the switch letters, so *any letter anywhere is
+  a switch*. `IT.EXE song.it O` parses the letters of the filename as switches --
+  the `w` in "what" becomes `/W`, convert-module. A filename must be attached to a
+  letter that consumes it (`Osong.it`), which then jumps to `SetSoundCardDriver1`
+  to NUL-terminate it in place. This is also why the pattern selector is a separate
+  `N###` and not digits on `O`.
+- **The only way to load a module at startup is the synthetic KEYSTROKE script**
+  (`StartupInformation` -> `GetStartupKeyList2` -> a tail table): Enter, Tab x3,
+  Ctrl-Backspace, the filename one character at a time, Enter. `/W` then runs a
+  tail of Ctrl-S / Ctrl-Q / Y to save and quit. That tail is now selectable via
+  `StartupTailOffset` / `StartupTailEnd`, and the batch switches point it at
+  `BatchInformation`, which just ends the script. While the script is running
+  `K_IsKeyWaiting` reports a key waiting, so the idle path is not reached until the
+  module has finished loading -- the ordering comes for free.
+
+Batch forces `<PFX><NNNN>` counter naming (`WAV_BatchNaming`): the interactive
+timestamp name `LLHHMMSS` only resolves to a second, and a loop renders several
+patterns within one.
+
+### TASM trap worth remembering
+
+**A bare label `Call`ed inside a `Proc Far` returns FAR.** TASM takes `Ret`'s width
+from the enclosing `Proc`, so a helper written as a label inside a Far proc pops
+`CS:IP` when the `Call` pushed only `IP` -- it returns into garbage. Symptom: the
+work completes correctly and *then* IT wedges. Write helpers as real
+`Proc ... Near` / `EndP`. (Cost a debugging round on the batch render, 2026-08-14.)
+
+Related: a cross-segment `Call` to a `Global ...:Far` proc can still fail to link
+under `/jSMART` with `Fixup overflow` -- five of them, calling `PE_LogStage` from
+`IT.ASM`. Keep such helpers in the caller's own segment.
+
 ## Getting facts back off the DOS PC (logging channels)
 
 `features/debug-logging-channels.feature` in the repo is the authority; the
@@ -1229,4 +1277,4 @@ Accessor: `PE_GetForkExtConfigOffset Far` (IT_PE.ASM), returns
 | Driver↔host table | `SoundDrivers/REQPROC.INC` + `IT_MUSIC.ASM:716-742` |
 | WAV render flags | `WAV_RenderMode` (0=idle, 1=rendering), `WAV_NoImport` (armed by dispatcher), `WAV_SessionNoImport` (latched at enter, read at leave) |
 | WAV hold proc | `WAV_HoldForMarkers` (IT_MUSIC.ASM), key-dismissable 15s timeout via Int 16h AH=01h |
-| Last Analyzed | 2026-08-14 (keyboard-state ownership, the real idle path, Ctrl+Shift, logging channels) |
+| Last Analyzed | 2026-08-14 (keyboard state, idle path, Ctrl+Shift, logging channels, headless batch, TASM Ret-width trap) |

@@ -90,6 +90,7 @@ include network.inc
         Global  Music_AutoDetectSoundCard:Far
         Global  Music_ToggleWAVRender:Far
         Global  Music_ArmRenderNoImport:Far
+        Global  Music_BatchRenderPatterns:Far
         Global  Music_StartMultiWAV:Far
         Global  Music_StartFullSongWAV:Far
         Global  Music_StartFullSongMWAV:Far
@@ -4824,6 +4825,9 @@ WAV_UserBase            DB      14 Dup (0)
 
 ; Multi-WAV state (Shift-Alt-M = current pattern split per channel)
 WAV_MultiMode           DB      0       ; 0=off, 1=running
+WAV_BatchNaming         DB      0       ; 1 = headless batch: force counter naming
+                                        ;     so same-second renders cannot collide
+                                        ; FEATURE-CARD >> features/headless-batch-render.feature
 WAV_MultiChannel        DB      0       ; channel currently being rendered
                                         ; (0..63); incremented after each
                                         ; finalize via Music_Poll.
@@ -5908,6 +5912,109 @@ EndP            PE_HoldInfoLine
 ; WAV_SessionNoImport, so the import-skip decision is fixed at the moment
 ; render mode is entered.
 ;-------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
+; Music_BatchRenderPatterns -- render patterns to WAV with no interaction.
+;
+;   In:  AX = pattern number, or 0FFFFh for "every pattern that has data"
+;   Out: AX = number of patterns rendered
+;
+; The headless equivalent of pressing Shift-Ctrl-O once per pattern, and only
+; possible because the single-pattern render is SYNCHRONOUS: WAV_SyncRenderLoop
+; inside Music_ToggleWAVRender pumps Music_Poll until playback ends and the driver
+; has closed its file, so when it returns the WAV is complete. No headless pump
+; loop of its own is needed -- the backlog card's plan for this feature assumed
+; one, because it was written before the render became synchronous.
+;
+; "Has data" is the pattern-location word at SongDataArea:[63912 + pattern*4]:
+; 0 = never allocated (Music_GetPatternLocationNoCount hands back EmptyPattern for
+; those), 1 = conventional memory, >1 = EMS. Empty patterns are skipped rather than
+; rendered as silence, so a 56-pattern module does not produce 200 files.
+;
+; Must run AFTER init: the render swaps the live sound driver out for WAVDRV and
+; back, so a driver has to exist. The idle path in IT_M.ASM is where it is called.
+; FEATURE-CARD >> features/headless-batch-render.feature
+;-------------------------------------------------------------------------------
+Proc            Music_BatchRenderPatterns Far
+
+                Push    BX
+                Push    CX
+                Push    DX
+                Push    SI
+                Push    DS
+
+                Mov     Byte Ptr [CS:WAV_BatchNaming], 1
+                Xor     DX, DX                  ; DX = rendered count
+
+                Cmp     AX, 0FFFFh
+                JE      MBRP_All
+
+                                                ; --- one named pattern ----------
+                Cmp     AX, 200
+                JAE     MBRP_Done
+                Mov     BX, AX
+                Call    MBRP_RenderOne
+                Jmp     MBRP_Done
+
+MBRP_All:
+                Xor     BX, BX                  ; BX = pattern index
+
+MBRP_Loop:
+                                                ; skip patterns with no data
+                Mov     SI, BX
+                ShL     SI, 2
+                Add     SI, 63912               ; pattern-location table
+                Mov     DS, [CS:SongDataArea]
+                        Assume DS:Nothing
+                Cmp     Word Ptr [SI], 0
+                JE      MBRP_Next
+
+                Call    MBRP_RenderOne
+
+MBRP_Next:
+                Inc     BX
+                Cmp     BX, 200
+                JB      MBRP_Loop
+
+MBRP_Done:
+                Mov     Byte Ptr [CS:WAV_BatchNaming], 0
+                Mov     AX, DX                  ; AX = count rendered
+
+                Pop     DS
+                Pop     SI
+                Pop     DX
+                Pop     CX
+                Pop     BX
+                Ret
+
+EndP            Music_BatchRenderPatterns
+
+;-------------------------------------------------------------------------------
+; BX = pattern to render; bumps DX (the caller's rendered count).
+;
+; A REAL Near proc, NOT a bare label inside the Far proc above. As a label its Ret
+; assembled as a FAR return -- TASM takes the width from the enclosing Proc --
+; while Call pushed only IP, so it returned into garbage and IT wedged after the
+; first pattern, with that pattern's WAV already correctly written. The breadcrumb
+; pair that caught it logged "Rr" and then never reached the caller's next step.
+;
+; Arms no-import on every pattern: the flag is consumed per render, and a batch run
+; must never eat sample slots.
+; FEATURE-CARD >> features/headless-batch-render.feature
+;-------------------------------------------------------------------------------
+Proc            MBRP_RenderOne Near
+
+                Push    BX
+                Call    Music_ArmRenderNoImport
+                Mov     AX, BX
+                Call    Music_ToggleWAVRender
+                Pop     BX
+                Inc     DX
+                Ret
+
+EndP            MBRP_RenderOne
+
+;-------------------------------------------------------------------------------
+
 Proc            Music_ArmRenderNoImport Far
                 Push    DS
                 Push    CS
@@ -6030,6 +6137,17 @@ WAV_PreflightDidCd:
                 Cmp     Byte Ptr [CS:WAV_SongMode], 0
                 JNE     WAV_BuildCounterName
                 Cmp     Byte Ptr [CS:WAV_UserFilenameSet], 0
+                JNE     WAV_BuildCounterName
+                                                ; A batch run renders many patterns
+                                                ; back to back, and the timestamp
+                                                ; basename is only accurate to the
+                                                ; SECOND -- so every pattern rendered
+                                                ; within the same second would write
+                                                ; the same filename and silently
+                                                ; overwrite the one before it. Batch
+                                                ; uses <PFX><NNNN> counter naming.
+                                                ; FEATURE-CARD >> features/headless-batch-render.feature
+                Cmp     Byte Ptr [CS:WAV_BatchNaming], 0
                 JNE     WAV_BuildCounterName
                 Call    WAV_BuildTimestampBasename
                 Jmp     WAV_BasenameReady
@@ -6380,7 +6498,38 @@ WAV_ActualDidCd:
                 ; FEATURE-CARD >> features/ctrl-o-empty-orderlist-crash.feature
                 Mov     Word Ptr [CS:StopEndOfPlaySection], 1
 
+                ; ROOT CAUSE FIX: Music_PlayPattern takes AX=pattern, BX=NUMBER OF
+                ; ROWS, CX=start row -- and BX was never set here, so NumberOfRows
+                ; got whatever happened to be in BX. When that landed small the
+                ; pattern ended on the first tick: PlayMode dropped to 0 before
+                ; WAVDRV's Poll ever reached its Int 21h AH=3Ch, so NO FILE was
+                ; created at all, while the sync loop below exited looking perfectly
+                ; healthy (it= still at full scale, one pass). Nondeterministic by
+                ; nature, which is why the render "worked sometimes" -- and why the
+                ; hunt went looking at the network share and the driver instead.
+                ;
+                ; Every other caller reads the count out of the pattern header --
+                ; word 0 is the packed length, word 1 is the row count (see
+                ; PE_OrderListLoopPattern, IT_PE.ASM:13479). Do the same.
+                ; FEATURE-CARD >> features/wav-render-quicksave.feature
+                Push    DS
                 Mov     AX, [CS:WAV_PendingPattern]
+                Push    AX
+                Call    Music_GetPattern        ; DS:SI -> pattern data
+                LodsW                           ; skip packed length
+                LodsW                           ; AX = number of rows
+                Mov     BX, AX
+                Pop     AX                      ; AX = pattern again
+                Pop     DS
+
+                Test    BX, BX                  ; no row count -> not playable; use
+                JNZ     WAV_HaveRows            ; IT's default rather than render
+                Mov     BX, 64                  ; nothing at all
+WAV_HaveRows:
+                Cmp     BX, 200
+                JBE     WAV_RowsOK
+                Mov     BX, 200
+WAV_RowsOK:
                 Xor     CX, CX
                 Call    Music_PlayPattern
                 Jmp     WAV_PlayDone

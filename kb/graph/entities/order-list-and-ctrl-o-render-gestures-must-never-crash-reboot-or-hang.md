@@ -10,12 +10,12 @@ updated: 2026-08-14
 Convey feature: features/ctrl-o-empty-orderlist-crash.feature.
 
 ## Claims
-- Scenario (L83): an out-of-range pattern number resolves to EmptyPattern, never a wild pointer
-- Scenario (L92): empty order list, F6 playing, Ctrl-O — no longer reboots
-- Scenario (L102): a single-pattern render stops after one pass instead of hanging
-- Scenario (L112): the render terminator never leaks into normal playback
-- Scenario (L119): all three gestures share the one hardened render path
-- Scenario (L128): each render writes a back-and-forth debug line to CTRLOLOG.TXT
-- Scenario (L138): the reboot leak SOURCE (Music_PlayPartSong) is documented, not yet hardened
+- Scenario (L84): an out-of-range pattern number resolves to EmptyPattern, never a wild pointer
+- Scenario (L93): empty order list, F6 playing, Ctrl-O — no longer reboots
+- Scenario (L103): a single-pattern render stops after one pass instead of hanging
+- Scenario (L113): the render terminator never leaks into normal playback
+- Scenario (L120): all three gestures share the one hardened render path
+- Scenario (L129): each render writes a back-and-forth debug line to CTRLOLOG.TXT
+- Scenario (L139): the reboot leak SOURCE (Music_PlayPartSong) is documented, not yet hardened
 
 ## Relationships
