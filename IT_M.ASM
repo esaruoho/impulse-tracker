@@ -62,6 +62,13 @@ EndS
                 Extrn   Music_BatchRenderPatterns:Far
                 Extrn   D_DumpAllSamplesWAV:Far
                 Extrn   Quit_NoConfirm:Far
+                Extrn   SetInfoLine:Far         ; confirming the screen grab
+                                                ; the grab lands in the Quicksave
+                                                ; folder, not in whatever directory
+                                                ; the loader last wandered into
+                Extrn   D_SaveCwd:Far
+                Extrn   D_RestoreCwd:Far
+                Extrn   D_GotoRenderDirectory:Far
 
                 Extrn   PE_DrawOrderList:Far
                 Extrn   PE_PreOrderList:Far
@@ -87,6 +94,7 @@ EndS
                 Global  M_FunctionHandler:Far
                 Global  M_Object1List:Far
                 Global  M_Object1ListDefault:Far
+                Global  M_ScreenGrabKey:Far
                 Public  ReleaseTimeSlice
                                                 ; headless batch flags, set by the
                                                 ; command line in IT.ASM
@@ -94,6 +102,11 @@ EndS
                 Public  BatchRenderFlag
                 Public  BatchRenderPattern
                 Public  BatchDumpFlag
+                                                ; headless screenshotter
+                                                ; FEATURE-CARD >> features/headless-screenshot.feature
+                Public  ScreenGrabFlag
+                Public  ScreenGrabKeys
+                Public  ScreenGrabCount
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
@@ -173,10 +186,164 @@ ReleaseTimeSlice        DB      0
 BatchRenderFlag         DB      0       ; 1 = render then quit  (cmdline /O)
 BatchRenderPattern      DW      0FFFFh  ;     0FFFFh = every pattern with data
 BatchDumpFlag           DB      0       ; 1 = dump samples then quit (cmdline /U)
+ScreenGrabFlag          DB      0       ; 1 = grab the screen then quit (cmdline /G)
+ScreenGrabKeys          DW      0, 0, 0, 0
+                                        ; up to four key words to send before the
+                                        ; grab, so a page behind a dialog is reachable
+                                        ; (e.g. Enter to clear the sound-card notice,
+                                        ; then the key for the page you want)
+ScreenGrabCount         DB      0       ; how many were given on the command line
+ScreenGrabNext          DB      0       ; how many have been sent
+ScreenGrabWait          DB      0       ; idle passes left to settle before grabbing
+                                        ; SCR-nn.TXT, nn counting up from 01 so a
+                                        ; run of grabs does not overwrite itself.
+                                        ; 8.3 names only -- "scr-midiscr.txt" is 11
+                                        ; characters before the dot and DOS would
+                                        ; mangle it.
+ScreenGrabName          DB      "SCR-01.TXT", 0
+SCREENGRABDIGITS        EQU     Offset ScreenGrabName + 4
+ScreenGrabRow           DB      80 Dup (' '), 13, 10
+SCREENGRABROWLEN        EQU     82      ; 80 columns + CRLF. Was "$ - ScreenGrabRow"
+                                        ; with the message strings defined in between,
+                                        ; so every captured row carried both messages.
+ScreenGrabOK            DB      0
+ScreenGrabOKMsg         DB      "Screen written to Quicksave folder as SCR-nn.TXT", 0
+ScreenGrabFailMsg       DB      "Screen grab FAILED (check the Quicksave folder in F12)", 0
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿
 ;ï¿½ Functions                                                                   ï¿½
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
+; M_ScreenGrab -- write the 80x50 text screen to SCREEN.TXT in the current
+; directory: one line per row, characters only (attributes dropped -- this is for
+; reading a layout, not reproducing colours).
+;
+; Reads video memory at B800:0000 directly, the same primitive the fork's VRAM debug
+; markers use. IT draws through its own buffer but blits to VRAM, so by the time the
+; idle list has run the text is really there. All registers preserved.
+; FEATURE-CARD >> features/headless-screenshot.feature
+; Shift-Alt-Y from any screen: write SCREEN.TXT and carry on. Same grabber the /G
+; switch uses, so what the operator captures interactively and what a headless run
+; captures are the same bytes. The pattern editor binds Shift-Alt-Y to its own
+; halve+tile op via 2222h -- this is 1515h, which was unbound everywhere.
+; FEATURE-CARD >> features/headless-screenshot.feature
+Proc            M_ScreenGrabKey Far
+
+                Call    M_ScreenGrab
+
+                                                ; Say so. Without this the key looked
+                                                ; like it had done nothing at all --
+                                                ; the file appeared on the share but
+                                                ; the person pressing it had no way to
+                                                ; know, which is the same class of
+                                                ; problem as a batch export that only
+                                                ; reports when it finishes.
+                Push    DS
+                Push    CS
+                Pop     DS
+                        Assume DS:Main
+                Mov     SI, Offset ScreenGrabOKMsg
+                Cmp     Byte Ptr [ScreenGrabOK], 0
+                JNE     M_SGK_Say
+                Mov     SI, Offset ScreenGrabFailMsg
+M_SGK_Say:
+                Call    SetInfoLine
+                Pop     DS
+                        Assume DS:Nothing
+
+                Mov     AX, 1
+                Ret
+EndP            M_ScreenGrabKey
+
+;-------------------------------------------------------------------------------
+
+Proc            M_ScreenGrab Near
+
+                PushF
+                PushAD
+                Push    DS
+                Push    ES
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Main
+
+                Mov     Byte Ptr [ScreenGrabOK], 0
+
+                                                ; Go where the operator can actually
+                                                ; get at it. IT's cwd follows the file
+                                                ; browser around, so a relative create
+                                                ; can land anywhere -- the first grab
+                                                ; from the real machine went somewhere
+                                                ; nobody could find.
+                Call    D_SaveCwd
+                Call    D_GotoRenderDirectory
+
+                Mov     DX, Offset ScreenGrabName
+                Mov     AH, 3Ch                 ; create / truncate
+                Xor     CX, CX
+                Int     21h
+                JC      M_SG_Done
+                Mov     BP, AX                  ; BP = file handle
+                Mov     Byte Ptr [ScreenGrabOK], 1
+
+                Xor     SI, SI                  ; SI = VRAM offset
+                Mov     BL, 50                  ; rows to go
+
+M_SG_Row:
+                Push    BX
+                Mov     DI, Offset ScreenGrabRow
+                Mov     CX, 80
+                Mov     AX, 0B800h
+                Mov     ES, AX
+
+M_SG_Cell:
+                Mov     AL, [ES:SI]             ; character byte
+                Add     SI, 2                   ; step over the attribute
+                Test    AL, AL                  ; a NUL would truncate the line
+                JNZ     M_SG_Store
+                Mov     AL, ' '
+M_SG_Store:
+                Mov     [DI], AL
+                Inc     DI
+                Loop    M_SG_Cell
+
+                Mov     BX, BP                  ; write the row + CRLF
+                Mov     CX, SCREENGRABROWLEN
+                Mov     DX, Offset ScreenGrabRow
+                Mov     AH, 40h
+                Int     21h
+
+                Pop     BX
+                Dec     BL
+                JNZ     M_SG_Row
+
+                Mov     BX, BP
+                Mov     AH, 3Eh
+                Int     21h
+
+                                                ; bump nn for the next grab
+                Inc     Byte Ptr [SCREENGRABDIGITS+1]
+                Cmp     Byte Ptr [SCREENGRABDIGITS+1], '9'
+                JBE     M_SG_Rolled
+                Mov     Byte Ptr [SCREENGRABDIGITS+1], '0'
+                Inc     Byte Ptr [SCREENGRABDIGITS]
+                Cmp     Byte Ptr [SCREENGRABDIGITS], '9'
+                JBE     M_SG_Rolled
+                Mov     Word Ptr [SCREENGRABDIGITS], '10'   ; wrap back to 01
+M_SG_Rolled:
+
+M_SG_Done:
+                Call    D_RestoreCwd
+                Pop     ES
+                Pop     DS
+                PopAD
+                PopF
+                Ret
+                        Assume DS:Nothing
+EndP            M_ScreenGrab
+
+;-------------------------------------------------------------------------------
 
 Proc            M_FunctionDivider Far           ; Given DS:SI points to list
                                                 ; Carry set if none found
@@ -399,6 +566,43 @@ M_KeyBoardInput1:
                 Test    AX, AX
                 JNZ     M_FunctionHandler8
 
+                ; --- headless screenshot, then quit ----------------------------
+                ; Boot IT, optionally press ONE key to reach a screen, let it draw,
+                ; write the text screen out as SCREEN.TXT, quit. That turns "is the
+                ; layout right?" into something answerable from the build machine
+                ; rather than a question only the person at the DOS box can answer.
+                ; FEATURE-CARD >> features/headless-screenshot.feature
+                Cmp     Byte Ptr CS:ScreenGrabFlag, 0
+                JE      M_NoGrab
+
+                Mov     AL, CS:ScreenGrabNext
+                Cmp     AL, CS:ScreenGrabCount
+                JAE     M_GrabSettle
+                                                ; Send the next key through the
+                                                ; dispatcher exactly as the right-shift
+                                                ; tap does, then come back on a later
+                                                ; idle pass, once it has been drawn.
+                Inc     Byte Ptr CS:ScreenGrabNext
+                Xor     AH, AH
+                Add     AX, AX
+                Mov     BX, AX
+                Mov     CX, [CS:ScreenGrabKeys+BX]
+                Mov     Byte Ptr CS:ScreenGrabWait, 6
+                Mov     DX, CX
+                Jmp     M_FunctionHandler9
+
+M_GrabSettle:
+                Cmp     Byte Ptr CS:ScreenGrabWait, 0
+                JE      M_DoGrab
+                Dec     Byte Ptr CS:ScreenGrabWait
+                Jmp     M_NoGrab                ; let the idle list redraw first
+
+M_DoGrab:
+                Mov     Byte Ptr CS:ScreenGrabFlag, 0
+                Call    M_ScreenGrab
+                Jmp     Quit_NoConfirm
+
+M_NoGrab:
                 ; --- headless batch work, then quit ----------------------------
                 ; Runs on the FIRST idle pass, which is the earliest moment that is
                 ; safe: the sound driver is loaded (the render swaps it out for

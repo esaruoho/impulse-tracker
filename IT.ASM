@@ -37,6 +37,9 @@ Segment         Main DWORD Public 'Code' USE16
                 Extrn   BatchRenderFlag:Byte
                 Extrn   BatchRenderPattern:Word
                 Extrn   BatchDumpFlag:Byte
+                Extrn   ScreenGrabFlag:Byte
+                Extrn   ScreenGrabKeys:Word
+                Extrn   ScreenGrabCount:Byte
 EndS
 
                 Extrn   D_InitDisk:Far
@@ -202,6 +205,8 @@ ENDIF
                 DB      "  OFilename.IT", 9, "Render its patterns to WAV, then quit", 13, 10
                 DB      "  N###", 9, 9, "Render only that one pattern", 13, 10
                 DB      "  UFilename.IT", 9, "Write its samples as WAVs, then quit", 13, 10
+                DB      "  G[hhhh]", 9, 9, "Screen -> SCREEN.TXT then quit; repeat G to", 13, 10
+                DB      9, 9, 9, "send up to 4 key words first", 13, 10
                 DB      9, "O and U write to the Quicksave folder (F12)", 13, 10
                 DB      "$"
 
@@ -435,6 +440,8 @@ CmdLine2:
                 JE      BatchDump1
                 Cmp     AL, 'N'
                 JE      BatchPattern1
+                Cmp     AL, 'G'
+                JE      ScreenGrab1
 
                 Jmp     CmdLine1
 
@@ -533,6 +540,86 @@ BatchPattern1:
 
 BatchPatternBad:
                 Jmp     CmdLine3
+
+                                                ; /G[hhhh]
+                                                ;   Write the text screen to
+                                                ;   SCREEN.TXT and quit. With four
+                                                ;   optional HEX digits, send that key
+                                                ;   word through the dispatcher first,
+                                                ;   so a specific page can be captured
+                                                ;   without anyone pressing a key:
+                                                ;     IT.EXE S0 G        boot screen
+                                                ;     IT.EXE S0 G13B     press F1 first
+                                                ; FEATURE-CARD >> features/headless-screenshot.feature
+ScreenGrab1:
+                Push    DS
+                Push    Main
+                Pop     DS
+                        Assume DS:Main
+                Mov     [ScreenGrabFlag], 1
+                Pop     DS
+                        Assume DS:Nothing
+
+                Xor     CX, CX                  ; CX = accumulated key word
+                Xor     BX, BX                  ; BX = digits seen
+
+ScreenGrab2:
+                LodsB
+                Call    CapitaliseAL
+                Mov     DL, AL                  ; keep the raw char
+                Sub     AL, '0'
+                JC      ScreenGrabDone
+                Cmp     AL, 9
+                JBE     ScreenGrabDigit
+                Mov     AL, DL
+                Sub     AL, 'A'
+                JC      ScreenGrabDone
+                Cmp     AL, 5                   ; A-F
+                JA      ScreenGrabDone
+                Add     AL, 10
+
+ScreenGrabDigit:
+                And     AX, 0Fh
+                ShL     CX, 4
+                Add     CX, AX
+                Inc     BX
+                Cmp     BX, 4
+                JB      ScreenGrab2
+
+                                                ; four digits taken -- append and carry
+                                                ; on parsing the next switch
+ScreenGrabStore:
+                Call    ScreenGrabAppend
+                Jmp     CmdLine1
+
+ScreenGrabDone:
+                Test    BX, BX
+                JZ      ScreenGrabNoDigits      ; plain /G
+                Call    ScreenGrabAppend
+
+ScreenGrabNoDigits:
+                Mov     AL, DL                  ; reprocess this character
+                Jmp     CmdLine3
+
+                                                ; CX = key word -> append to the queue
+ScreenGrabAppend:
+                Push    DS
+                Push    BX
+                Push    Main
+                Pop     DS
+                        Assume DS:Main
+                Mov     BL, [ScreenGrabCount]
+                Cmp     BL, 4
+                JAE     ScreenGrabAppendFull
+                Xor     BH, BH
+                Add     BX, BX
+                Mov     [ScreenGrabKeys+BX], CX
+                Inc     Byte Ptr [ScreenGrabCount]
+ScreenGrabAppendFull:
+                Pop     BX
+                Pop     DS
+                        Assume DS:Nothing
+                Ret
 
 BatchDump1:
                 Push    DS

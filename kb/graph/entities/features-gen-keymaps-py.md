@@ -14,7 +14,7 @@ Source module in impulse-tracker.
 
 ## Relationships
 - depends_on [[sys]]
-- depends_on [[subprocess]]
-- depends_on [[glob]]
-- depends_on [[os]]
 - depends_on [[re]]
+- depends_on [[glob]]
+- depends_on [[subprocess]]
+- depends_on [[os]]

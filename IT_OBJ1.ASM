@@ -189,6 +189,7 @@ ENDIF
                 Extrn   Glbl_MIDITransport_Toggle:Far
                 Extrn   Glbl_MIDIMulti_Toggle:Far
                 Extrn   Glbl_MIDIMulti_ToggleGuarded:Far
+                Extrn   M_ScreenGrabKey:Far
                 Extrn   Glbl_MIDIStopF8_Toggle:Far
                 Extrn   Glbl_LoadSample:Far
                 Extrn   Glbl_LoadInstrument:Far
@@ -3247,6 +3248,11 @@ OrderKeyValue           DW      157h
                         DB      0               ; Fork: Scroll Lock, same handler,
                         DW      146h            ;   also global -- it was bound only
                         DD      DWord Ptr PE_ScrollLockFollow ; on the F3/F4 lists.
+
+                        DB      1               ; Fork: Shift-Alt-Y writes the text
+                        DW      1515h           ;   screen to SCREEN.TXT, so a layout
+                        DD      DWord Ptr M_ScreenGrabKey ; can be read off the share
+                                                ; instead of described down a phone.
 
                         DB      3               ; Fork: Ctrl-F9 -> invert every
                         DW      143h            ;   channel mute. Alt-F9 already
@@ -8772,31 +8778,31 @@ MIDIPWDInput            DW      14
                         DW      25
 
 MIDIOutputButton        DW      2
-                        DW      22, 16, 0FFFFh, 24
+                        DW      22, 23, 0FFFFh, 16
                         DW      0
                         DW      0, 0
                         DW      1
                         DD      DWord Ptr O1_MIDIOutputScreen
                         DW      0, 0, 0
-                        DB      2, 33, 40, 35
+                        DB      2, 37, 40, 39
                         DB      8
                         DB      0
                         DB      "  MIDI Output Configuration", 0
 
 MIDISaveConfigButton    DW      2
-                        DW      15, 23, 0FFFFh, 25
+                        DW      0FFFFh, 24, 15, 0FFFFh
                         DW      0
                         DW      0, 0
                         DW      2
                         DD      DWord Ptr Music_SaveMIDIConfig
                         DW      0, 0, 0
-                        DB      2, 37, 40, 39
+                        DB      42, 37, 78, 39
                         DB      8
                         DB      0
                         DB      "  Save Output Configuration", 0
 
 MIDISyncToggleButton    DW      2
-                        DW      16, 0FFFFh, 0FFFFh, 26
+                        DW      15, 25, 0FFFFh, 24
                         DW      0
                         DW      0, 0
                         DW      2
@@ -8808,39 +8814,39 @@ MIDISyncToggleButton    DW      2
                         DB      "  Toggle MIDI Sync (F8 Clock)", 0
 
 MIDITransportToggleButton DW    2
-                        DW      0FFFFh, 25, 15, 0FFFFh
+                        DW      16, 26, 23, 0FFFFh
                         DW      0
                         DW      0, 0
                         DW      2
                         DD      DWord Ptr Glbl_MIDITransport_Toggle
                         DW      0, 0, 0
-                        DB      42, 33, 78, 35
+                        DB      42, 41, 78, 43
                         DB      8
                         DB      0
                         DB      "  Toggle MIDI Transport (FA/FB/FC)", 0
 
 ; FEATURE-CARD >> features/midi-in-multitimbral.feature (Shift-F1 "Toggle Multitimbral MIDI-In" button)
 MIDIMultiToggleButton   DW      2
-                        DW      24, 26, 16, 0FFFFh
+                        DW      23, 0FFFFh, 0FFFFh, 26
                         DW      0
                         DW      0, 0
                         DW      2
                         DD      DWord Ptr Glbl_MIDIMulti_ToggleGuarded
                         DW      0, 0, 0
-                        DB      42, 37, 78, 39
+                        DB      2, 45, 40, 47
                         DB      8
                         DB      0
                         DB      "  Toggle Multitimbral MIDI-In", 0
 
 ; FEATURE-CARD >> features/midi-out-stop-on-f8.feature (Shift-F1 "Send MIDI Stop on F8" button)
 MIDIStopF8ToggleButton  DW      2
-                        DW      25, 0FFFFh, 23, 0FFFFh
+                        DW      24, 0FFFFh, 25, 0FFFFh
                         DW      0
                         DW      0, 0
                         DW      2
                         DD      DWord Ptr Glbl_MIDIStopF8_Toggle
                         DW      0, 0, 0
-                        DB      42, 41, 78, 43
+                        DB      42, 45, 78, 47
                         DB      8
                         DB      0
                         DB      "  Toggle Send MIDI Stop (FC) on F8", 0

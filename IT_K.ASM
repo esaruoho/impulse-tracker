@@ -326,6 +326,8 @@ USKeyboardTable    Label Byte
          DW      19h
          DB      5       ; Alt-Y
          DW      1500h
+         DB      11      ; Shift+Alt-Y = grab the screen to SCREEN.TXT
+         DW      1515h   ;   FEATURE-CARD >> features/headless-screenshot.feature
          DB      0FFh
 
         DB      22      ; U

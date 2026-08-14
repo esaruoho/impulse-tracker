@@ -311,6 +311,11 @@
       "name": "glob"
     },
     {
+      "id": "re",
+      "kind": "entity",
+      "name": "re"
+    },
+    {
       "id": "subprocess",
       "kind": "entity",
       "name": "subprocess"
@@ -319,11 +324,6 @@
       "id": "os",
       "kind": "entity",
       "name": "os"
-    },
-    {
-      "id": "re",
-      "kind": "entity",
-      "name": "re"
     },
     {
       "id": "json",
@@ -354,7 +354,7 @@
     },
     {
       "from": "features-gen-keymaps-py",
-      "to": "subprocess",
+      "to": "re",
       "type": "depends_on"
     },
     {
@@ -364,12 +364,12 @@
     },
     {
       "from": "features-gen-keymaps-py",
-      "to": "os",
+      "to": "subprocess",
       "type": "depends_on"
     },
     {
       "from": "features-gen-keymaps-py",
-      "to": "re",
+      "to": "os",
       "type": "depends_on"
     },
     {
@@ -394,12 +394,12 @@
     },
     {
       "from": "features-print-card-py",
-      "to": "sys",
+      "to": "os",
       "type": "depends_on"
     },
     {
       "from": "features-print-card-py",
-      "to": "os",
+      "to": "sys",
       "type": "depends_on"
     }
   ]
