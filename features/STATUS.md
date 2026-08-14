@@ -20,6 +20,7 @@
 | f3-sample-list | 5 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
 | f4-f3-cursor-translate | 4 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped |
 | f4-instrument-list | 4 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
+| f5-info-page-shift-right-quicksave | 8 | ✓ | — | ✗ | @build-verified @design-note @hw-untested @shipped @todo |
 | f6-play-from-order-list-row | 5 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped @stock |
 | loader-keyjazz-hang | 4 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped @stock |
 | midi-in-multitimbral | 9 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock @todo |
@@ -43,8 +44,8 @@
 | wav-render-reentry-guard | 7 | ✓ | ✓ | ✗ | @build-verified @hw-untested @runtime-verified @shipped |
 
 ## Tally (computed)
-- Cards: 30
-- Build-verified: 29
+- Cards: 31
+- Build-verified: 30
 - Runtime-verified in DOSBox-X: 3 full + 8 partial
-- **Hardware-verified: 10**  ·  hardware-untested: 17
+- **Hardware-verified: 10**  ·  hardware-untested: 18
 

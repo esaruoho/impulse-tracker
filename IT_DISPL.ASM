@@ -48,8 +48,12 @@ ENDIF
                 Extrn   Music_ToggleReverse:Far
                 Extrn   Music_GetLastChannel:far
                 Extrn   Music_GetPatternLength:Far
+                Extrn   Music_ToggleWAVRender:Far
+                Extrn   Music_ArmRenderNoImport:Far
+                Extrn   Music_ClearRenderNoImport:Far
 
                 Extrn   M_FunctionDivider:Far
+                Extrn   K_IsKeyDown:Far
 
 IF NETWORKENABLED
                 Extrn   Network_Poll:Far
@@ -233,7 +237,7 @@ DisplayListKeys         Label
 
                         DB      0
                         DW      1CDh            ; Right arrow
-                        DW      Offset DisplayDown
+                        DW      Offset Display_RightDispatch
 
                         DB      2
                         DW      1C8h
@@ -3870,6 +3874,84 @@ DisplayDown1:
 
 EndP            DisplayDown
                 Assume DS:Nothing
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+; Shift-Right on the Info Page renders the pattern being played to the Quicksave
+; folder, without consuming a sample slot. Plain Right keeps its upstream job of
+; moving the channel selection down.
+;
+; Shift is read live from the keyboard table rather than being encoded in the
+; keymap row, because K_TranslateKey3's shifted-arrow conditions are exactly
+; where this fork has been bitten before. PE_OrderList_RightDispatch already
+; does it this way on F11 and is known to work on hardware; this copies it.
+;
+; features/f5-info-page-shift-right-quicksave.feature
+
+Proc            Display_RightDispatch Far
+
+                Push    BX
+
+                Mov     BX, 02Ah                ; Left Shift
+                Call    K_IsKeyDown
+                JNE     Display_RD_Shift
+                Mov     BX, 036h                ; Right Shift
+                Call    K_IsKeyDown
+                JNE     Display_RD_Shift
+
+                Pop     BX
+                Jmp     DisplayDown             ; no shift: upstream behaviour
+
+Display_RD_Shift:
+                Pop     BX
+
+                Call    Music_ArmRenderNoImport ; Quicksave only, no import
+
+                Call    Display_ResolvePattern
+                JC      Display_RD_NoPat
+
+                Call    Music_ToggleWAVRender    ; AX = pattern
+
+Display_RD_NoPat:
+                Mov     AX, 1
+                Ret
+
+EndP            Display_RightDispatch
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+; AX = pattern to render, CF=0.  CF=1 if there isn't a sensible one.
+;
+; Playing -> the pattern the engine is on, which is what the user can hear and
+; is looking at on this screen. Stopped -> the pattern loaded in the editor.
+; (The F11 resolver falls back to the order cursor instead; this screen hasn't
+; got one, so that fallback would be meaningless here.)
+
+Proc            Display_ResolvePattern Far
+
+                Call    Music_GetPlayMode       ; AX=PlayMode, CX=CurrentPattern
+                Test    AX, AX
+                JZ      Display_RP_Stopped
+
+                Mov     AX, CX
+                Jmp     Display_RP_Check
+
+Display_RP_Stopped:
+                Call    PE_GetCurrentPattern    ; AX = editor's pattern
+
+Display_RP_Check:
+                Cmp     AX, 200
+                JAE     Display_RP_Fail
+
+                ClC
+                Ret
+
+Display_RP_Fail:
+                StC
+                Ret
+
+EndP            Display_ResolvePattern
+
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 

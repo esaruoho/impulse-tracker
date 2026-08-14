@@ -46,6 +46,7 @@
 #
 # WATCH: Glbl_F11 PE_OrderList_ClonePattern PE_OrderList_ExtendPattern PE_OrderList_ToggleMuteWipe PE_OrderList_ApplyMuteWipe PE_OrderList_RenderDispatch PE_OrderList_RenderQuicksave PE_OrderList_GDispatch PE_OrderList_RightDispatch PE_OrderList_LeftDispatch Music_FindFreePattern Music_GetMuteChannelTable ClonePatternMuteWipe
 # RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
+#   2026-08-14  direct-commit  touched: PE_OrderList_RightDispatch
 #   2026-06-04  direct-commit  touched: ClonePatternMuteWipe
 #   2026-06-03  direct-commit  touched: PE_OrderList_ExtendPattern
 #

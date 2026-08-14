@@ -9,64 +9,10 @@
 > Metadata only -- no conversation content is copied into the repo. The list
 > reflects the machine it was generated on (transcripts are local).
 
-**10 Convey conversations** plugged in:
+**1 Convey conversations** plugged in:
 
-### `1fa213d0-83aa-4fc1-a8fb-b38dbcdee53d`  (2026-06-03)
-- Resume: `claude --resume 1fa213d0-83aa-4fc1-a8fb-b38dbcdee53d`
-- Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/1fa213d0-83aa-4fc1-a8fb-b38dbcdee53d.jsonl
-- Convey tooling touched: .githooks/post-merge, .githooks/pre-commit, GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, report-card-stamp.sh
-- Cards touched (14): day-2026-06-03.feature, f11-order-list.feature, f12-song-variables.feature, f2-pattern-editor.feature, f3-sample-list.feature, f4-instrument-list.feature, midi-in-multitimbral.feature, midi-realtime-sync.feature, scrolllock-follow-from-lists.feature, session-2026-06-03-multitimbral-and-whitelabel.feature, session-changes-codespace.feature, shift-enter-load-from-sample-list.feature, wav-render-quicksave.feature, wav-render-reentry-guard.feature
-
-### `227bcb50-c2eb-4f4e-8c73-116ad86c5e2f`  (2026-06-03 → 2026-06-04)
-- Resume: `claude --resume 227bcb50-c2eb-4f4e-8c73-116ad86c5e2f`
-- Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/227bcb50-c2eb-4f4e-8c73-116ad86c5e2f.jsonl
-- Convey tooling touched: .githooks/post-merge, .githooks/pre-commit, CONVEY.md, GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, report-card-stamp.sh
-- Cards touched (7): f11-order-list.feature, f12-song-variables.feature, f2-pattern-editor.feature, f3-sample-list.feature, f4-instrument-list.feature, midi-in-multitimbral.feature, wav-render-quicksave.feature
-
-### `8fdac3f9-0da3-4d36-a1e1-7e0d3ed99894`  (2026-06-03 → 2026-06-06)
-- Resume: `claude --resume 8fdac3f9-0da3-4d36-a1e1-7e0d3ed99894`
-- Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/8fdac3f9-0da3-4d36-a1e1-7e0d3ed99894.jsonl
+### `8713ab60-7367-412f-9a1c-293965805fdf`  (2026-08-14)
+- Resume: `claude --resume 8713ab60-7367-412f-9a1c-293965805fdf`
+- Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/8713ab60-7367-412f-9a1c-293965805fdf.jsonl
 - Convey tooling touched: .githooks/post-merge, .githooks/pre-commit, CONVEY-SITUATION.md, CONVEY.md, GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, STATUS.md, gen-sessions.py, gen-status.py, report-card-stamp.sh
-- Cards touched (30): alt-r-replicate.feature, convey-session-distiller.feature, day-2026-06-03.feature, f11-order-list.feature, f12-song-variables.feature, f2-pattern-editor.feature, f2-resize-tiles-pattern.feature, f3-sample-list.feature, f4-f3-cursor-translate.feature, f4-instrument-list.feature, f6-play-from-order-list-row.feature, loader-keyjazz-hang.feature, midi-in-multitimbral.feature, midi-realtime-sync.feature … (+16)
-
-### `bfba3a95-7804-448c-b2be-5748a8bae097`  (2026-06-03)
-- Resume: `claude --resume bfba3a95-7804-448c-b2be-5748a8bae097`
-- Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/bfba3a95-7804-448c-b2be-5748a8bae097.jsonl
-- Convey tooling touched: GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md
-- Cards touched (4): loader-keyjazz-hang.feature, midi-in-multitimbral.feature, midi-realtime-sync.feature, wav-render-quicksave.feature
-
-### `e86aa106-2936-452b-805c-e3418c03140c`  (2026-06-03 → 2026-06-04)
-- Resume: `claude --resume e86aa106-2936-452b-805c-e3418c03140c`
-- Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/e86aa106-2936-452b-805c-e3418c03140c.jsonl
-- Convey tooling touched: .githooks/post-merge, .githooks/pre-commit, CONVEY-SITUATION.md, CONVEY.md, GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, STATUS.md, gen-status.py, report-card-stamp.sh
-- Cards touched (27): alt-r-replicate.feature, convey-test-runner.feature, day-2026-06-03.feature, f11-order-list.feature, f12-song-variables.feature, f2-pattern-editor.feature, f2-resize-tiles-pattern.feature, f3-sample-list.feature, f4-instrument-list.feature, f6-play-from-order-list-row.feature, loader-keyjazz-hang.feature, midi-in-multitimbral.feature, midi-out-stop-on-f8.feature, midi-realtime-sync.feature … (+13)
-
-### `2f145369-14b0-48b7-b4cb-1d15255dfcad`  (2026-06-04)
-- Resume: `claude --resume 2f145369-14b0-48b7-b4cb-1d15255dfcad`
-- Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/2f145369-14b0-48b7-b4cb-1d15255dfcad.jsonl
-- Convey tooling touched: GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, STATUS.md, gen-status.py
-- Cards touched (11): alt-r-replicate.feature, convey-test-runner.feature, day-2026-06-03.feature, f11-order-list.feature, f12-song-variables.feature, f2-pattern-editor.feature, f2-resize-tiles-pattern.feature, f3-sample-list.feature, f4-instrument-list.feature, midi-out-stop-on-f8.feature, song-name-timestamp-default.feature
-
-### `6ddcab86-2462-4295-9717-0b3f0e837425`  (2026-06-04)
-- Resume: `claude --resume 6ddcab86-2462-4295-9717-0b3f0e837425`
-- Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/6ddcab86-2462-4295-9717-0b3f0e837425.jsonl
-- Convey tooling touched: .githooks/post-merge, .githooks/pre-commit, CONVEY-SITUATION.md, CONVEY.md, GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, STATUS.md, gen-sessions.py, gen-status.py, report-card-stamp.sh
-- Cards touched (20): alt-r-replicate.feature, convey-test-runner.feature, day-2026-06-03.feature, f11-order-list.feature, f12-song-variables.feature, f2-pattern-editor.feature, f2-resize-tiles-pattern.feature, f3-sample-list.feature, f4-instrument-list.feature, f6-play-from-order-list-row.feature, midi-in-multitimbral.feature, note-cut-toggle.feature, pattern-length-beyond-200.feature, sample-amplify-keeps-playback.feature … (+6)
-
-### `adf61574-f4a4-4fbc-b9db-dbcf7476fc40`  (2026-06-04)
-- Resume: `claude --resume adf61574-f4a4-4fbc-b9db-dbcf7476fc40`
-- Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/adf61574-f4a4-4fbc-b9db-dbcf7476fc40.jsonl
-- Convey tooling touched: CONVEY-SITUATION.md, CONVEY.md, GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, STATUS.md, gen-sessions.py, gen-status.py
-- Cards touched (17): alt-r-replicate.feature, convey-test-runner.feature, f11-order-list.feature, f2-resize-tiles-pattern.feature, loader-keyjazz-hang.feature, midi-in-multitimbral.feature, midi-out-stop-on-f8.feature, midi-realtime-sync.feature, pattern-length-beyond-200.feature, sample-amplify-keeps-playback.feature, scrolllock-follow-from-lists.feature, shift-f4-drumkit.feature, song-name-timestamp-default.feature, undo-messaging.feature … (+3)
-
-### `020aa82c-669a-419b-905e-63f1a1ac8c42`  (2026-06-15)
-- Resume: `claude --resume 020aa82c-669a-419b-905e-63f1a1ac8c42`
-- Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/020aa82c-669a-419b-905e-63f1a1ac8c42.jsonl
-- Convey tooling touched: GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, STATUS.md, report-card-stamp.sh
-- Cards touched (4): midi-out-stop-on-f8.feature, pattern-length-beyond-200.feature, recent-features-2026-06-03_to_04.feature, undo-messaging.feature
-
-### `3471aca0-a5df-4b96-82d0-78eafb943199`  (2026-06-15 → 2026-06-23)
-- Resume: `claude --resume 3471aca0-a5df-4b96-82d0-78eafb943199`
-- Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/3471aca0-a5df-4b96-82d0-78eafb943199.jsonl
-- Convey tooling touched: .githooks/post-merge, .githooks/pre-commit, CONVEY.md, GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, STATUS.md, gen-sessions.py, gen-status.py, report-card-stamp.sh
-- Cards touched (6): ctrl-o-empty-orderlist-crash.feature, midi-out-stop-on-f8.feature, sample-amplify-keeps-playback.feature, wav-render-keep-playback.feature, wav-render-quicksave.feature, wav-render-reentry-guard.feature
+- Cards touched (6): midi-in-multitimbral.feature, midi-out-stop-on-f8.feature, midi-realtime-sync.feature, pattern-length-beyond-200.feature, undo-messaging.feature, wav-render-reentry-guard.feature
