@@ -34,9 +34,11 @@ Feature: Dumping every sample in the song to WAV in one keystroke
   without saving them one at a time.
 
   @shipped @build-verified @hw-untested
-  Scenario: Ctrl-Shift-Right writes every loaded sample
+  Scenario: Ctrl-Shift-Right, or D, writes every loaded sample
     # cite: IT_DISK.ASM D_DumpAllSamplesWAV -- slots 1..99, Test [SI+12h],1 to skip
     #       empty ones, D_GotoRenderDirectory first so files land in Quicksave
+    # cite: IT_DISPL.ASM Display_RenderQuicksave -- K_IsKeyDown(01Dh) picks the dump
+    #       over the pattern render; DisplayListKeys also has DB 5 / DW 'D'
     Given a song with samples loaded
     When the user presses Ctrl-Shift-Right on the F5 Info Page
     Then each non-empty sample is written as SMPnn.WAV in the Quicksave folder
@@ -69,16 +71,24 @@ Feature: Dumping every sample in the song to WAV in one keystroke
     When the user presses Ctrl-Shift-Right
     Then nothing is written and the info line says the folder is invalid
 
-  @design-note
-  Scenario: Why the Ctrl row sits before the Shift row in the keymap
-    # Code 3 gates on Test CH,18h (Ctrl) and code 4 on Test CH,6 (Shift); neither
-    # rejects the other modifier, and M_FunctionDivider takes the FIRST matching
-    # row. So with Ctrl+Shift held both rows match and order decides. Ctrl first
-    # means Ctrl-Shift-Right dumps and plain Shift-Right still renders.
-    # Consequence, accepted: plain Ctrl-Right also dumps, since code 3 only tests
-    # Ctrl. Nothing else on this screen wanted Ctrl-Right.
-    Given both a Ctrl row and a Shift row match Ctrl-Shift-Right
-    Then the Ctrl row is placed first so the more specific chord wins
+  @corrected
+  Scenario: Ctrl-Shift-Right cannot be a keymap row -- it is a live modifier test
+    # Two wrong turns before this landed:
+    #
+    # 1. A code-3 row on the Right arrow. Code 3 gates on Test CH,18h (Ctrl) ONLY --
+    #    it does not reject "no Shift" -- so the row also matched plain Ctrl-Right,
+    #    which is pattern navigation. The design note claimed "nothing else on this
+    #    screen wanted Ctrl-Right", which was simply false.
+    # 2. Retreating to the letter 'D' only. That works, but it abandoned the gesture
+    #    that was actually asked for.
+    #
+    # The dispatcher has no Ctrl+Shift code at all. What it does have: the existing
+    # code-4 Shift-Right row gates on Test CH,6 and rejects nothing else, so
+    # Ctrl-Shift-Right ALREADY matches it. So the discrimination belongs in the
+    # handler, as a live K_IsKeyDown(01Dh) test -- the same post-dispatch modifier
+    # test the F11 order-list edge uses at IT_PE.ASM:2308. 'D' is kept as well.
+    Given Ctrl-Left and Ctrl-Right move between patterns
+    Then Ctrl+Shift is discriminated inside the handler, not by a keymap row
 
   @todo
   Scenario: Names carry the sample name, not just the slot

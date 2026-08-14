@@ -1215,8 +1215,34 @@ K_GetKeyNoStartupKeyList:
 K_GetKey1:
                 Call    K_IsKeyWaiting
                 And     AX, AX
+                JNZ     K_GetKey1_HaveKey
+
+                ; --- right-shift TAP -> synthesize Scroll Lock ----------------
+                ; A bare modifier never reaches the translate chain, so it can
+                ; never produce a key word of its own. But this idle spin is the
+                ; one place that (a) runs constantly while IT waits for input and
+                ; (b) is INSIDE K_GetKey, so it can hand the dispatcher a key
+                ; word as if one had really been typed. Feed it Scroll Lock's own
+                ; word, 146h: that is bound globally to PE_ScrollLockFollow
+                ; (IT_OBJ1.ASM:3247), which already does exactly the two halves
+                ; wanted here -- from any other screen, force Follow Mode on and
+                ; enter the pattern being PLAYED; from inside the pattern editor,
+                ; toggle Follow Mode off. So the tap is not a second
+                ; implementation of the gesture, it is a second trigger for it.
+                ;
+                ; Must be the ONLY consumer of K_PollRightShiftTap: the tap is a
+                ; one-shot, so a second caller (Music_Poll used to log here)
+                ; would eat it before the dispatcher ever saw it.
+                ; features/right-shift-tap.feature
+                Call    K_PollRightShiftTap
+                Test    AX, AX
                 JZ      K_GetKey1
 
+                Mov     CX, 146h                ; Scroll Lock, as a code-0 row
+                Mov     DX, CX                  ;   sees it (full CX compare)
+                Jmp     K_GetKey20
+
+K_GetKey1_HaveKey:
                 Xor     SI, SI
 
                 Mov     BX, KBStart
@@ -1681,7 +1707,7 @@ K_PRST_Store:
 
 EndP            K_PollRightShiftTap
 
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 Proc            K_IsKeyDown Far         ; BX = key to test
 

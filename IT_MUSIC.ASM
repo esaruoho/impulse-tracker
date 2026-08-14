@@ -3155,18 +3155,12 @@ EndP            WAV_MultiFinish
 
 Proc            Music_Poll Far
 
-                ; --- right-shift TAP probe (instrumentation only) ----
-                ; Logs one line per detected tap so we can find out, from real
-                ; hardware, whether a bare-modifier tap is reliably detectable
-                ; from polled keyboard state before any ISR is touched. It does
-                ; NOT act on the tap: a screen change has to come back through
-                ; the key dispatcher, which polled code cannot do.
-                ; features/right-shift-tap.feature
-                Call    K_PollRightShiftTap
-                Test    AX, AX
-                JZ      Music_Poll_NoRSTap
-                Call    WAV_LogRShiftTap
-Music_Poll_NoRSTap:
+                ; The right-shift tap probe USED to be polled here, purely to log
+                ; taps. It has moved into K_GetKey's idle spin (IT_K.ASM), which
+                ; can actually act on a tap by handing the dispatcher a key word.
+                ; The tap is a ONE-SHOT, so polling it from two places meant
+                ; whichever ran first ate it -- this call had to go, not just stop
+                ; logging. features/right-shift-tap.feature
 
                 ; --- Multi-WAV Esc abort -----------------------------
                 ; If we're in the middle of a multi-channel sweep and the
@@ -5037,6 +5031,94 @@ WAV_LogDone:
 EndP            WAV_AppendErrorLog
 
 ;-------------------------------------------------------------------------------
+; WAV_ProbeRenderedFile -- does RenderedFilename exist in the CURRENT directory,
+; and how big is it? Fills the two fields WAV_AppendErrorLog already prints:
+;
+;   bytes=FFFF size=0000  -- open failed: the file was never created
+;   bytes=0000 size=HHHH  -- it exists, HHHH bytes (002C = header only, no audio)
+;
+; Must be called while cwd is still the render directory. All regs preserved.
+;-------------------------------------------------------------------------------
+Proc            WAV_PreCreateRenderedFile Near
+                PushF
+                PushAD
+                Push    DS
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+
+                Mov     Word Ptr [WAV_LastReadBytes], 0
+                Mov     Word Ptr [WAV_LastFileSize], 0
+
+                Mov     DX, Offset RenderedFilename
+                Mov     AH, 3Ch                 ; create / truncate
+                Xor     CX, CX                  ; normal attributes
+                Int     21h
+                JC      WPCRF_Failed
+
+                Mov     BX, AX                  ; created -- close it again and
+                Mov     AH, 3Eh                 ; let the driver reopen it
+                Int     21h
+                Jmp     WPCRF_Log
+
+WPCRF_Failed:
+                Mov     [WAV_LastReadBytes], AX ; DOS error code: 3 = path not
+                                                ; found, 4 = too many open files,
+                                                ; 5 = access denied
+WPCRF_Log:
+                Mov     SI, Offset WAV_LogPrefix_PRE
+                Call    WAV_AppendErrorLog
+
+                Pop     DS
+                PopAD
+                PopF
+                Ret
+                        Assume DS:Nothing
+EndP            WAV_PreCreateRenderedFile
+
+;-------------------------------------------------------------------------------
+
+Proc            WAV_ProbeRenderedFile Near
+                PushF
+                PushAD
+                Push    DS
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+
+                Mov     Word Ptr [WAV_LastReadBytes], 0
+                Mov     Word Ptr [WAV_LastFileSize], 0
+
+                Mov     DX, Offset RenderedFilename
+                Mov     AX, 3D00h               ; open read-only
+                Int     21h
+                JNC     WPRF_Opened
+
+                Mov     Word Ptr [WAV_LastReadBytes], 0FFFFh    ; no file at all
+                Jmp     WPRF_Done
+
+WPRF_Opened:
+                Mov     BX, AX
+                Mov     AX, 4202h               ; seek end -> DX:AX = size
+                Xor     CX, CX
+                Xor     DX, DX
+                Int     21h
+                Mov     [WAV_LastFileSize], AX
+
+                Mov     AH, 3Eh
+                Int     21h
+
+WPRF_Done:
+                Pop     DS
+                PopAD
+                PopF
+                Ret
+                        Assume DS:Nothing
+EndP            WAV_ProbeRenderedFile
+
+;-------------------------------------------------------------------------------
 ; WAV_LogState -- append a one-line render-STATE snapshot to CTRLOLOG.TXT. This
 ; is the back&forth debug channel: the render dir IS the Quicksave folder
 ; (E:\ITNU2026), which the Mac sees at /Volumes/netdrive/ITNU2026 -- so every
@@ -5122,6 +5204,11 @@ WLS_Opened:
                 Mov     SI, Offset WAV_Log_it
                 Call    WAV_WriteStringDSSI
                 Mov     AX, [WAV_SyncItLeft]
+                Call    WAV_WriteHexAX
+
+                Mov     SI, Offset WAV_Log_p2
+                Call    WAV_WriteStringDSSI
+                Mov     AX, [WAV_PostPlayMode]
                 Call    WAV_WriteHexAX
 
                 Mov     SI, Offset WAV_LogCRLF
@@ -5657,7 +5744,7 @@ Proc            WAV_LogRShiftTap Far
 
 EndP            WAV_LogRShiftTap
 
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 Proc            PE_LogEndLine Far
                 PushF
@@ -6210,6 +6297,27 @@ WAV_ActualDidCd:
                 Mov     AL, 'E'
                 Call    WAV_LogState
 
+                ; Pre-create the output file HERE, in the host, before playback
+                ; starts. Two jobs:
+                ;
+                ;  1. Diagnosis. WAVDRV creates the WAV itself, from inside its
+                ;     Poll (SoundDrivers/WAVDRV.ASM:844, Int 21h AH=3Ch) -- and if
+                ;     that create fails it just sets an info line and calls
+                ;     StopPlayBack. The host then sees PlayMode go 0 on the very
+                ;     first Music_Poll and the sync loop exits looking healthy,
+                ;     with no file and no error anywhere in the log. Doing the
+                ;     same create here logs the DOS error code (in bytes=) for the
+                ;     same directory, from the same cwd, moments earlier.
+                ;  2. Likely fix. With the file already present, the driver's
+                ;     AH=3Ch truncates an existing file instead of creating a new
+                ;     one -- which is a different code path in the DOS redirector
+                ;     for a network drive like the Quicksave share.
+                ;
+                ; Logged as "PRE  file=<name> bytes=<err|0000>". Never fatal: if
+                ; the create fails here the render still goes ahead, so the driver
+                ; error path stays reachable and behaviour is unchanged.
+                Call    WAV_PreCreateRenderedFile
+
                 ; Latch the dispatcher-armed no-import flag into the per-
                 ; session copy. Shift-Ctrl-O sets WAV_NoImport before this
                 ; call; plain Ctrl-O clears it. Consuming the latch at
@@ -6282,6 +6390,15 @@ WAV_PlaySongMode:
                 Call    Music_PlaySong
 
 WAV_PlayDone:
+                ; Did playback actually START? If PlayMode is 0 here the render
+                ; is already over before it began: Music_Poll won't drive the
+                ; WAVDRV Poll, so the driver never reaches its Int 21h AH=3Ch
+                ; and NO FILE IS EVER CREATED -- while the sync loop below still
+                ; exits "cleanly" on the first pass with a healthy-looking
+                ; it=86A0 (= the full 100000 count untouched). Logged as p2=.
+                Mov     AX, [CS:PlayMode]
+                Mov     [CS:WAV_PostPlayMode], AX
+
                 ; Song-mode render uses Music_PlaySong, which arms a hardware
                 ; timer (StartClock) -- keep THAT realtime via the async path.
                 ; The single-PATTERN render uses Music_PlayPattern (no timer), so
@@ -6329,6 +6446,19 @@ WAV_SyncCloseLoop:
                 ; swap-back. it=0000 here means the render never terminated.
                 Mov     AL, 'X'
                 Call    WAV_LogState
+
+                ; Existence probe, while cwd is still the render directory: did
+                ; a file with that name actually appear? This answers "it said it
+                ; saved but there's no wavefile" without another round trip --
+                ; bytes=FFFF means the open failed (nothing was created at all),
+                ; size= is the real byte count when it did.
+                Call    WAV_ProbeRenderedFile
+                Push    DS
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_LogPrefix_END
+                Call    WAV_AppendErrorLog
+                Pop     DS
                                                              ; finalize inline:
                                                              ; swap the live driver
                                                              ; back + import.
@@ -6726,6 +6856,18 @@ WAV_Log_mm              DB      " mm=", 0
 WAV_Log_o0              DB      " o0=", 0
 WAV_Log_se              DB      " se=", 0
 WAV_Log_it              DB      " it=", 0
+WAV_Log_p2              DB      " p2=", 0
+WAV_LogPrefix_PRE       DB      "PRE  file=", 0 ; host-side create probe: bytes= is
+                                                ; the DOS error code (0000 = the host
+                                                ; could create it fine, so a missing
+                                                ; WAV is the DRIVER's create failing)
+WAV_LogPrefix_END       DB      "END  file=", 0 ; post-render existence probe:
+                                                ; size=0000 + bytes=FFFF means the
+                                                ; WAV was never created at all.
+WAV_PostPlayMode        DW      0               ; PlayMode right AFTER the play call
+                                                ; (0000 = playback never started, so
+                                                ;  the driver's Poll never ran and no
+                                                ;  file was ever created)
 WAV_SyncItLeft          DW      0               ; sync-loop iters left at exit
                                                 ; (0000 = hit 100000 cap = HUNG)
 WAV_BounceSeg           DW      0               ; conventional bounce buffer segment
@@ -10629,7 +10771,7 @@ Music_ICM_Loop:
 
 EndP            Music_InvertChannelMutes
 
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 Proc            Music_GetMuteChannelTable Far
                 Push    CS

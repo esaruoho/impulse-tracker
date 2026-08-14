@@ -8933,7 +8933,7 @@ EndP            D_SaveRawSampleInternal
 
 EndP            D_SaveRawSample
 
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 ; Dump EVERY loaded sample to the render directory as its own WAV -- the Quicksave
 ; folder when one is configured, so the files land where the Mac reads them.
 ; Ported from the schismtracker fork's Ctrl-Shift-Right (song_samples_to_quicksave_files).
@@ -8962,15 +8962,20 @@ Proc            D_DumpAllSamplesWAV Far
                 Cld                             ; the two Rep MovsB below depend on
                                                 ; it; cheaper than trusting callers
 
-                                                ; Samples go where the SAMPLE
-                                                ; browser is pointing, not to the
-                                                ; Quicksave folder: a pattern render
-                                                ; is a hand-off artefact, a sample
-                                                ; dump belongs next to the samples
-                                                ; you are working with. Shift-Right
-                                                ; still uses Quicksave.
-                Mov     SI, Offset SampleDirectory
-                Call    D_SetDriveDirectory
+                                                ; Samples go to the QUICKSAVE folder,
+                                                ; same as Shift-Right's renders. The
+                                                ; earlier version used SampleDirectory
+                                                ; on the theory that a sample dump
+                                                ; belongs next to the samples you are
+                                                ; working with -- but Quicksave is the
+                                                ; cross-machine hand-off folder, which
+                                                ; is the whole point of dumping WAVs,
+                                                ; and having renders and dumps land in
+                                                ; two different places is a trap.
+                                                ; D_GotoRenderDirectory resolves to
+                                                ; QuickSaveDirectory, falling back to
+                                                ; SampleDirectory when it is empty.
+                Call    D_GotoRenderDirectory
 
                 Mov     CS:[DumpSampleCount], 0
                 Mov     BX, 1
@@ -9049,7 +9054,7 @@ D_DumpAll_End:
 
 EndP            D_DumpAllSamplesWAV
 
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 ; BX = slot 1..99 -> patch the two digits of CS:DumpSampleName ("SMPnn.WAV").
 
 Proc            D_DumpBuildName Near

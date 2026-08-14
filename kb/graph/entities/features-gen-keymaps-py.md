@@ -13,8 +13,8 @@ Source module in impulse-tracker.
 - .py module · 4 functions. !/usr/bin/env python3
 
 ## Relationships
-- depends_on [[subprocess]]
-- depends_on [[sys]]
-- depends_on [[os]]
-- depends_on [[glob]]
 - depends_on [[re]]
+- depends_on [[sys]]
+- depends_on [[subprocess]]
+- depends_on [[glob]]
+- depends_on [[os]]

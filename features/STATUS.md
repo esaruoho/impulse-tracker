@@ -13,7 +13,7 @@
 |------|----:|:-----:|:----------------:|:--------:|----------------|
 | alt-r-replicate | 6 | ✓ | ~ partial | ✓ | @build-verified @hw-verified @runtime-untested @runtime-verified @shipped |
 | ctrl-o-empty-orderlist-crash | 7 | ✓ | ✗ | ✗ | @build-verified @hw-untested @known-limit @runtime-untested @shipped |
-| dump-all-samples-wav | 6 | ✓ | — | ✗ | @build-verified @design-note @hw-untested @shipped @todo |
+| dump-all-samples-wav | 6 | ✓ | — | ✗ | @build-verified @corrected @hw-untested @shipped @todo |
 | f11-order-list | 9 | ✓ | — | ✓ | @build-verified @hw-untested @hw-verified @shipped @stock |
 | f12-song-variables | 4 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
 | f2-pattern-editor | 4 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
@@ -33,7 +33,7 @@
 | no-samples-to-instruments-envelope-retention | 5 | ✓ | ✗ | — | @build-verified @removed @runtime-untested @stock @todo |
 | note-cut-toggle | 3 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped @stock |
 | pattern-length-beyond-200 | 5 | ✗ | — | — | @analysis-verified @blocked-by-architecture @stock |
-| right-shift-tap | 4 | ✓ | — | ✗ | @build-verified @design-note @hw-untested @shipped @todo |
+| right-shift-tap | 7 | ✓ | — | ✗ | @build-verified @corrected @design-note @hw-untested @shipped @todo |
 | sample-amplify-keeps-playback | 9 | ✓ | ✓ | ✓ | @bug @build-verified @hw-untested @hw-verified @runtime-verified @shipped @stock |
 | schismtracker-port-backlog | 15 | ✓ | — | ✗ | @already @build-verified @done @hw-untested @impossible @todo |
 | scrolllock-follow-from-lists | 9 | ✓ | ~ partial | ✓ | @bug @build-verified @hw-untested @hw-verified @runtime-untested @runtime-verified @shipped @stock @todo |
