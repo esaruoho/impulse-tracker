@@ -34,6 +34,7 @@
 # WATCH: PEFunction_AltR_Dispatch PEFunction_ReplicateAtCursor PEFunction_ReplicatePatternAtCursor PEFunction_ClearViews
 # RESULT-LOG >> (auto-maintained by .githooks/pre-commit / post-merge)
 #   2026-08-14  direct-commit  touched: PEFunction_AltR_Dispatch
+#   2026-08-14  direct-commit  touched: PEFunction_AltR_Dispatch
 #   2026-06-04  direct-commit  touched: PEFunction_AltR_Dispatch
 #   2026-06-04  direct-commit  touched: PEFunction_ReplicateAtCursor PEFunction_ClearViews
 #
@@ -49,6 +50,38 @@ Feature: Alt-R replicate at cursor
   So that I can lay down a one- or few-row loop and stamp it across the pattern
   without copy/paste — while Shift-Alt-R does the same across the WHOLE pattern
   (all channels).
+
+  @shipped @build-verified @hw-untested
+  Scenario: Ctrl-Down and Ctrl-Shift-Down do the same thing as Alt-R
+    # cite: IT_PE.ASM PEFunctions -- DB 3 / DW 1D0h -> PEFunction_AltR_Dispatch
+    # cite: features/KEYMAPS.generated.md, the PEFunctions table
+    # Added 2026-08-14 at Esa's request, to match the binding schismtracker uses
+    # (page_patedit.c SCHISM_KEYSYM_DOWN in pattern_editor_handle_ctrl_key). Alt-R
+    # and Shift-Alt-R are unchanged and remain the primary keys.
+    #
+    # It points at the SAME dispatcher, not a copy, so the track-vs-pattern rule
+    # cannot drift between the two gestures.
+    #
+    # ROW ORDER MATTERS, and getting it wrong would have shipped a half-working
+    # feature: code 4 gates on Test CH,6 and rejects nothing else, so the existing
+    # code-4 Down row ALSO matches Ctrl-Shift-Down, and M_FunctionDivider takes the
+    # first match. The Ctrl row therefore has to sit ABOVE it -- otherwise plain
+    # Ctrl-Down replicates and Ctrl-Shift-Down just moves the cursor down.
+    Given the user is in the pattern editor
+    When they press Ctrl-Down
+    Then the rows above the cursor are replicated down this track
+    When they press Ctrl-Shift-Down
+    Then they are replicated across the whole pattern
+
+  @design-note
+  Scenario: What Ctrl-Down displaced, and why that is free
+    # Ctrl-Down was next-instrument (PEFunction_IncreaseInstrument). Nothing is
+    # lost: that function is still bound to '>' and to "'" in the same table, and
+    # Ctrl-Up remains previous-instrument. This is the same trade schismtracker
+    # made -- it kept prev/next instrument on '<' '>' ';' "'" and gave Ctrl-Down to
+    # replicate -- so the two forks now agree on both the gesture and its cost.
+    Given next-instrument has three other bindings
+    Then handing Ctrl-Down to replicate costs nothing
 
   @shipped @build-verified @hw-verified
   Scenario: Alt-R and Shift-Alt-R are disambiguated by live shift state

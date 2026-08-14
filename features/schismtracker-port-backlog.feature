@@ -169,7 +169,10 @@ Feature: Feature parity between Impulse Tracker and Schism Tracker
     And F3/F4 carrying the cursor between the lists              # f4-f3-cursor-translate
     And MIDI clock sync, its toggle, and transport               # midi-realtime-sync
     And multitimbral MIDI in, Shift-F4 and the drumkit           # midi-in-multitimbral, shift-f4-drumkit
-    And replicating the rows above the cursor                    # Alt-R, Paketti port
+    And replicating the rows above the cursor                    # alt-r-replicate
+      # NOTE: IT had the FEATURE first (Alt-R / Shift-Alt-R, Paketti port) but not
+      # schism's BINDING. Ctrl-Down / Ctrl-Shift-Down was added here 2026-08-14 so
+      # the two forks agree on the keys as well as the behaviour.
     And Shift-Enter bulk-loading a module's samples              # shift-enter-bulk-load-from-module
     And the remembered default pattern length                    # f2-pattern-editor
 

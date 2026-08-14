@@ -553,6 +553,31 @@ ENDIF
                         DW      1CFh
                         DW      Offset PEFunction_Ctrl_End
 
+                        DB      3               ; Ctrl-Down replicates the rows
+                        DW      1D0h            ;   above the cursor down this
+                        DW      Offset PEFunction_AltR_Dispatch
+                                                ;   track; hold Shift as well for
+                                                ;   the whole pattern. Same handler
+                                                ;   as Alt-R / Shift-Alt-R, whose
+                                                ;   live-shift check already picks
+                                                ;   track vs pattern -- so the two
+                                                ;   gestures cannot drift apart.
+                                                ;
+                                                ; MUST SIT BEFORE the code-4 row
+                                                ; below. Code 4 gates on Test CH,6
+                                                ; and rejects nothing else, so it
+                                                ; also matches Ctrl-SHIFT-Down; the
+                                                ; first matching row wins, so with
+                                                ; the code-4 row first, Ctrl-Shift-
+                                                ; Down would just move the cursor
+                                                ; down and never replicate.
+                                                ; Ctrl-Down displaces next-
+                                                ; instrument, which stays on '>'
+                                                ; and "'" (and Ctrl-Up is still
+                                                ; previous-instrument) -- exactly
+                                                ; the trade schismtracker made.
+                                                ; FEATURE-CARD >> features/alt-r-replicate.feature
+
                         DB      4
                         DW      1C8h
                         DW      Offset PEFunction_Up
@@ -665,9 +690,11 @@ ENDIF
                         DW      1C8h
                         DW      Offset PEFunction_DecreaseInstrument
 
-                        DB      3
-                        DW      1D0h
-                        DW      Offset PEFunction_IncreaseInstrument
+                                                ; Ctrl-Down is the replicate gesture
+                                                ; now (see the row further up, which
+                                                ; has to precede the code-4 Shift
+                                                ; row). Next-instrument remains on
+                                                ; '>' and "'" above.
 
                         DB      1
                         DW      3000h           ; Alt 'B'
@@ -2862,7 +2889,7 @@ Proc            PE_OrderList_ClonePatternWipe Far
 
 EndP            PE_OrderList_ClonePatternWipe
 
-;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 Proc            PE_OrderList_ClonePatternModal Far      ; In: BL = wipe mode
                                                 ; (no fallthrough on purpose --

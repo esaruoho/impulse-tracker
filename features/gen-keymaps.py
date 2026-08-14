@@ -90,7 +90,11 @@ def tables_in(path):
     text = open(path, encoding='latin-1').read().replace('\r', '')
     lines = text.split('\n')
     for i, line in enumerate(lines):
-        m = re.match(r'^(\w*Keys)\s+Label\b', line)
+        # Most tables are named <Something>Keys, but not all: the PATTERN EDITOR's
+        # is PEFunctions, and GlobalKeyList is a List. Matching only *Keys left the
+        # single most-asked-about table -- every pattern editor binding -- out of the
+        # dump entirely, which is exactly the staleness this script exists to kill.
+        m = re.match(r'^(\w*(?:Keys|KeyList|Functions))\s+Label\b', line)
         if not m:
             continue
         label = m.group(1)

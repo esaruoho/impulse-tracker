@@ -11,7 +11,7 @@
 
 | Card | Scn | Build | Runtime (DOSBox) | Hardware | Grades present |
 |------|----:|:-----:|:----------------:|:--------:|----------------|
-| alt-r-replicate | 6 | ✓ | ~ partial | ✓ | @build-verified @hw-verified @runtime-untested @runtime-verified @shipped |
+| alt-r-replicate | 8 | ✓ | ~ partial | ✓ | @build-verified @design-note @hw-untested @hw-verified @runtime-untested @runtime-verified @shipped |
 | ctrl-o-empty-orderlist-crash | 7 | ✓ | ✗ | ✗ | @build-verified @hw-untested @known-limit @runtime-untested @shipped |
 | debug-logging-channels | 9 | ✗ | — | ✓ | @design-note @hw-verified @shipped @todo |
 | dump-all-samples-wav | 6 | ✓ | — | ✗ | @build-verified @corrected @hw-untested @shipped @todo |
