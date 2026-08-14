@@ -17,6 +17,8 @@ Convey feature: features/wav-render-quicksave.feature.
 - Scenario (L131): The extension is a real .WAV, not the 3-digit pattern number
 - Scenario (L142): The auto-import opens the exact file WAVDRV wrote
 - Scenario (L156): Multi-WAV, full-song, and user-named renders keep <PFX><NNNN>
-- Scenario (L168): Two renders in the same second overwrite
+- Scenario (L168): The render plays the pattern's actual number of rows
+- Scenario (L178): BX was never set, so renders intermittently wrote NO FILE AT ALL
+- Scenario (L206): Two renders in the same second overwrite
 
 ## Relationships

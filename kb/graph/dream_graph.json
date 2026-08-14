@@ -91,6 +91,12 @@
       "claims": 10
     },
     {
+      "id": "feature-parity-between-impulse-tracker-and-schism-tracker",
+      "kind": "feature",
+      "name": "Feature parity between Impulse Tracker and Schism Tracker",
+      "claims": 21
+    },
+    {
       "id": "features-convey-distill-py",
       "kind": "module",
       "name": "features/convey-distill.py",
@@ -179,12 +185,6 @@
       "kind": "feature",
       "name": "Pattern length beyond 200 rows (256 / 512)",
       "claims": 5
-    },
-    {
-      "id": "porting-the-schismtracker-august-2026-work-into-impulse-tracker",
-      "kind": "feature",
-      "name": "Porting the schismtracker August 2026 work into Impulse Tracker",
-      "claims": 15
     },
     {
       "id": "rendering-a-module-without-touching-the-interface",
@@ -286,7 +286,7 @@
       "id": "wav-quicksave-render-filename",
       "kind": "feature",
       "name": "WAV Quicksave render filename",
-      "claims": 8
+      "claims": 10
     },
     {
       "id": "wav-render-keeps-the-music-going-fast-pattern-render-midi-clock-resume",
@@ -316,14 +316,14 @@
       "name": "subprocess"
     },
     {
-      "id": "re",
-      "kind": "entity",
-      "name": "re"
-    },
-    {
       "id": "os",
       "kind": "entity",
       "name": "os"
+    },
+    {
+      "id": "re",
+      "kind": "entity",
+      "name": "re"
     },
     {
       "id": "json",
@@ -349,17 +349,12 @@
     },
     {
       "from": "features-gen-keymaps-py",
-      "to": "glob",
-      "type": "depends_on"
-    },
-    {
-      "from": "features-gen-keymaps-py",
       "to": "subprocess",
       "type": "depends_on"
     },
     {
       "from": "features-gen-keymaps-py",
-      "to": "re",
+      "to": "sys",
       "type": "depends_on"
     },
     {
@@ -369,7 +364,12 @@
     },
     {
       "from": "features-gen-keymaps-py",
-      "to": "sys",
+      "to": "glob",
+      "type": "depends_on"
+    },
+    {
+      "from": "features-gen-keymaps-py",
+      "to": "re",
       "type": "depends_on"
     },
     {
