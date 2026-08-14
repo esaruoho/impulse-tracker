@@ -251,6 +251,10 @@ DisplayListKeys         Label
                         DW      1CDh            ; playing pattern to Quicksave.
                         DW      Offset Display_RenderQuicksave
 
+                        DB      0               ; Enter -- jump into the playing
+                        DW      11Ch            ; pattern, at the playing row, on
+                        DW      Offset Display_EnterPattern ; the highlighted channel
+
                         DB      1               ; Ctrl-O -- same thing, for
                         DW      0Fh             ; the muscle memory from F2/F11
                         DW      Offset Display_RenderQuicksave
@@ -3903,6 +3907,52 @@ EndP            DisplayDown
 ; this is the same mechanism, not a new one.
 ;
 ; features/f5-info-page-shift-right-quicksave.feature
+
+; Enter on the Info Page: open the pattern being played, at the row playback has
+; reached, on the channel highlighted here. This screen is a per-channel view, so
+; arriving from it should carry which channel you were looking at -- not just the
+; pattern.
+;
+; Music_GetPlayMode hands back everything needed in the right registers already:
+; AX = PlayMode, BX = CurrentRow, CX = CurrentPattern. PE_GotoPattern wants
+; AX = pattern, BX = row, CX = channel, and ends with its own Jmp Glbl_F2, so this
+; TAIL-jumps to it -- calling it and then jumping to Glbl_F2 as well would enter the
+; editor twice and open Pattern Edit Config instead.
+;
+; features/f5-info-page-shift-right-quicksave.feature
+
+Proc            Display_EnterPattern Far
+
+                Call    Music_GetPlayMode       ; AX=mode, BX=row, CX=pattern
+                Test    AX, AX
+                JZ      Display_EP_Stopped
+
+                Cmp     CX, 200
+                JAE     Display_EP_None
+
+                Mov     AX, CX                  ; AX = playing pattern
+                                                ; BX already = playing row
+                Mov     CX, CS:[CurrentChannel]  ; CX = this screen's channel
+                Jmp     PE_GotoPattern
+
+Display_EP_Stopped:
+                                                ; Stopped: the editor's own pattern,
+                                                ; its row left alone, but still on
+                                                ; the channel highlighted here.
+                Call    PE_GetCurrentPattern
+                Cmp     AX, 200
+                JAE     Display_EP_None
+                Xor     BX, BX
+                Mov     CX, CS:[CurrentChannel]
+                Jmp     PE_GotoPattern
+
+Display_EP_None:
+                Mov     AX, 1
+                Ret
+
+EndP            Display_EnterPattern
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            Display_RenderQuicksave Far
 

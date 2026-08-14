@@ -13,5 +13,5 @@ Source module in impulse-tracker.
 - .py module · 15 functions. !/usr/bin/env python3
 
 ## Relationships
-- depends_on [[os]]
 - depends_on [[sys]]
+- depends_on [[os]]

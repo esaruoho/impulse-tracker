@@ -13698,7 +13698,15 @@ Proc            PE_ScrollLockFollow Far
                 Mov     CX, Channel             ; keep the column you were on
                 Pop     DS
                         Assume DS:Nothing
-                Call    PE_GotoPattern
+                                                ; TAIL-jump: PE_GotoPattern ends
+                                                ; with its OWN Jmp Glbl_F2, so
+                                                ; CALLing it and then jumping to
+                                                ; Glbl_F2 again entered the editor
+                                                ; and then -- CurrentMode now 2 --
+                                                ; opened Pattern Edit Config, and
+                                                ; left CurrentMode wrong so even a
+                                                ; later plain F2 showed the config.
+                Jmp     PE_GotoPattern
 
 PE_SLF_NoRetarget:
                 Jmp     Glbl_F2                 ; enter Pattern Editor; Glbl_F2's
