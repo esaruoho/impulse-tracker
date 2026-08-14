@@ -22,6 +22,48 @@ triggers:
 
 Full Impulse Tracker 2.15 source, BSD-3-Clause. Originally released 2014 on Bitbucket alongside Jeffrey Lim's "20 Years of Impulse Tracker" blog series. TASM 4.1 / TLINK 3.01 / Borland MAKE 4.0 + DOS target. 16-bit real-mode segmented assembly with 386 extensions (`.386P`). Builds `IT.EXE` plus a set of `.DRV` sound drivers loaded at runtime.
 
+## 🔴 THIS FILE IS A DERIVED ARTIFACT. THE SOURCE IS THE AUTHORITY.
+
+Every table below was true when it was written and may be stale now. Before you
+contradict the user about what does or does not work — **especially** about a
+keybinding they are reporting from real hardware — dump the actual table.
+
+```bash
+# every keymap row for a screen, in table order, straight from source
+python3 - <<'EOF'
+import re
+F,L='IT_PE.ASM','OrderListKeys'        # or 'IT_DISPL.ASM','DisplayListKeys'
+lines=open(F,encoding='latin-1').read().replace('\r','').split('\n')
+st=next(i for i,l in enumerate(lines) if l.startswith(L))
+row=[]
+for i in range(st+1, st+160):
+    t=lines[i].strip()
+    if not t or t.startswith(';'): continue
+    m=re.match(r'DB\s+(\S+)',t)
+    if m:
+        if m.group(1)=='0FFh': break
+        if row: print(row)
+        row=[m.group(1)]; continue
+    m=re.match(r'DW\s+([^;]+)',t)
+    if m and row: row.append(m.group(1).strip())
+if row: print(row)
+EOF
+```
+
+Also note: `*.ASM` files are ISO-8859-1 with CRLF and contain cp437 box-drawing,
+so `grep` treats them as binary — use `grep -a`, or read them in Python with
+`encoding='latin-1'`. **When writing them back, use
+`open(p,'w',encoding='latin-1',newline='\r\n')`** or you will silently convert
+the whole file's line endings and produce a diff of hundreds of phantom lines.
+
+**Incident, 2026-08-14.** The F11 table in this skill listed only the code-0 rows
+for the cursor keys. Working from that, I concluded F11 Shift-Right could never
+dispatch, told the user their working feature didn't work, and built a bespoke
+live-`K_IsKeyDown` mechanism for F5 instead of copying the keymap. The source had
+both a code-0 and a code-4 row all along (`IT_PE.ASM:1121-1130`). A summary is a
+lead. The source is the authority. The user reporting hardware behaviour outranks
+both.
+
 ## User-Facing Keyboard Reference (from IT.TXT — DO NOT GUESS)
 
 **Source of truth:** `ReleaseDocumentation/IT.TXT` and the IRQ-level handler in `IT_K.ASM`. If a key isn't listed here and isn't in `IT.TXT`, look it up before mentioning it to the user. Hallucinated key bindings (e.g. claiming "Space" is the play key, calling Ctrl-O "module load" when it's WAV render) waste the user's time and erode trust. This has happened more than once. **Do not guess.**
@@ -426,21 +468,48 @@ After modifying any block region, call `NetworkPatternBlock Near` (`IT_PE.ASM:31
 
 ## Keymap Dispatch & Modifier Disambiguation
 
-### M_FunctionDivider's modifier codes (PE keymap, table 1)
+### M_FunctionDivider's modifier codes — VERIFIED against IT_M.ASM:168-261 (2026-08-14)
 
-`IT_M.ASM:168` (`M_FunctionDivider Far`) walks a key dispatch table. First byte per entry:
+Each keymap row is `DB <code>` / `DW <key>` / `DW Offset <handler>`, terminated by
+`DB 0FFh`. `M_FunctionDivider` walks the rows; `CX` and `DX` carry the key.
 
-| DB | Meaning | Test |
-|----|---------|------|
-| 0 | direct compare against CX | (none) |
-| 1 | key word compare against DX | (none) |
-| 2 | Alt | `Test CH, 60h` |
-| 3 | Ctrl | `Test CH, 18h` |
-| 4 | Shift | `Test CH, 6` |
-| 5 | capital-key compare | (alpha mask) |
-| 6 | MIDI message | (special) |
+**`CH` = modifier flags, `CL` = key code.** That single fact is what the table
+below turns on.
 
-Alt-letter keys have the scancode in the high byte, 00h low byte (e.g. `1300h` = Alt-R because R scancode is 13h, and Alt suppresses ASCII). The PE keymap's modifiers 2/3/4 are single-modifier only.
+| DB | Meaning | Gate | **Value actually compared** |
+|----|---------|------|------------------------------|
+| 0 | direct | (none) | **full `CX`** — so it matches ONLY when no modifier bits are set |
+| 1 | key word | (none) | `DX` |
+| 2 | Alt | `Test CH, 60h` | **`CX AND 1FFh`** |
+| 3 | Ctrl | `Test CH, 18h` | **`CX AND 1FFh`** |
+| 4 | Shift | `Test CH, 6` | **`CX AND 1FFh`** |
+| 5 | capital key | uppercases | `DX` |
+| 6 | MIDI message | `CL == 0` | `CX AND 0F000h` |
+
+**The masking is the whole point, and omitting it caused a wasted debugging
+session on 2026-08-14.** A plain Right arrow arrives as `CX = 01CDh` (CH=01h
+"keypress", CL=CDh). Hold shift and CH gains bit 1 or 2, so `CX` becomes `03CDh`
+or `05CDh` — a code-0 row comparing full `CX` against `1CDh` **no longer
+matches**. A code-4 row masks to `1FFh`, giving `0x100 | 0xCD` = `1CDh`, and
+matches. Hence:
+
+> **To bind a modified arrow (or any key whose CH changes), register it TWICE:
+> once with code 0 for the plain press, once with code 2/3/4 for the modified
+> one. Both rows may point at the same handler.**
+
+This is exactly what `OrderListKeys` and `DisplayListKeys` do for Left/Right —
+see the tables below, which are dumped from source, not summarised.
+
+**Correction:** an earlier version of this skill said "the PE keymap's modifiers
+2/3/4 are single-modifier only." That is wrong. Each code tests **only its own**
+modifier bit and does not reject the others, so a code-4 row also matches
+Ctrl-Shift-<key>. If you need to exclude another modifier you must test for it in
+the handler.
+
+Codes 2/3/4 do NOT require the handler to check `K_IsKeyDown`. Some fork handlers
+(`PE_OrderList_RenderDispatch`, `PEFunction_AltR_Dispatch`) do call it, but that
+is to choose *between behaviours after dispatch* — never to trigger dispatch.
+Confusing the two is what produced the 2026-08-14 error.
 
 ### IT_K.ASM scancode → key-word translation (table 2, upstream)
 
@@ -753,18 +822,25 @@ order-cursor's pattern byte at `SongData+256+Order`. Resolution helper:
 CF=0` or `CF=1` if no valid pattern (cursor on `0xFE` skip / `0xFF`
 end-of-list marker while stopped).
 
-### Keymap additions to OrderListKeys (`IT_PE.ASM`):
+### OrderListKeys — read the GENERATED table, not a copy
 
-| Entry | Modifier code | Key word | Handler | What |
-|-------|---------------|----------|---------|------|
-| Plain `G` | 5 (capital) | `'G'` | `PE_OrderList_GDispatch` | Tail-jumps to original `PE_PostOrderList24` (goto pattern) when shift NOT held; else falls into render-import path. Tail-jump preserves caller state (AX=Order, ES=SongData, DS=Pattern). |
-| Plain `M` | 5 (capital) | `'M'` | `PE_OrderList_ToggleMuteWipe` | Toggles `ClonePatternMuteWipe` flag with info-line confirmation. |
-| Ctrl-O | 1 (key) | `0Fh` | `PE_OrderList_RenderDispatch` | Shift-aware via K_IsKeyDown(2Ah/36h). Shift held → arms `WAV_NoImport`; else clears. Then resolves pattern and `Music_ToggleWAVRender`. |
-| Ctrl-G | 1 (key) | `07h` | `PE_OrderList_RenderQuicksave` | Always arms `WAV_NoImport`. Render to Quicksave, no auto-import. |
-| Alt-D | 1 (key) | `2000h` | `PE_OrderList_ClonePattern` | Clone active pattern to first free slot. Respects M-toggle. |
-| Alt-E | 1 (key) | `1200h` | `PE_OrderList_ExtendPattern` | Extend active pattern in place by doubling rows. Bails if 2*N > 200. |
-| Left | 0 (direct) | `1CBh` | `PE_OrderList_LeftDispatch` | At OrderCursor=0: clone (shift = mute-wipe BL=1, plain = verbatim BL=0). Else tail-jumps to `PE_PostOrderList7` (normal wrap). |
-| Right | 0 (direct) | `1CDh` | `PE_OrderList_RightDispatch` | At OrderCursor=2: tail-jumps to `PE_OrderList_RenderDispatch` (shift-aware). Else tail-jumps to `PE_PostOrderList9` (normal wrap). |
+**`features/KEYMAPS.generated.md` in the repo is the authority.** It is dumped
+from every `*Keys` table in the tree by `features/gen-keymaps.py`, regenerated by
+`features/gen-all.sh` and by the pre-commit hook whenever a `.ASM` is staged, so
+it cannot drift from the source. It also prints, per table, a
+**"registered more than once"** list — the plain + modified pairs that a prose
+summary keeps losing.
+
+```bash
+cd ~/work/impulse-tracker && python3 features/gen-keymaps.py && \
+  sed -n '/## `OrderListKeys`/,/^## /p' features/KEYMAPS.generated.md
+```
+
+The one fact worth carrying in your head: **the cursor keys are registered twice**
+on this screen — code 0 for the plain press and code 4 for the shifted one, both
+pointing at the same dispatcher. So **F11 Shift-Right works**, and has since that
+code-4 row landed. A previous version of this skill listed only the code-0 rows,
+which produced the false claim that it could not dispatch.
 
 ### Clone pipeline
 
@@ -837,6 +913,46 @@ In-place: source pattern S itself is re-encoded with doubled row count.
 | `Music_ArmRenderNoImport Far` | Sets `WAV_NoImport = 1` (cross-segment setter). | `IT_MUSIC.ASM` |
 | `Music_ClearRenderNoImport Far` | Sets `WAV_NoImport = 0`. | `IT_MUSIC.ASM` |
 | `Music_InstrumentHasEnvelopes Far` | AX = instrument#. Compares bytes 130h..554 of the live instrument header (envelope section, 250 bytes) against the default `InstrumentHeader` template. ZF=1 if all match (default-blank), ZF=0 if any byte differs (custom envelope present). | `IT_MUSIC.ASM` |
+
+## F5 Info Page keymap (`DisplayListKeys`, IT_DISPL.ASM:225) — verified 2026-08-14
+
+The Info Page is the F5 playback screen. Its object is `DisplayObject` (type 15,
+`IT_OBJ1.ASM:6711`) whose key handler is **`PostDisplayData`** (`IT_DISPL.ASM`),
+which walks `DisplayListKeys` through `M_FunctionDivider` — the same dispatch as
+the order list. Handlers must live in the `InfoPage` segment, because the table
+stores 16-bit offsets and `PostDisplayData` reaches them with `Jmp [SI]`.
+
+Full table: `features/KEYMAPS.generated.md` (section `DisplayListKeys`). The fork
+rows are:
+
+| code | key | handler | note |
+|------|-----|---------|------|
+| 0 | `1CDh` | `DisplayDown` | plain Right — upstream, moves the channel |
+| **4** | **`1CDh`** | **`Display_RenderQuicksave`** | **Shift-Right — render the playing pattern** |
+| **1** | **`0Fh`** | **`Display_RenderQuicksave`** | **Ctrl-O — same** |
+
+`G` (code 5) already jumped to a pattern here before the fork touched anything.
+
+### Shift-Right / Ctrl-O render (fork, 2026-08-14)
+
+`Display_RenderQuicksave` (IT_DISPL.ASM) arms `Music_ArmRenderNoImport`, resolves
+a pattern, and calls `Music_ToggleWAVRender` — the same three calls the F11 path
+makes. `Display_ResolvePattern` returns the engine's `CurrentPattern` when
+`Music_GetPlayMode` is non-zero, else the editor's pattern via
+`PE_GetCurrentPattern`; CF=1 if ≥ 200. (The F11 resolver falls back to the order
+cursor, which this screen hasn't got.)
+
+Imports added to IT_DISPL.ASM for this: `Music_ToggleWAVRender`,
+`Music_ArmRenderNoImport`, `Music_ClearRenderNoImport`, `K_IsKeyDown`.
+
+Card: `features/f5-info-page-shift-right-quicksave.feature`.
+
+**How this went wrong first time, so it doesn't repeat:** the initial attempt
+bound only the code-0 row and tested shift inside the handler with `K_IsKeyDown`.
+A code-0 row compares full `CX`, which never matches while shift is held, so the
+handler was never reached and nothing happened at all. The fix was to add the
+code-4 row — i.e. to copy what `OrderListKeys` already does — not to write a new
+mechanism.
 
 ## F12 Samples → Instruments envelope preservation (since `d8ec842`)
 
@@ -1017,4 +1133,4 @@ Accessor: `PE_GetForkExtConfigOffset Far` (IT_PE.ASM), returns
 | Driver↔host table | `SoundDrivers/REQPROC.INC` + `IT_MUSIC.ASM:716-742` |
 | WAV render flags | `WAV_RenderMode` (0=idle, 1=rendering), `WAV_NoImport` (armed by dispatcher), `WAV_SessionNoImport` (latched at enter, read at leave) |
 | WAV hold proc | `WAV_HoldForMarkers` (IT_MUSIC.ASM), key-dismissable 15s timeout via Int 16h AH=01h |
-| Last Analyzed | 2026-05-19 |
+| Last Analyzed | 2026-08-14 (keymap tables re-dumped from source; F5 section added) |

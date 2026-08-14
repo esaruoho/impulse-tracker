@@ -236,8 +236,16 @@ DisplayListKeys         Label
                         DW      Offset DisplayDown
 
                         DB      0
-                        DW      1CDh            ; Right arrow
-                        DW      Offset Display_RightDispatch
+                        DW      1CDh            ; Right arrow -- plain
+                        DW      Offset DisplayDown
+
+                        DB      4               ; Shift-Right -- render the
+                        DW      1CDh            ; playing pattern to Quicksave.
+                        DW      Offset Display_RenderQuicksave
+
+                        DB      1               ; Ctrl-O -- same thing, for
+                        DW      0Fh             ; the muscle memory from F2/F11
+                        DW      Offset Display_RenderQuicksave
 
                         DB      2
                         DW      1C8h
@@ -3878,45 +3886,30 @@ EndP            DisplayDown
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 ; Shift-Right on the Info Page renders the pattern being played to the Quicksave
-; folder, without consuming a sample slot. Plain Right keeps its upstream job of
-; moving the channel selection down.
+; folder, without consuming a sample slot. Ctrl-O is bound to the same handler.
 ;
-; Shift is read live from the keyboard table rather than being encoded in the
-; keymap row, because K_TranslateKey3's shifted-arrow conditions are exactly
-; where this fork has been bitten before. PE_OrderList_RightDispatch already
-; does it this way on F11 and is known to work on hardware; this copies it.
+; The keymap registers the Right arrow twice -- once plain (modifier code 0,
+; which is a direct CX compare and so only matches with no modifiers held) and
+; once with code 4, which gates on Test CH,6 and compares CX AND 1FFh. That is
+; exactly how OrderListKeys catches Shift-Right on F11 (IT_PE.ASM:1121-1130);
+; this is the same mechanism, not a new one.
 ;
 ; features/f5-info-page-shift-right-quicksave.feature
 
-Proc            Display_RightDispatch Far
-
-                Push    BX
-
-                Mov     BX, 02Ah                ; Left Shift
-                Call    K_IsKeyDown
-                JNE     Display_RD_Shift
-                Mov     BX, 036h                ; Right Shift
-                Call    K_IsKeyDown
-                JNE     Display_RD_Shift
-
-                Pop     BX
-                Jmp     DisplayDown             ; no shift: upstream behaviour
-
-Display_RD_Shift:
-                Pop     BX
+Proc            Display_RenderQuicksave Far
 
                 Call    Music_ArmRenderNoImport ; Quicksave only, no import
 
                 Call    Display_ResolvePattern
-                JC      Display_RD_NoPat
+                JC      Display_RQ_NoPat
 
                 Call    Music_ToggleWAVRender    ; AX = pattern
 
-Display_RD_NoPat:
+Display_RQ_NoPat:
                 Mov     AX, 1
                 Ret
 
-EndP            Display_RightDispatch
+EndP            Display_RenderQuicksave
 
 ;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 

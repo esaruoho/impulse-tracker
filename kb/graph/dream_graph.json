@@ -1,0 +1,329 @@
+{
+  "nodes": [
+    {
+      "id": "1-toggles-the-note-cut-under-the-cursor",
+      "kind": "feature",
+      "name": "'1' toggles the note cut under the cursor",
+      "claims": 3
+    },
+    {
+      "id": "a-blank-song-is-born-named-with-its-creation-timestamp",
+      "kind": "feature",
+      "name": "A blank song is born named with its creation timestamp",
+      "claims": 5
+    },
+    {
+      "id": "a-convey-conversation-self-archives-when-it-ends",
+      "kind": "feature",
+      "name": "A Convey conversation self-archives when it ends",
+      "claims": 6
+    },
+    {
+      "id": "a-session-changes-a-codespace",
+      "kind": "feature",
+      "name": "A session changes a codespace",
+      "claims": 14
+    },
+    {
+      "id": "alt-r-replicate-at-cursor",
+      "kind": "feature",
+      "name": "Alt-R replicate at cursor",
+      "claims": 11
+    },
+    {
+      "id": "conversation-2026-06-03-what-we-accomplished",
+      "kind": "feature",
+      "name": "Conversation 2026-06-03 \u2014 what we accomplished",
+      "claims": 6
+    },
+    {
+      "id": "convey-test-runner-conveys-the-test-situation-to-a-user-and-routes-the-verdict-b",
+      "kind": "feature",
+      "name": "Convey test-runner conveys the test situation to a User and routes the verdict back",
+      "claims": 12
+    },
+    {
+      "id": "day-2026-06-03-what-changed-in-impulse-tracker",
+      "kind": "feature",
+      "name": "Day 2026-06-03 \u2014 what changed in impulse-tracker",
+      "claims": 7
+    },
+    {
+      "id": "external-midi-real-time-sync",
+      "kind": "feature",
+      "name": "External MIDI Real-Time Sync",
+      "claims": 11
+    },
+    {
+      "id": "f12-samples-instruments-uses-upstream-clear-remap-no-envelope-retention",
+      "kind": "feature",
+      "name": "F12 Samples->Instruments uses upstream clear+remap (no envelope retention)",
+      "claims": 5
+    },
+    {
+      "id": "f2-pattern-length-increase-duplicates-tiles-the-existing-content",
+      "kind": "feature",
+      "name": "F2 pattern-length increase duplicates (tiles) the existing content",
+      "claims": 12
+    },
+    {
+      "id": "f3-f4-loader-keyjazz-keeps-the-song-playing",
+      "kind": "feature",
+      "name": "F3/F4 loader keyjazz keeps the song playing",
+      "claims": 4
+    },
+    {
+      "id": "f4-f3-carry-the-cursor-selection-across-the-two-list-screens",
+      "kind": "feature",
+      "name": "F4<->F3 carry the cursor selection across the two list screens",
+      "claims": 4
+    },
+    {
+      "id": "f4-instrument-list-play-dots-in-multitimbral-sample-mode",
+      "kind": "feature",
+      "name": "F4 instrument-list play dots in multitimbral Sample mode",
+      "claims": 10
+    },
+    {
+      "id": "features-convey-distill-py",
+      "kind": "module",
+      "name": "features/convey-distill.py",
+      "claims": 1
+    },
+    {
+      "id": "features-gen-hwtest-py",
+      "kind": "module",
+      "name": "features/gen-hwtest.py",
+      "claims": 1
+    },
+    {
+      "id": "features-gen-sessions-py",
+      "kind": "module",
+      "name": "features/gen-sessions.py",
+      "claims": 1
+    },
+    {
+      "id": "features-gen-status-py",
+      "kind": "module",
+      "name": "features/gen-status.py",
+      "claims": 1
+    },
+    {
+      "id": "features-hwtest-py",
+      "kind": "module",
+      "name": "features/hwtest.py",
+      "claims": 1
+    },
+    {
+      "id": "features-print-card-py",
+      "kind": "module",
+      "name": "features/print-card.py",
+      "claims": 1
+    },
+    {
+      "id": "impulse-tracker-fork-what-got-baked-in-2026-06-03-04",
+      "kind": "feature",
+      "name": "Impulse Tracker fork \u2014 what got baked in 2026-06-03 \u2192 04",
+      "claims": 11
+    },
+    {
+      "id": "multi-wav-render",
+      "kind": "feature",
+      "name": "Multi-WAV render",
+      "claims": 5
+    },
+    {
+      "id": "multitimbral-midi-in",
+      "kind": "feature",
+      "name": "Multitimbral MIDI-In",
+      "claims": 9
+    },
+    {
+      "id": "order-list-and-ctrl-o-render-gestures-must-never-crash-reboot-or-hang",
+      "kind": "feature",
+      "name": "Order-list and Ctrl-O render gestures must never crash, reboot, or hang",
+      "claims": 7
+    },
+    {
+      "id": "order-list-f6-loops-the-selected-order-s-pattern-f7-plays-from-it-at-the-cursor-",
+      "kind": "feature",
+      "name": "Order List F6 loops the selected order's pattern; F7 plays from it at the cursor row",
+      "claims": 10
+    },
+    {
+      "id": "pattern-length-beyond-200-rows-256-512",
+      "kind": "feature",
+      "name": "Pattern length beyond 200 rows (256 / 512)",
+      "claims": 5
+    },
+    {
+      "id": "sample-amplify-keeps-the-song-playing",
+      "kind": "feature",
+      "name": "Sample Amplify keeps the song playing",
+      "claims": 18
+    },
+    {
+      "id": "send-midi-stop-fc-out-on-f8",
+      "kind": "feature",
+      "name": "Send MIDI Stop (FC) out on F8",
+      "claims": 8
+    },
+    {
+      "id": "shift-enter-load-from-sample-list-bulk-load-a-module-s-samples",
+      "kind": "feature",
+      "name": "Shift-Enter Load from Sample List (bulk-load a module's samples)",
+      "claims": 4
+    },
+    {
+      "id": "shift-enter-load-from-sample-list",
+      "kind": "feature",
+      "name": "Shift-Enter Load from Sample List",
+      "claims": 4
+    },
+    {
+      "id": "shift-f4-auto-builds-a-drumkit-instrument-alongside-the-01-16-multitimbral-set",
+      "kind": "feature",
+      "name": "Shift-F4 auto-builds a drumkit instrument alongside the 01-16 multitimbral set",
+      "claims": 10
+    },
+    {
+      "id": "shift-f4-to-enable-multitimbral-mode-also-switches-samples-instruments",
+      "kind": "feature",
+      "name": "Shift-F4 to enable Multitimbral mode also switches Samples -> Instruments",
+      "claims": 4
+    },
+    {
+      "id": "shift-right-on-the-f5-info-page-renders-the-playing-pattern-to-quicksave",
+      "kind": "feature",
+      "name": "Shift-Right on the F5 Info Page renders the playing pattern to Quicksave",
+      "claims": 8
+    },
+    {
+      "id": "undo-steps-are-named-via-the-undobuffertypes-table",
+      "kind": "feature",
+      "name": "Undo steps are named via the UndoBufferTypes table",
+      "claims": 6
+    },
+    {
+      "id": "user-presses-f11-order-list",
+      "kind": "feature",
+      "name": "User Presses F11 (Order List)",
+      "claims": 9
+    },
+    {
+      "id": "user-presses-f12-song-variables-directory-configuration",
+      "kind": "feature",
+      "name": "User Presses F12 (Song Variables & Directory Configuration)",
+      "claims": 4
+    },
+    {
+      "id": "user-presses-f2-pattern-editor",
+      "kind": "feature",
+      "name": "User Presses F2 (Pattern Editor)",
+      "claims": 4
+    },
+    {
+      "id": "user-presses-f3-sample-list",
+      "kind": "feature",
+      "name": "User Presses F3 (Sample List)",
+      "claims": 5
+    },
+    {
+      "id": "user-presses-f4-instrument-list",
+      "kind": "feature",
+      "name": "User Presses F4 (Instrument List)",
+      "claims": 4
+    },
+    {
+      "id": "user-presses-scroll-lock-while-in-f3-sample-list-or-f4-instrument-list",
+      "kind": "feature",
+      "name": "User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument List)",
+      "claims": 18
+    },
+    {
+      "id": "wav-quicksave-render-filename",
+      "kind": "feature",
+      "name": "WAV Quicksave render filename",
+      "claims": 8
+    },
+    {
+      "id": "wav-render-keeps-the-music-going-fast-pattern-render-midi-clock-resume",
+      "kind": "feature",
+      "name": "WAV render keeps the music going (fast pattern render + MIDI-clock resume)",
+      "claims": 12
+    },
+    {
+      "id": "wav-render-re-entry-guard-a-second-render-gesture-mid-render-stops-cleanly",
+      "kind": "feature",
+      "name": "WAV render re-entry guard -- a second render gesture mid-render stops cleanly",
+      "claims": 14
+    },
+    {
+      "id": "sys",
+      "kind": "entity",
+      "name": "sys"
+    },
+    {
+      "id": "glob",
+      "kind": "entity",
+      "name": "glob"
+    },
+    {
+      "id": "json",
+      "kind": "entity",
+      "name": "json"
+    },
+    {
+      "id": "termios",
+      "kind": "entity",
+      "name": "termios"
+    },
+    {
+      "id": "os",
+      "kind": "entity",
+      "name": "os"
+    }
+  ],
+  "edges": [
+    {
+      "from": "features-convey-distill-py",
+      "to": "sys",
+      "type": "depends_on"
+    },
+    {
+      "from": "features-gen-hwtest-py",
+      "to": "glob",
+      "type": "depends_on"
+    },
+    {
+      "from": "features-gen-sessions-py",
+      "to": "json",
+      "type": "depends_on"
+    },
+    {
+      "from": "features-gen-status-py",
+      "to": "glob",
+      "type": "depends_on"
+    },
+    {
+      "from": "features-hwtest-py",
+      "to": "termios",
+      "type": "depends_on"
+    },
+    {
+      "from": "features-hwtest-py",
+      "to": "glob",
+      "type": "depends_on"
+    },
+    {
+      "from": "features-print-card-py",
+      "to": "os",
+      "type": "depends_on"
+    },
+    {
+      "from": "features-print-card-py",
+      "to": "sys",
+      "type": "depends_on"
+    }
+  ]
+}

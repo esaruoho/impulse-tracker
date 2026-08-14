@@ -15,4 +15,4 @@
 - Resume: `claude --resume 8713ab60-7367-412f-9a1c-293965805fdf`
 - Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/8713ab60-7367-412f-9a1c-293965805fdf.jsonl
 - Convey tooling touched: .githooks/post-merge, .githooks/pre-commit, CONVEY-SITUATION.md, CONVEY.md, GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, STATUS.md, gen-sessions.py, gen-status.py, report-card-stamp.sh
-- Cards touched (6): midi-in-multitimbral.feature, midi-out-stop-on-f8.feature, midi-realtime-sync.feature, pattern-length-beyond-200.feature, undo-messaging.feature, wav-render-reentry-guard.feature
+- Cards touched (14): alt-r-replicate.feature, convey-session-distiller.feature, convey-test-runner.feature, ctrl-o-empty-orderlist-crash.feature, day-2026-06-03.feature, midi-in-multitimbral.feature, midi-out-stop-on-f8.feature, midi-realtime-sync.feature, pattern-length-beyond-200.feature, schismtracker-port-backlog.feature, session-2026-06-03-multitimbral-and-whitelabel.feature, session-changes-codespace.feature, undo-messaging.feature, wav-render-reentry-guard.feature

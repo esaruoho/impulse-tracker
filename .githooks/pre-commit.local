@@ -27,3 +27,18 @@ if git diff --cached --name-only 2>/dev/null | grep -q '^features/.*\.feature$';
       && git add -- "$REPO/features/CONVEY-SESSIONS.generated.md" 2>/dev/null || true
   fi
 fi
+
+# --- keymap tables: regenerate from source whenever assembly is staged -------
+# The hand-written keymap summaries in the impulse-tracker skill went stale and
+# cost a debugging session on 2026-08-14 (a Shift-<arrow> row was missing, so
+# "this cannot dispatch" was concluded and the user was told their working
+# feature was broken). features/KEYMAPS.generated.md is dumped straight from the
+# .ASM tables, so it cannot drift. Staged INTO the commit that changed the keymap.
+if git diff --cached --name-only --diff-filter=ACMR 2>/dev/null \
+     | grep -qiE '\.(ASM|INC)$'; then
+  REPO_TOP="$(git rev-parse --show-toplevel 2>/dev/null)"
+  if [ -n "$REPO_TOP" ] && [ -f "$REPO_TOP/features/gen-keymaps.py" ]; then
+    python3 "$REPO_TOP/features/gen-keymaps.py" >/dev/null 2>&1 \
+      && git add "$REPO_TOP/features/KEYMAPS.generated.md" 2>/dev/null || true
+  fi
+fi

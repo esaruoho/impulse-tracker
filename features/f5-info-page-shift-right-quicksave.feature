@@ -8,11 +8,11 @@
 #
 # WHAT THIS CARD SPAWNS (generative SEED):
 #   - CODESPACE  : this .feature + .session.md, PLUS the innards below --
-#                  Display_RightDispatch + Display_ResolvePattern in IT_DISPL.ASM
-#                  and the retargeted DisplayListKeys Right-arrow row.
-#   - THINKSPACE : the .session.md -- WHY a live-shift dispatcher rather than a
-#                  DB 4 (Shift) keymap row, and why the Info Page resolves the
-#                  pattern differently from the F11 order list.
+#                  Display_RenderQuicksave + Display_ResolvePattern in IT_DISPL.ASM
+#                  and the DisplayListKeys rows that reach them.
+#   - THINKSPACE : the .session.md -- why a modified key must be caught by the
+#                  keymap (code 4) and not by the handler, and why the Info Page
+#                  resolves the pattern differently from the F11 order list.
 #   - AREASPACE  : owns the F5 Info Page right-arrow behaviour. Must NOT touch
 #                  the F11 order-list dispatchers, Music_ToggleWAVRender itself,
 #                  or the WAV_NoImport flag semantics.
@@ -25,16 +25,20 @@
 #   @runtime-untested - logic verified by reading only
 #
 # Source files linked back to this card (grep "features/f5-info-page-shift-right"):
-#   IT_DISPL.ASM - DisplayListKeys Right-arrow row (~line 234)
-#   IT_DISPL.ASM - Display_RightDispatch  (live-shift dispatcher)
-#   IT_DISPL.ASM - Display_ResolvePattern (playing pattern, else editor pattern)
+#   IT_DISPL.ASM - DisplayListKeys: Right registered TWICE (code 0 -> DisplayDown,
+#                  code 4 -> Display_RenderQuicksave) plus code 1 / 0Fh for Ctrl-O
+#   IT_DISPL.ASM - Display_RenderQuicksave (arm no-import, resolve, render)
+#   IT_DISPL.ASM - Display_ResolvePattern  (playing pattern, else editor pattern)
+#
+# RESULT: hardware-verified by Esa on the DOS PC, 2026-08-14. Shift-Right on F5
+# renders the playing pattern to E:\ITNU2026 with no sample slot consumed.
 #
 # Prior art this leans on (do not re-derive):
-#   IT_PE.ASM PE_OrderList_RightDispatch  - the same live-shift trick on F11
+#   IT_PE.ASM OrderListKeys:1121-1130     - the plain+shift row pair this copies
 #   IT_PE.ASM PE_OrderList_RenderDispatch - arms WAV_NoImport, calls the render
 #   IT_MUSIC.ASM Music_ToggleWAVRender    - AX = pattern on enter
 #
-# WATCH: Display_RightDispatch Display_ResolvePattern DisplayListKeys DisplayDown
+# WATCH: Display_RenderQuicksave Display_ResolvePattern DisplayListKeys DisplayDown
 #        Music_ToggleWAVRender Music_ArmRenderNoImport Music_GetPlayMode
 #        PE_GetCurrentPattern K_IsKeyDown
 # =============================================================================
@@ -45,9 +49,9 @@ Feature: Shift-Right on the F5 Info Page renders the playing pattern to Quicksav
   So that capturing a loop is one key from the screen I am already looking at,
   without going to F11 first.
 
-  @shipped @build-verified @hw-untested
+  @shipped @build-verified @hw-verified
   Scenario: Shift-Right renders the playing pattern, no sample import
-    # cite: IT_DISPL.ASM Display_RightDispatch - K_IsKeyDown(02Ah/036h) live test
+    # cite: IT_DISPL.ASM DisplayListKeys - DB 4 / DW 1CDh -> Display_RenderQuicksave
     # cite: IT_DISPL.ASM Display_ResolvePattern - Music_GetPlayMode CX=CurrentPattern
     # cite: IT_MUSIC.ASM Music_ArmRenderNoImport then Music_ToggleWAVRender (AX=pattern)
     Given the song is playing and the user is on the F5 Info Page
@@ -56,10 +60,10 @@ Feature: Shift-Right on the F5 Info Page renders the playing pattern to Quicksav
     And no sample slot is consumed (WAV_NoImport armed)
     And the channel selection does not move
 
-  @shipped @build-verified @hw-untested
+  @shipped @build-verified @hw-verified
   Scenario: Plain Right still moves the channel selection
-    # cite: IT_DISPL.ASM Display_RightDispatch tail-jumps to DisplayDown when no
-    #       shift key is held, preserving the upstream binding exactly
+    # cite: IT_DISPL.ASM DisplayListKeys - DB 0 / DW 1CDh -> DisplayDown, the
+    #       upstream row, left exactly as it was
     Given the user is on the F5 Info Page
     When the user presses Right without shift
     Then the selected channel moves down, as it always did
@@ -78,23 +82,24 @@ Feature: Shift-Right on the F5 Info Page renders the playing pattern to Quicksav
     When the user holds Shift and presses Right
     Then nothing is rendered and the gesture is a no-op
 
-  @design-note
-  Scenario: Why a live-shift dispatcher and not a "DB 4" keymap row
-    # The M_FunctionDivider modifier codes (IT_M.ASM:168) do have a Shift code
-    # (4), but IT_K.ASM's K_TranslateKey3 chain decides whether a shifted arrow
-    # emits a key word at all, and the Shift+modifier conditions there are
-    # exactly where the fork has been bitten before (see the Shift-Alt gotcha
-    # that forced Condition 11 in commit 9fb5ac1).
+  @corrected
+  Scenario: It IS a "DB 4" keymap row -- the first attempt got this wrong
+    # The first attempt registered ONLY the plain arrow (code 0) and tested shift
+    # inside the handler with K_IsKeyDown -- on the mistaken belief that this was
+    # how F11 caught Shift-Right. It is not. Code 0 compares the FULL CX, and a
+    # held shift changes CH, so the row never matched and the handler was never
+    # reached: pressing Shift-Right did nothing whatsoever.
     #
-    # PE_OrderList_RightDispatch already sidesteps all of that: it registers on
-    # the PLAIN arrow key word (1CDh, modifier code 0) and asks the keyboard
-    # table for the live shift state with K_IsKeyDown. That is known to work on
-    # real hardware today.
+    # OrderListKeys registers the arrow TWICE (IT_PE.ASM:1121-1130): code 0 for
+    # the plain press and code 4 for the shifted one. Code 4 gates on Test CH,6
+    # and compares CX AND 1FFh, which for Right is 0x100|0xCD = 1CDh. The
+    # K_IsKeyDown call inside the F11 handler only chooses import vs no-import
+    # AFTER dispatch -- it is not what triggers it.
     #
-    # This card copies that, deliberately, rather than inventing a second
-    # mechanism for the same job.
-    Given two ways to detect Shift-Right exist
-    Then the one already proven on the F11 order list is the one used
+    # features/KEYMAPS.generated.md now dumps these tables from source, including
+    # a "registered more than once" list, so this cannot be misread again.
+    Given a modified key must be caught by the keymap, not by the handler
+    Then the arrow is registered twice, exactly as OrderListKeys does it
 
   @design-note
   Scenario: Why the Info Page resolves the pattern differently from F11

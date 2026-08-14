@@ -20,7 +20,7 @@
 | f3-sample-list | 5 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
 | f4-f3-cursor-translate | 4 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped |
 | f4-instrument-list | 4 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
-| f5-info-page-shift-right-quicksave | 8 | ✓ | — | ✗ | @build-verified @design-note @hw-untested @shipped @todo |
+| f5-info-page-shift-right-quicksave | 8 | ✓ | — | ✓ | @build-verified @corrected @design-note @hw-untested @hw-verified @shipped @todo |
 | f6-play-from-order-list-row | 5 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped @stock |
 | loader-keyjazz-hang | 4 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped @stock |
 | midi-in-multitimbral | 9 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock @todo |
@@ -32,6 +32,7 @@
 | note-cut-toggle | 3 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped @stock |
 | pattern-length-beyond-200 | 5 | ✗ | — | — | @analysis-verified @blocked-by-architecture @stock |
 | sample-amplify-keeps-playback | 9 | ✓ | ✓ | ✓ | @bug @build-verified @hw-untested @hw-verified @runtime-verified @shipped @stock |
+| schismtracker-port-backlog | 15 | ✓ | — | ✗ | @already @build-verified @done @hw-untested @impossible @todo |
 | scrolllock-follow-from-lists | 9 | ✓ | ~ partial | ✓ | @bug @build-verified @hw-untested @hw-verified @runtime-untested @runtime-verified @shipped @stock @todo |
 | shift-enter-bulk-load-from-module | 4 | ✓ | ✗ | ✗ | @bug @build-verified @fixed-pending-verify @hw-untested @runtime-untested @shipped |
 | shift-enter-load-from-sample-list | 4 | ✓ | — | ✗ | @code-verified @hw-untested @shipped |
@@ -44,8 +45,8 @@
 | wav-render-reentry-guard | 7 | ✓ | ✓ | ✗ | @build-verified @hw-untested @runtime-verified @shipped |
 
 ## Tally (computed)
-- Cards: 31
-- Build-verified: 30
+- Cards: 32
+- Build-verified: 31
 - Runtime-verified in DOSBox-X: 3 full + 8 partial
-- **Hardware-verified: 10**  ·  hardware-untested: 18
+- **Hardware-verified: 11**  ·  hardware-untested: 18
 
