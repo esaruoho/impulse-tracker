@@ -67,8 +67,10 @@ Feature: Tapping right shift jumps to the pattern being played
     When they tap right shift
     Then Follow Mode is switched off and the screen does not change
 
-  @shipped @build-verified @hw-untested
+  @shipped @build-verified @hw-verified
   Scenario: Holding it as a modifier is not a tap
+    # Confirmed 2026-08-14: Shift-Right still renders with the tap live, so the
+    # held-modifier case is not being swallowed.
     # cite: IT_K.ASM K_GetKey -- Cmp SI,36h / else Mov [RShiftTapArmed],0, so any
     #       other scancode processed between down and up disarms it. Shift-Right and
     #       friends therefore never register as taps.

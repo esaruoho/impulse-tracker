@@ -31,7 +31,16 @@
 #   IT_DISPL.ASM - Display_ResolvePattern  (playing pattern, else editor pattern)
 #
 # RESULT: hardware-verified by Esa on the DOS PC, 2026-08-14. Shift-Right on F5
-# renders the playing pattern to E:\ITNU2026 with no sample slot consumed.
+# renders the playing pattern to the Quicksave folder with no sample slot consumed,
+# and the WAV lands on disk.
+#
+# One real bug was found and fixed underneath this: WAVDRV creates the output file
+# itself, from inside its Poll (SoundDrivers/WAVDRV.ASM:844, Int 21h AH=3Ch), and
+# on failure only sets an info line and calls StopPlayBack. So a failed create
+# looked like a clean render -- PlayMode 0 on the first poll, the sync loop exiting
+# with an untouched counter -- and no file anywhere. The host now pre-creates the
+# file before playback (WAV_PreCreateRenderedFile) and probes for it afterwards
+# (WAV_ProbeRenderedFile). cite: features/debug-logging-channels.feature
 #
 # Prior art this leans on (do not re-derive):
 #   IT_PE.ASM OrderListKeys:1121-1130     - the plain+shift row pair this copies
