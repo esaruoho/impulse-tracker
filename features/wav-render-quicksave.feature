@@ -162,6 +162,44 @@ Feature: WAV Quicksave render filename
     Then it uses the song-name-derived <PFX> + 4-digit counter (not the clock)
     And only the extension changed for these (now .WAV via WAVDRV Poll9)
 
+  # --- The bug that made renders silently produce nothing --------------------
+
+  @shipped @build-verified @dosbox-verified @hw-untested
+  Scenario: The render plays the pattern's actual number of rows
+    # cite: IT_MUSIC.ASM Music_ToggleWAVRender -- Music_GetPattern, then LodsW twice:
+    #       word 0 is the packed length, word 1 is the row count -> BX
+    # cite: IT_MUSIC.ASM Music_PlayPattern -- "AX = pattern, BX = number of rows,
+    #       CX = row to start"; it stores BX into NumberOfRows
+    Given a pattern of any length is about to be rendered
+    When playback is started for the render
+    Then it is told how many rows that pattern actually has
+
+  @corrected
+  Scenario: BX was never set, so renders intermittently wrote NO FILE AT ALL
+    # THE ROOT CAUSE of "it says it saved but there is no wavefile", found
+    # 2026-08-14 while building the headless batch render.
+    #
+    # Music_PlayPattern takes the row count in BX. This call site set only AX and
+    # CX, so NumberOfRows received whatever BX happened to hold from the code that
+    # ran before. When that value landed small, the pattern ended on its FIRST tick:
+    #
+    #   PlayMode -> 0 before WAVDRV's Poll ever reached its Int 21h AH=3Ch
+    #   -> the output file was never even CREATED, let alone written
+    #   -> the synchronous loop exited on its first pass and looked healthy
+    #
+    # Every symptom pointed away from the real cause. The log's "it=" field showed
+    # the full 100000 counter, which reads as a clean one-pass render (see
+    # features/debug-logging-channels.feature, gotcha 5). No error was raised,
+    # because WAVDRV's create-failure path only sets an info line. And it depended
+    # on leftover register contents, so it came and went -- which sent the
+    # investigation to the network share and the DOS redirector instead.
+    #
+    # Time lost: most of a session, across both trackers. What ended it was
+    # rendering in a LOOP: the same failure every time, in DOSBox, where the
+    # register state going in was consistent.
+    Given a proc documents a register in its own header comment
+    Then a caller that ignores it can fail in a way that looks like anything else
+
   # --- Known limit carried forward (open report-card item) -------------------
 
   @known-limit

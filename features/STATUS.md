@@ -37,7 +37,7 @@
 | pattern-length-beyond-200 | 5 | ✗ | — | — | @analysis-verified @blocked-by-architecture @stock |
 | right-shift-tap | 9 | ✓ | — | ✓ | @build-verified @corrected @design-note @hw-verified @shipped @todo |
 | sample-amplify-keeps-playback | 9 | ✓ | ✓ | ✓ | @bug @build-verified @hw-untested @hw-verified @runtime-verified @shipped @stock |
-| schismtracker-port-backlog | 15 | ✓ | — | ✓ | @already @build-verified @done @dosbox-verified @hw-untested @hw-verified @impossible @todo |
+| schismtracker-port-backlog | 21 | ✗ | — | ✓ | @already @design-note @done @dosbox-verified @hw-untested @hw-verified @impossible @it-only @todo |
 | scrolllock-follow-from-lists | 9 | ✓ | ~ partial | ✓ | @bug @build-verified @hw-untested @hw-verified @runtime-untested @runtime-verified @shipped @stock @todo |
 | shift-enter-bulk-load-from-module | 4 | ✓ | ✗ | ✗ | @bug @build-verified @fixed-pending-verify @hw-untested @runtime-untested @shipped |
 | shift-enter-load-from-sample-list | 4 | ✓ | — | ✗ | @code-verified @hw-untested @shipped |
@@ -46,12 +46,12 @@
 | song-name-timestamp-default | 5 | ✓ | ~ partial | ✓ | @build-verified @hw-untested @hw-verified @runtime-untested @runtime-verified @shipped |
 | undo-messaging | 6 | ✓ | ~ partial | — | @bug @build-verified @howto @runtime-untested @runtime-verified @shipped @stock |
 | wav-render-keep-playback | 7 | ✓ | ~ partial | ✓ | @build-verified @hw-untested @hw-verified @known-limit @runtime-untested @runtime-verified @shipped |
-| wav-render-quicksave | 8 | ✓ | ~ partial | ✓ | @build-verified @hw-untested @hw-verified @known-limit @runtime-untested @runtime-verified @shipped |
+| wav-render-quicksave | 10 | ✓ | ~ partial | ✓ | @build-verified @corrected @dosbox-verified @hw-untested @hw-verified @known-limit @runtime-untested @runtime-verified @shipped |
 | wav-render-reentry-guard | 7 | ✓ | ✓ | ✗ | @build-verified @hw-untested @runtime-verified @shipped |
 
 ## Tally (computed)
 - Cards: 37
-- Build-verified: 35
+- Build-verified: 34
 - Runtime-verified in DOSBox-X: 3 full + 8 partial
 - **Hardware-verified: 14**  ·  hardware-untested: 20
 
