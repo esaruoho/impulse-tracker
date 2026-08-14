@@ -7,8 +7,8 @@
 # the pattern editor.
 #
 # STATUS: shipped and HARDWARE-VERIFIED by Esa on the DOS PC, 2026-08-14 -- tapped
-# from F5, F3, F4 and F11, and each time landed in the pattern editor with Follow
-# Mode on. The tap is polled in the dispatcher's idle path and dispatches Scroll
+# from F5, F3, F4 and F11, each time landing in the pattern editor with Follow Mode
+# on, and tapping again inside the editor switches Follow off. BOTH halves confirmed. The tap is polled in the dispatcher's idle path and dispatches Scroll
 # Lock's key word, reusing PE_ScrollLockFollow unchanged. The transition probe that
 # proved it out has been removed again -- see the @corrected scenarios.
 #
@@ -56,9 +56,9 @@ Feature: Tapping right shift jumps to the pattern being played
     Then the pattern editor opens on the pattern being played
     And Follow Mode is on
 
-  @shipped @build-verified @hw-untested
+  @shipped @build-verified @hw-verified
   Scenario: A tap inside the pattern editor toggles Follow Mode off
-    # The one half not yet confirmed on hardware.
+    # Verified on the DOS PC, 2026-08-14: both halves of the gesture confirmed.
     # cite: IT_PE.ASM PE_ScrollLockFollow - Glbl_GetCurrentMode == 2 -> PE_SLF_Toggle,
     #       the stock Scroll Lock behaviour. Reaching the editor via Glbl_F2 a second
     #       time is what used to open Pattern Edit Config instead.

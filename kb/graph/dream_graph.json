@@ -139,6 +139,12 @@
       "claims": 4
     },
     {
+      "id": "getting-facts-back-off-the-dos-pc",
+      "kind": "feature",
+      "name": "Getting facts back off the DOS PC",
+      "claims": 9
+    },
+    {
       "id": "impulse-tracker-fork-what-got-baked-in-2026-06-03-04",
       "kind": "feature",
       "name": "Impulse Tracker fork \u2014 what got baked in 2026-06-03 \u2192 04",
@@ -226,7 +232,7 @@
       "id": "tapping-right-shift-jumps-to-the-pattern-being-played",
       "kind": "feature",
       "name": "Tapping right shift jumps to the pattern being played",
-      "claims": 7
+      "claims": 9
     },
     {
       "id": "undo-steps-are-named-via-the-undobuffertypes-table",
@@ -299,6 +305,11 @@
       "name": "glob"
     },
     {
+      "id": "subprocess",
+      "kind": "entity",
+      "name": "subprocess"
+    },
+    {
       "id": "re",
       "kind": "entity",
       "name": "re"
@@ -307,11 +318,6 @@
       "id": "os",
       "kind": "entity",
       "name": "os"
-    },
-    {
-      "id": "subprocess",
-      "kind": "entity",
-      "name": "subprocess"
     },
     {
       "id": "json",
@@ -337,12 +343,17 @@
     },
     {
       "from": "features-gen-keymaps-py",
-      "to": "re",
+      "to": "subprocess",
       "type": "depends_on"
     },
     {
       "from": "features-gen-keymaps-py",
-      "to": "os",
+      "to": "sys",
+      "type": "depends_on"
+    },
+    {
+      "from": "features-gen-keymaps-py",
+      "to": "re",
       "type": "depends_on"
     },
     {
@@ -352,12 +363,7 @@
     },
     {
       "from": "features-gen-keymaps-py",
-      "to": "subprocess",
-      "type": "depends_on"
-    },
-    {
-      "from": "features-gen-keymaps-py",
-      "to": "sys",
+      "to": "os",
       "type": "depends_on"
     },
     {
