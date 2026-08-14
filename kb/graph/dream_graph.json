@@ -97,6 +97,12 @@
       "claims": 1
     },
     {
+      "id": "features-gen-keymaps-py",
+      "kind": "module",
+      "name": "features/gen-keymaps.py",
+      "claims": 1
+    },
+    {
       "id": "features-gen-sessions-py",
       "kind": "module",
       "name": "features/gen-sessions.py",
@@ -155,6 +161,12 @@
       "kind": "feature",
       "name": "Pattern length beyond 200 rows (256 / 512)",
       "claims": 5
+    },
+    {
+      "id": "porting-the-schismtracker-august-2026-work-into-impulse-tracker",
+      "kind": "feature",
+      "name": "Porting the schismtracker August 2026 work into Impulse Tracker",
+      "claims": 15
     },
     {
       "id": "sample-amplify-keeps-the-song-playing",
@@ -269,6 +281,21 @@
       "name": "glob"
     },
     {
+      "id": "os",
+      "kind": "entity",
+      "name": "os"
+    },
+    {
+      "id": "re",
+      "kind": "entity",
+      "name": "re"
+    },
+    {
+      "id": "subprocess",
+      "kind": "entity",
+      "name": "subprocess"
+    },
+    {
       "id": "json",
       "kind": "entity",
       "name": "json"
@@ -277,11 +304,6 @@
       "id": "termios",
       "kind": "entity",
       "name": "termios"
-    },
-    {
-      "id": "os",
-      "kind": "entity",
-      "name": "os"
     }
   ],
   "edges": [
@@ -296,6 +318,31 @@
       "type": "depends_on"
     },
     {
+      "from": "features-gen-keymaps-py",
+      "to": "os",
+      "type": "depends_on"
+    },
+    {
+      "from": "features-gen-keymaps-py",
+      "to": "glob",
+      "type": "depends_on"
+    },
+    {
+      "from": "features-gen-keymaps-py",
+      "to": "sys",
+      "type": "depends_on"
+    },
+    {
+      "from": "features-gen-keymaps-py",
+      "to": "re",
+      "type": "depends_on"
+    },
+    {
+      "from": "features-gen-keymaps-py",
+      "to": "subprocess",
+      "type": "depends_on"
+    },
+    {
       "from": "features-gen-sessions-py",
       "to": "json",
       "type": "depends_on"
@@ -307,12 +354,12 @@
     },
     {
       "from": "features-hwtest-py",
-      "to": "termios",
+      "to": "glob",
       "type": "depends_on"
     },
     {
       "from": "features-hwtest-py",
-      "to": "glob",
+      "to": "termios",
       "type": "depends_on"
     },
     {

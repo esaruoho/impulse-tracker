@@ -262,6 +262,7 @@ ENDIF
 
                 Global  D_SaveSample:Far
                 Global  D_SaveRawSample:Far
+                Global  D_DumpAllSamplesWAV:Far
                 Global  D_SaveST3Sample:Far
 
                 Global  D_GotoStartingDirectory:Far
@@ -712,6 +713,12 @@ IF SAVESAMPLEWAV
  WAVEHeader3     DB      "data"
  WAVEDataSize    DD      0
 ENDIF
+
+DumpSampleName          DB      "SMP00.WAV", 0
+DumpSampleCount         DW      0
+DumpAllSamplesMsg       DB      "Dumped ", 0FDh, 'D', " samples as SMPnn.WAV", 0
+DumpNoSamplesMsg        DB      "No samples to dump", 0
+DumpBadPathMsg          DB      "Dump aborted: Quicksave folder invalid (check F12)", 0
 
 DiskOptions             DB      0
 EditTimer               DD      0
@@ -8806,6 +8813,13 @@ Proc            D_SaveRawSample Far
                 JC      D_SaveRawSample2
                         Assume DS:Nothing
 
+; Everything below is reusable on its own: DS:SI = an 80-byte sample header whose
+; offset-4 filename field is the file to write, BX = sample number (1-based). The
+; PCM comes from the real sample via Music_GetSampleLocation, so the header may be
+; a COPY with a substituted filename -- which is how D_DumpAllSamplesWAV writes
+; every sample without touching the song's own filename fields.
+Proc            D_SaveRawSampleInternal Far
+
 IF SAVESAMPLEWAV
                 Mov     DWord Ptr [CS:WaveBytesPerSample], 80001h
                 Mov     ECX, [SI+3Ch]          ; C5Speed
@@ -8910,7 +8924,144 @@ D_SaveRawSampleEnd:
                 Mov     AX, 1
                 Ret
 
+EndP            D_SaveRawSampleInternal
+
 EndP            D_SaveRawSample
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; Dump EVERY loaded sample to the render directory as its own WAV -- the Quicksave
+; folder when one is configured, so the files land where the Mac reads them.
+; Ported from the schismtracker fork's Ctrl-Shift-Right (song_samples_to_quicksave_files).
+;
+; Reuses IT's own per-sample WAV writer rather than adding a second one: that path
+; already patches the RIFF header from the sample's length / C5Speed / width, and
+; already picks D_SaveSampleDataConvert for 8-bit samples (IT stores them signed,
+; WAV wants unsigned) versus D_SaveSampleData for 16-bit. Writing a fresh WAV
+; emitter here would have got that conversion wrong.
+;
+; Names are SMP01.WAV .. SMP99.WAV -- the slot number, because 8.3 has no room for
+; a 26-character sample name and the slot is what makes them unambiguous.
+;
+; features/dump-all-samples-wav.feature
+
+Proc            D_DumpAllSamplesWAV Far
+
+                PushAD
+                Push    DS
+                Push    ES
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Disk
+
+                Call    D_GotoRenderDirectory
+                JC      D_DumpAll_BadPath
+
+                Mov     CS:[DumpSampleCount], 0
+                Mov     BX, 1
+
+D_DumpAll_Loop:
+                Push    BX
+
+                Call    Music_GetSongSegment
+                Mov     DS, AX
+                        Assume DS:Nothing
+                Mov     SI, BX
+                Add     SI, SI
+                Mov     SI, [DS:64912+SI-2]     ; DS:SI -> sample header
+
+                Test    Byte Ptr [SI+12h], 1    ; does the sample exist?
+                JZ      D_DumpAll_Next
+
+                                                ; Copy the header so the filename
+                                                ; can be replaced without editing
+                                                ; the song's own sample record.
+                Mov     ES, CS:DiskDataArea
+                Xor     DI, DI
+                Push    SI
+                Mov     CX, 80
+                Rep     MovsB
+                Pop     SI
+
+                Call    D_DumpBuildName         ; BX -> CS:DumpSampleName
+
+                Push    CS                      ; splice the name in at offset 4
+                Pop     DS
+                Mov     SI, Offset DumpSampleName
+                Mov     DI, 4
+                Mov     CX, 10
+                Rep     MovsB
+
+                Push    ES                      ; DS:SI = the patched copy
+                Pop     DS
+                Xor     SI, SI
+
+                Call    D_SaveRawSampleInternal
+
+                Inc     CS:[DumpSampleCount]
+
+D_DumpAll_Next:
+                Pop     BX
+                Inc     BX
+                Cmp     BX, 100
+                JB      D_DumpAll_Loop
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Disk
+                Mov     AX, CS:[DumpSampleCount]
+                Test    AX, AX
+                JZ      D_DumpAll_None
+
+                Mov     SI, Offset DumpAllSamplesMsg
+                Call    SetInfoLine
+                Jmp     D_DumpAll_End
+
+D_DumpAll_None:
+                Mov     SI, Offset DumpNoSamplesMsg
+                Call    SetInfoLine
+                Jmp     D_DumpAll_End
+
+D_DumpAll_BadPath:
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset DumpBadPathMsg
+                Call    SetInfoLine
+
+D_DumpAll_End:
+                Pop     ES
+                Pop     DS
+                PopAD
+                Mov     AX, 1
+                Ret
+                        Assume DS:Nothing
+
+EndP            D_DumpAllSamplesWAV
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+; BX = slot 1..99 -> patch the two digits of CS:DumpSampleName ("SMPnn.WAV").
+
+Proc            D_DumpBuildName Near
+
+                Push    AX
+                Push    BX
+                Push    DX
+
+                Mov     AX, BX
+                Xor     DX, DX
+                Mov     BX, 10
+                Div     BX                      ; AL = tens, DL = units
+                Add     AL, '0'
+                Add     DL, '0'
+                Mov     CS:[DumpSampleName+3], AL
+                Mov     CS:[DumpSampleName+4], DL
+
+                Pop     DX
+                Pop     BX
+                Pop     AX
+                Ret
+
+EndP            D_DumpBuildName
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 

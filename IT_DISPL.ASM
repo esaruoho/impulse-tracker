@@ -54,6 +54,7 @@ ENDIF
 
                 Extrn   M_FunctionDivider:Far
                 Extrn   K_IsKeyDown:Far
+                Extrn   D_DumpAllSamplesWAV:Far
 
 IF NETWORKENABLED
                 Extrn   Network_Poll:Far
@@ -238,6 +239,13 @@ DisplayListKeys         Label
                         DB      0
                         DW      1CDh            ; Right arrow -- plain
                         DW      Offset DisplayDown
+
+                        DB      3               ; Ctrl-Shift-Right -- dump every
+                        DW      1CDh            ; sample as its own WAV. Placed
+                        DW      Offset D_DumpAllSamplesWAV ; before the Shift row:
+                                                ; code 3 tests Ctrl only and code
+                                                ; 4 tests Shift only, so with both
+                                                ; held the first row wins.
 
                         DB      4               ; Shift-Right -- render the
                         DW      1CDh            ; playing pattern to Quicksave.
