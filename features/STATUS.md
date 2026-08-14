@@ -33,6 +33,7 @@
 | no-samples-to-instruments-envelope-retention | 5 | ✓ | ✗ | — | @build-verified @removed @runtime-untested @stock @todo |
 | note-cut-toggle | 3 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped @stock |
 | pattern-length-beyond-200 | 5 | ✗ | — | — | @analysis-verified @blocked-by-architecture @stock |
+| right-shift-tap | 4 | ✓ | — | ✗ | @build-verified @design-note @hw-untested @shipped @todo |
 | sample-amplify-keeps-playback | 9 | ✓ | ✓ | ✓ | @bug @build-verified @hw-untested @hw-verified @runtime-verified @shipped @stock |
 | schismtracker-port-backlog | 15 | ✓ | — | ✗ | @already @build-verified @done @hw-untested @impossible @todo |
 | scrolllock-follow-from-lists | 9 | ✓ | ~ partial | ✓ | @bug @build-verified @hw-untested @hw-verified @runtime-untested @runtime-verified @shipped @stock @todo |
@@ -47,8 +48,8 @@
 | wav-render-reentry-guard | 7 | ✓ | ✓ | ✗ | @build-verified @hw-untested @runtime-verified @shipped |
 
 ## Tally (computed)
-- Cards: 34
-- Build-verified: 33
+- Cards: 35
+- Build-verified: 34
 - Runtime-verified in DOSBox-X: 3 full + 8 partial
-- **Hardware-verified: 11**  ·  hardware-untested: 20
+- **Hardware-verified: 11**  ·  hardware-untested: 21
 

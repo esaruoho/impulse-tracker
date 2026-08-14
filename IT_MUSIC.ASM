@@ -98,6 +98,7 @@ include network.inc
         Global  Music_ClearRenderNoImport:Far
         Global  Music_GetMuteChannelTable:Far
         Global  Music_InvertChannelMutes:Far
+                Extrn   K_PollRightShiftTap:Far
         Global  Music_FindFreePattern:Far
         Global  PE_AppendCloneLog:Far
         Global  PE_AppendExtendLog:Far
@@ -3154,6 +3155,19 @@ EndP            WAV_MultiFinish
 
 Proc            Music_Poll Far
 
+                ; --- right-shift TAP probe (instrumentation only) ----
+                ; Logs one line per detected tap so we can find out, from real
+                ; hardware, whether a bare-modifier tap is reliably detectable
+                ; from polled keyboard state before any ISR is touched. It does
+                ; NOT act on the tap: a screen change has to come back through
+                ; the key dispatcher, which polled code cannot do.
+                ; features/right-shift-tap.feature
+                Call    K_PollRightShiftTap
+                Test    AX, AX
+                JZ      Music_Poll_NoRSTap
+                Call    WAV_LogRShiftTap
+Music_Poll_NoRSTap:
+
                 ; --- Multi-WAV Esc abort -----------------------------
                 ; If we're in the middle of a multi-channel sweep and the
                 ; user presses Esc, peek-and-eat the keystroke, stop the
@@ -5614,6 +5628,37 @@ EndP            PE_LogStage
 ;-------------------------------------------------------------------------------
 ; PE_LogEndLine -- terminate the current keypress line with CRLF.
 ;-------------------------------------------------------------------------------
+; One line per right-shift tap: "RSTAP" + CRLF into CTRLOLOG.TXT.
+; Instrumentation for features/right-shift-tap.feature. Main-loop context, so
+; Int 21h here is safe -- this is deliberately NOT in the ISR.
+
+Proc            WAV_LogRShiftTap Far
+
+                PushAD
+                Push    DS
+                Push    ES
+
+                Mov     AL, 'R'
+                Call    PE_LogStage
+                Mov     AL, 'S'
+                Call    PE_LogStage
+                Mov     AL, 'T'
+                Call    PE_LogStage
+                Mov     AL, 'A'
+                Call    PE_LogStage
+                Mov     AL, 'P'
+                Call    PE_LogStage
+                Call    PE_LogEndLine
+
+                Pop     ES
+                Pop     DS
+                PopAD
+                Ret
+
+EndP            WAV_LogRShiftTap
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
 Proc            PE_LogEndLine Far
                 PushF
                 PushAD

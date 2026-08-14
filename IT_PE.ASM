@@ -1148,6 +1148,10 @@ ENDIF
         DW      2000h                           ; clone currently-playing
         DW      Offset PE_OrderList_ClonePattern ; pattern to next free slot
 
+        DB      1                               ; Shift-Alt-D on F11: clone
+        DW      2020h                           ;   WITH mute-wipe, whatever M says
+        DW      Offset PE_OrderList_ClonePatternWipe
+
         DB      1                               ; Alt-E on F11
         DW      1200h                           ; extend (double rows) the
         DW      Offset PE_OrderList_ExtendPattern ; currently-playing pattern
@@ -2844,6 +2848,21 @@ Proc            PE_OrderList_ClonePattern Far
                 Mov     BL, CS:[ClonePatternMuteWipe]
                 Jmp     PE_OrdClonePat_Body
 EndP            PE_OrderList_ClonePattern
+
+; Shift-Alt-D: clone WITH the muted channels wiped, whatever the M toggle says.
+; Plain Alt-D still honours M, so the toggle keeps its meaning and this is the
+; explicit override. Both trackers behave the same way.
+;
+; features/alt-d-shift-alt-d-clone.feature
+
+Proc            PE_OrderList_ClonePatternWipe Far
+
+                Mov     BL, 1                   ; force wipe
+                Jmp     PE_OrdClonePat_Body
+
+EndP            PE_OrderList_ClonePatternWipe
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            PE_OrderList_ClonePatternModal Far      ; In: BL = wipe mode
                                                 ; (no fallthrough on purpose --

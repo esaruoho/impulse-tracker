@@ -55,6 +55,7 @@ include switch.inc
                 Global  K_IsKeyDown:Far
                 Global  K_ClearKeyBoardQueue:Far
                 Global  K_ResetKeyboardTables:Far
+        Global  K_PollRightShiftTap:Far
                 Global  K_SelectKBButton:Far
                 Global  K_SetKeyboardType:Far
                 Global  K_InstallDOSHandler:Far
@@ -416,6 +417,8 @@ USKeyboardTable    Label Byte
          DW      4
          DB      5       ; Alt-D
          DW      2000h
+         DB      11      ; Shift+Alt-D (fork extension, same shape
+         DW      2020h   ;   as Shift-Alt-M's 3232h below)
          DB      0FFh
 
         DB      33      ; F
@@ -1580,6 +1583,97 @@ K_IsAnyKeyDown2:
 EndP            K_IsAnyKeyDown
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
+; ---------------------------------------------------------------------------
+; K_PollRightShiftTap -- returns AX=1 exactly once when RIGHT SHIFT has been
+; pressed and released WITHOUT any other key going down in between. AX=0
+; otherwise. Poll it once per main-loop pass.
+;
+; This is INSTRUMENTATION FIRST, per the marker-first rule: it answers "is a bare
+; modifier tap even detectable from polled state?" before any interrupt handler is
+; touched. It reads KeyboardTable, which the ISR already maintains, so it adds no
+; IRQ-level code and cannot introduce a hang.
+;
+; Why polling can't (yet) perform the jump itself: a screen change has to travel
+; back through the key dispatcher as AX=5/DX=list (see PE_ScrollLockFollow), and a
+; bare shift never enters the translate chain, so it produces no key word to
+; dispatch on. Making it produce one is the ISR work this instrumentation is meant
+; to justify or rule out.
+;
+; features/right-shift-tap.feature
+
+RShiftTapPrev   DB      0                       ; was it down last poll?
+RShiftTapArmed  DB      0                       ; still a candidate for a tap?
+
+Proc            K_PollRightShiftTap Far
+
+                Push    BX
+                Push    CX
+                Push    DX
+                Push    SI
+
+                Xor     AX, AX                  ; default: no tap
+
+                                                ; DL = right shift down now?
+                Xor     DL, DL
+                Cmp     [CS:KeyboardTable+36h], 0
+                JE      K_PRST_HaveNow
+                Mov     DL, 1
+
+K_PRST_HaveNow:
+                                                ; DH = is any OTHER key down?
+                Xor     DH, DH
+                Mov     SI, 0
+                Mov     CX, 518
+
+K_PRST_ScanLoop:
+                Cmp     SI, 36h                 ; skip right shift itself
+                JE      K_PRST_ScanNext
+                Cmp     [CS:KeyboardTable+SI], 0
+                JE      K_PRST_ScanNext
+                Mov     DH, 1
+                Jmp     K_PRST_ScanDone
+
+K_PRST_ScanNext:
+                Inc     SI
+                Loop    K_PRST_ScanLoop
+
+K_PRST_ScanDone:
+                Test    DL, DL
+                JZ      K_PRST_NotDown
+
+                                                ; --- right shift IS down ---
+                Cmp     [CS:RShiftTapPrev], 0
+                JNE     K_PRST_StillDown
+                Mov     [CS:RShiftTapArmed], 1  ; fresh press: candidate
+
+K_PRST_StillDown:
+                Test    DH, DH                  ; used as a modifier?
+                JZ      K_PRST_Store
+                Mov     [CS:RShiftTapArmed], 0  ; then it is not a tap
+                Jmp     K_PRST_Store
+
+K_PRST_NotDown:
+                                                ; --- right shift is UP ---
+                Cmp     [CS:RShiftTapPrev], 0
+                JE      K_PRST_Store            ; was already up: nothing happened
+                Cmp     [CS:RShiftTapArmed], 0
+                JE      K_PRST_Store            ; released, but it was a modifier
+                Mov     [CS:RShiftTapArmed], 0
+                Mov     AX, 1                   ; <- a tap just completed
+
+K_PRST_Store:
+                Mov     [CS:RShiftTapPrev], DL
+
+                Pop     SI
+                Pop     DX
+                Pop     CX
+                Pop     BX
+                Ret
+
+EndP            K_PollRightShiftTap
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
 Proc            K_IsKeyDown Far         ; BX = key to test
 
