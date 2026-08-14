@@ -311,9 +311,9 @@
       "name": "glob"
     },
     {
-      "id": "re",
+      "id": "subprocess",
       "kind": "entity",
-      "name": "re"
+      "name": "subprocess"
     },
     {
       "id": "os",
@@ -321,9 +321,9 @@
       "name": "os"
     },
     {
-      "id": "subprocess",
+      "id": "re",
       "kind": "entity",
-      "name": "subprocess"
+      "name": "re"
     },
     {
       "id": "json",
@@ -349,12 +349,17 @@
     },
     {
       "from": "features-gen-keymaps-py",
-      "to": "glob",
+      "to": "sys",
       "type": "depends_on"
     },
     {
       "from": "features-gen-keymaps-py",
-      "to": "re",
+      "to": "subprocess",
+      "type": "depends_on"
+    },
+    {
+      "from": "features-gen-keymaps-py",
+      "to": "glob",
       "type": "depends_on"
     },
     {
@@ -364,12 +369,7 @@
     },
     {
       "from": "features-gen-keymaps-py",
-      "to": "sys",
-      "type": "depends_on"
-    },
-    {
-      "from": "features-gen-keymaps-py",
-      "to": "subprocess",
+      "to": "re",
       "type": "depends_on"
     },
     {
