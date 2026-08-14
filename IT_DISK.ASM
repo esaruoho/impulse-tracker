@@ -82,6 +82,12 @@ EndS
                 Extrn   Music_GetMIDIDataArea:Far
 
                 Extrn   Music_Stop:Far
+                                                ; the sample dump stops playback for
+                                                ; its duration and puts it back
+                                                ; FEATURE-CARD >> features/dump-all-samples-wav.feature
+                Extrn   Music_GetPlayMode:Far
+                Extrn   Music_PlayPartSong:Far
+                Extrn   Music_PlayPattern:Far
                 Extrn   Msg_ResetMessage:Far
                 Extrn   Msg_GetMessageOffset:Far
                 Extrn   Msg_GetMessageLength:Far
@@ -734,6 +740,10 @@ DumpHeaderCopy          DB      80 Dup (0)
 DumpSampleCount         DW      0
 DumpAllSamplesMsg       DB      "Dumped ", 0FDh, 'D', " samples as SMPnn.WAV", 0
 DumpStartMsg            DB      "Starting batch export of samples as .WAV...", 0
+DumpResumeMode          DW      0       ; play state to restore after the dump
+DumpResumeRow           DW      0
+DumpResumePattern       DW      0
+DumpResumeOrder         DW      0
 DumpNoSamplesMsg        DB      "No samples to dump", 0
 
 DiskOptions             DB      0
@@ -9018,6 +9028,32 @@ Proc            D_DumpAllSamplesWAV Far
                 Call    S_SetDirectMode
                 Pop     AX
 
+                                                ; STOP PLAYBACK FIRST.
+                                                ; Reading a sample means mapping its
+                                                ; pages into the EMS page frame
+                                                ; (Music_GetSampleLocation ->
+                                                ; E_MapEMSMemory), once per sample and
+                                                ; again per 32K block. The MIXER is
+                                                ; mapping its own pages into that same
+                                                ; shared frame to play. Whoever maps
+                                                ; last wins, so dumping while playing
+                                                ; made the mixer read the page the dump
+                                                ; had just mapped -- bursts of white
+                                                ; noise out of the speakers, and the
+                                                ; dump reading pages the mixer had
+                                                ; remapped under it. Play state is put
+                                                ; back at the end.
+                                                ; FEATURE-CARD >> features/dump-all-samples-wav.feature
+                Call    Music_GetPlayMode       ; AX=mode BX=row CX=pattern DX=order
+                Mov     CS:[DumpResumeMode], AX
+                Mov     CS:[DumpResumeRow], BX
+                Mov     CS:[DumpResumePattern], CX
+                Mov     CS:[DumpResumeOrder], DX
+                Test    AX, AX
+                JZ      D_DumpAll_WasStopped
+                Call    Music_Stop
+D_DumpAll_WasStopped:
+
                 Mov     CS:[DumpSampleCount], 0
                 Mov     BX, 1
 
@@ -9100,6 +9136,43 @@ D_DumpAll_None:
                 Jmp     D_DumpAll_End
 
 D_DumpAll_End:
+                                                ; Put playback back where it was.
+                Mov     AX, CS:[DumpResumeMode]
+                Test    AX, AX
+                JZ      D_DumpAll_NoResume
+                Cmp     AX, 2                   ; 2 = playing the song
+                JNE     D_DumpAll_ResumePattern
+
+                Mov     AX, CS:[DumpResumeOrder]
+                Mov     BX, CS:[DumpResumeRow]
+                Call    Music_PlayPartSong
+                Jmp     D_DumpAll_NoResume
+
+D_DumpAll_ResumePattern:
+                                                ; Pattern loop: Music_PlayPattern wants
+                                                ; the row COUNT in BX, which lives in
+                                                ; the pattern header (word 0 = packed
+                                                ; length, word 1 = rows). Getting this
+                                                ; wrong is what made renders silently
+                                                ; write no file at all.
+                                                ; cite: features/wav-render-quicksave.feature
+                Push    DS
+                Mov     AX, CS:[DumpResumePattern]
+                Push    AX
+                Call    Music_GetPattern        ; DS:SI -> pattern data
+                LodsW
+                LodsW                           ; AX = number of rows
+                Mov     BX, AX
+                Pop     AX
+                Pop     DS
+                Test    BX, BX
+                JNZ     D_DumpAll_HaveRows
+                Mov     BX, 64
+D_DumpAll_HaveRows:
+                Mov     CX, CS:[DumpResumeRow]
+                Call    Music_PlayPattern
+
+D_DumpAll_NoResume:
                 Pop     ES
                 Pop     DS
                 PopAD

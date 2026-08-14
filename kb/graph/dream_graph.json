@@ -94,7 +94,7 @@
       "id": "feature-parity-between-impulse-tracker-and-schism-tracker",
       "kind": "feature",
       "name": "Feature parity between Impulse Tracker and Schism Tracker",
-      "claims": 21
+      "claims": 22
     },
     {
       "id": "features-convey-distill-py",
@@ -317,9 +317,9 @@
       "name": "glob"
     },
     {
-      "id": "os",
+      "id": "subprocess",
       "kind": "entity",
-      "name": "os"
+      "name": "subprocess"
     },
     {
       "id": "re",
@@ -327,9 +327,9 @@
       "name": "re"
     },
     {
-      "id": "subprocess",
+      "id": "os",
       "kind": "entity",
-      "name": "subprocess"
+      "name": "os"
     },
     {
       "id": "json",
@@ -355,12 +355,7 @@
     },
     {
       "from": "features-gen-keymaps-py",
-      "to": "sys",
-      "type": "depends_on"
-    },
-    {
-      "from": "features-gen-keymaps-py",
-      "to": "os",
+      "to": "subprocess",
       "type": "depends_on"
     },
     {
@@ -375,7 +370,12 @@
     },
     {
       "from": "features-gen-keymaps-py",
-      "to": "subprocess",
+      "to": "os",
+      "type": "depends_on"
+    },
+    {
+      "from": "features-gen-keymaps-py",
+      "to": "sys",
       "type": "depends_on"
     },
     {
@@ -400,12 +400,12 @@
     },
     {
       "from": "features-print-card-py",
-      "to": "sys",
+      "to": "os",
       "type": "depends_on"
     },
     {
       "from": "features-print-card-py",
-      "to": "os",
+      "to": "sys",
       "type": "depends_on"
     }
   ]

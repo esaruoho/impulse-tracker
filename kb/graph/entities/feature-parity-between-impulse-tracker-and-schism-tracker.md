@@ -29,7 +29,8 @@ Convey feature: features/schismtracker-port-backlog.feature.
 - Scenario (L261): The quicksave gestures work in the sample loader too
 - Scenario (L273): Enter in the pattern editor lifts the nearest instrument number
 - Scenario (L284): Alt-Up/Alt-Down page, Shift-Alt-Up/Down are home and end
-- Scenario (L296): Things this fork has that schism does not
-- Scenario (L309): Why the counts will never reach a literal 1:1
+- Scenario (L294): Schism's Shift-F5 Preferences page has nothing worth porting
+- Scenario (L331): Things this fork has that schism does not
+- Scenario (L344): Why the counts will never reach a literal 1:1
 
 ## Relationships

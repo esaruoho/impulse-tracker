@@ -71,6 +71,39 @@ Feature: Dumping every sample in the song to WAV in one keystroke
     When the user presses Ctrl-Shift-Right
     Then nothing is written and the info line says the folder is invalid
 
+  @shipped @build-verified @hw-untested
+  Scenario: Dumping while the song plays does not shriek, and playback comes back
+    # cite: IT_DISK.ASM D_DumpAllSamplesWAV -- Music_GetPlayMode snapshot, Music_Stop
+    #       before the first EMS mapping, Music_PlayPartSong / Music_PlayPattern after
+    Given the song is playing
+    When the user dumps the samples
+    Then playback stops for the duration and resumes at the same order and row
+    And no noise is produced, and the files are correct
+
+  @corrected
+  Scenario: Dumping during playback made the mixer scream
+    # Esa, 2026-08-14: "DURING PLAYBACK, shift-ctrl-rightarrow resulted in actual
+    # bursts of white noise" -- reported alongside the botched WAVs, and a SEPARATE
+    # cause from the DiskDataArea header-copy bug that was fixed first.
+    #
+    # Reading a sample means mapping its pages into the EMS PAGE FRAME
+    # (Music_GetSampleLocation -> E_MapEMSMemory, IT_MUSIC.ASM), once per sample and
+    # again for every 32K block. The mixer is mapping ITS pages into that same shared
+    # frame to play. Whoever maps last wins, so:
+    #   - the mixer read whatever page the dump had just mapped -> white noise
+    #   - the dump read pages the mixer had remapped under it -> garbage in the WAVs
+    # One shared window, two readers, no interlock. Both symptoms, one cause.
+    #
+    # The dump now stops playback before its first mapping and restores it afterwards
+    # (order + row for song mode; pattern + rows + row for a pattern loop, with the
+    # row count read from the pattern header -- getting THAT wrong is what made
+    # renders write no file at all: features/wav-render-quicksave.feature).
+    #
+    # Worth remembering for anything else that walks sample memory in bulk: the EMS
+    # page frame is shared with the live mixer.
+    Given two readers share one EMS page frame with no interlock
+    Then the bulk reader has to stop the realtime one first
+
   @corrected
   Scenario: Ctrl-Shift-Right cannot be a keymap row -- it is a live modifier test
     # Two wrong turns before this landed:
