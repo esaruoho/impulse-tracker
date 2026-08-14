@@ -290,6 +290,41 @@ Feature: Feature parity between Impulse Tracker and Schism Tracker
     When they press Alt-Down
     Then the cursor pages down as Page Down would
 
+  @impossible
+  Scenario: Schism's Shift-F5 Preferences page has nothing worth porting
+    # Compared side by side 2026-08-14 from real screenshots of both (IT's via the
+    # new screen grabber, features/headless-screenshot.feature).
+    #
+    # IT's Shift-F5 is the sound-DRIVER screen; schism's is Preferences. They already
+    # overlap on the things that matter: master volume L/R, a mixing-mode list, and
+    # the playback frequency. IT additionally exposes Treble/Bass L/R, Filter mode
+    # (No/50%/75%) and Feedback mode (None/50% Separated/50% Crossed) -- SB16 hardware
+    # mixer registers that schism has no use for.
+    #
+    # What only schism has, and why each stays there:
+    #   Available Audio Devices / Drivers  - SDL host plumbing. On DOS the driver is
+    #                                        chosen at startup or on this very screen.
+    #   Output Equalizer (4 bands)         - genuinely absent here (IT_FOUR.ASM is the
+    #                                        FFT SPECTRUM screen, Fourier_Start from
+    #                                        the F5 info page -- not an equaliser).
+    #                                        But schism EQs inside its own mixer,
+    #                                        while IT mixes inside each sound driver's
+    #                                        hand-optimised 16-bit asm inner loop --
+    #                                        so it would mean writing DSP separately
+    #                                        into SB16DRV, GUS, ES1868, AWE32 and the
+    #                                        rest. Large job, negligible payoff.
+    #   Cubic Spline / 8-Tap FIR modes     - same wall, same reason. IT's four modes
+    #                                        trade bit depth instead, which is the
+    #                                        DOS-era trade and is fine.
+    #   Ramp volume at start of sample     - the drivers already do click removal
+    #                                        (WAVDRV keeps LastClickRemovalLeft/Right;
+    #                                        SB16DRV has a commented-out ramping mix
+    #                                        mode). A toggle needs per-driver support.
+    #   Save Output Configuration button   - already covered; IT persists driver
+    #                                        settings in IT.CFG.
+    Given schism's Preferences page is compared against IT's driver screen
+    Then the differences are host plumbing or per-driver DSP, and none are ported
+
   # --- THE OTHER DIRECTION: this fork only -----------------------------------
 
   @it-only

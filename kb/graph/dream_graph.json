@@ -317,14 +317,14 @@
       "name": "glob"
     },
     {
-      "id": "re",
-      "kind": "entity",
-      "name": "re"
-    },
-    {
       "id": "os",
       "kind": "entity",
       "name": "os"
+    },
+    {
+      "id": "re",
+      "kind": "entity",
+      "name": "re"
     },
     {
       "id": "subprocess",
@@ -355,12 +355,7 @@
     },
     {
       "from": "features-gen-keymaps-py",
-      "to": "glob",
-      "type": "depends_on"
-    },
-    {
-      "from": "features-gen-keymaps-py",
-      "to": "re",
+      "to": "sys",
       "type": "depends_on"
     },
     {
@@ -370,7 +365,12 @@
     },
     {
       "from": "features-gen-keymaps-py",
-      "to": "sys",
+      "to": "re",
+      "type": "depends_on"
+    },
+    {
+      "from": "features-gen-keymaps-py",
+      "to": "glob",
       "type": "depends_on"
     },
     {
@@ -390,22 +390,22 @@
     },
     {
       "from": "features-hwtest-py",
-      "to": "termios",
-      "type": "depends_on"
-    },
-    {
-      "from": "features-hwtest-py",
       "to": "glob",
       "type": "depends_on"
     },
     {
-      "from": "features-print-card-py",
-      "to": "os",
+      "from": "features-hwtest-py",
+      "to": "termios",
       "type": "depends_on"
     },
     {
       "from": "features-print-card-py",
       "to": "sys",
+      "type": "depends_on"
+    },
+    {
+      "from": "features-print-card-py",
+      "to": "os",
       "type": "depends_on"
     }
   ]
