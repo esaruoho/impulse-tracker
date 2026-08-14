@@ -124,6 +124,7 @@ ENDIF
                 Global  Glbl_F6:Far
                 Global  Glbl_Shift_F1:Far
                 Global  Glbl_Shift_F4:Far
+                Global  Glbl_MIDIMulti_ToggleGuarded:Far
                 Global  Glbl_Shift_F6:Far
                 Global  Glbl_Shift_F9:Far
                 Global  Glbl_F8:Far
@@ -215,6 +216,9 @@ VolumeSetMsg    DB      "Global Volume set to ", 0FDh, "D", 0
 MIDIMultiOffMsg DB      "MIDI multitimbral input OFF - normal MIDI restored", 0
 ShiftF4NeedInstrMsg DB  "Enable Instruments mode first (F12) to use Shift-F4", 0
 MIDIMultiMadeMsg    DB      "Multitimbral: instruments 01-16 mapped to MIDI-In 01-16", 0
+MIDIMultiGuardOnMsg DB      "Multitimbral MIDI-In: ON", 0
+MIDIMultiGuardOffMsg DB     "Multitimbral MIDI-In: OFF", 0
+MIDIMultiNeedInstMsg DB     "Multitimbral MIDI-In needs Instrument mode - left OFF", 0
 MIDIMultiExpandMsg  DB      "Multitimbral: 96 instruments created (01-16 x 6 banks)", 0
 MIDIMultiResetMsg   DB      "Multitimbral: reset to instruments 01-16", 0
 
@@ -436,6 +440,97 @@ Glbl_Shift_F4_Done:
                 Ret
 
 EndP            Glbl_Shift_F4
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
+; Glbl_MIDIMulti_ToggleGuarded -- the Shift-F1 "Toggle Multitimbral MIDI-In"
+; button.
+;
+; Multitimbral MIDI-in routes incoming notes BY CHANNEL to the instrument that
+; claims that channel, so it only means anything in Instrument mode. Switching it
+; on from Sample mode used to just flip the flag and say "ON", which was a lie: it
+; had nothing to route to. So enabling it from Sample mode now offers the whole
+; move -- switch to Instrument mode and build the 01-16 rig -- which is what
+; Shift-F4 already does. Same dialog, same creation proc, same flag: this is a
+; second doorway into that gesture, not a second implementation of it.
+;
+; Turning it OFF, or turning it on while already in Instrument mode, is unchanged.
+; FEATURE-CARD >> features/midi-in-multitimbral.feature
+Proc            Glbl_MIDIMulti_ToggleGuarded Far
+
+                Call    Music_GetMIDIMultiEnable
+                Test    AL, AL
+                JNZ     GMMTG_TurnOff           ; it is on -> plain off, no questions
+
+                Call    Music_GetInstrumentMode ; ZF=1 -> Sample mode
+                JNZ     GMMTG_PlainOn
+
+                                                ; --- Sample mode: offer the move ---
+                Mov     DI, Offset O1_ConfirmCreateMIDIIn
+                Mov     CX, 4
+                Call    M_Object1List
+                Test    DX, DX
+                JZ      GMMTG_Declined          ; "No" -> leave it OFF, and say why
+
+                Call    Music_CreateMIDIInInstruments
+
+                                                ; Flip the song's Instrument-mode
+                                                ; flag (bit 2 of [songseg:2Ch]) --
+                                                ; the same direct set Shift-F4 does,
+                                                ; deliberately NOT the F12
+                                                ; F_SetControlInstrument clear/remap
+                                                ; path, which would discard the
+                                                ; mapping just created.
+                Call    Music_GetSongSegment
+                Mov     DS, AX
+                        Assume DS:Nothing
+                Or      Byte Ptr [DS:2Ch], 4
+
+                Mov     AL, 1
+                Call    Music_SetMIDIMultiEnable
+
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset MIDIMultiMadeMsg
+                Call    SetInfoLine
+                Mov     AX, 1
+                Ret
+
+GMMTG_PlainOn:
+                Mov     AL, 1
+                Call    Music_SetMIDIMultiEnable
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset MIDIMultiGuardOnMsg
+                Call    SetInfoLine
+                Mov     AX, 1
+                Ret
+
+GMMTG_TurnOff:
+                Xor     AL, AL
+                Call    Music_SetMIDIMultiEnable
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset MIDIMultiGuardOffMsg
+                Call    SetInfoLine
+                Mov     AX, 1
+                Ret
+
+GMMTG_Declined:
+                                                ; Left OFF on purpose. Enabling a
+                                                ; router with nothing to route to
+                                                ; would report success and then do
+                                                ; nothing audible, which is the
+                                                ; behaviour this change exists to
+                                                ; remove.
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset MIDIMultiNeedInstMsg
+                Call    SetInfoLine
+                Mov     AX, 1
+                Ret
+
+EndP            Glbl_MIDIMulti_ToggleGuarded
 
 Proc            Glbl_F4 Far
 

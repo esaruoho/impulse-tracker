@@ -27,7 +27,7 @@
 | headless-batch-render | 10 | ✓ | — | ✗ | @build-verified @corrected @design-note @dosbox-verified @hw-untested @shipped @todo |
 | invert-channel-mutes | 4 | ✓ | — | ✗ | @build-verified @design-note @hw-untested @shipped @todo |
 | loader-keyjazz-hang | 4 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped @stock |
-| midi-in-multitimbral | 9 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock @todo |
+| midi-in-multitimbral | 12 | ✓ | — | ✗ | @build-verified @design-note @hw-untested @shipped @stock @todo |
 | midi-out-stop-on-f8 | 8 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped |
 | midi-realtime-sync | 11 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @todo |
 | multi-wav | 5 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped |

@@ -55,6 +55,7 @@
 #
 # WATCH: F_SetControlInstrument Music_InstrumentIsReal Music_ClearAllInstruments
 # RESULT-LOG >> (auto-maintained by .githooks/post-merge)
+#   2026-08-14  direct-commit  touched: F_SetControlInstrument
 #   2026-06-03  direct-commit  touched: F_SetControlInstrument
 #   2026-06-03  direct-commit  touched: F_SetControlInstrument Music_InstrumentIsReal Music_ClearAllInstruments
 #

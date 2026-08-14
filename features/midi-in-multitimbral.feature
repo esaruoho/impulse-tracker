@@ -21,7 +21,9 @@
 # Source files linked back to this card (grep "features/midi-in-multitimbral"):
 #   IT_MUSIC.ASM  - creator / expand / reset / build-slot / enable+banks flags
 #   IT_I.ASM      - MIDIMulti_Route live router + MMR_FindInst channel match
-#   IT_K.ASM      - MIDISend router hook + Shift-F1 panel toggle proc
+#   IT_K.ASM      - MIDISend router hook + the original Shift-F1 toggle proc
+#   IT_G.ASM      - Glbl_MIDIMulti_ToggleGuarded: the Shift-F1 button's handler,
+#                   which offers the Sample->Instrument move before enabling
 #   IT_G.ASM      - Glbl_Shift_F4 3-state dispatcher
 #   IT_OBJ1.ASM   - confirm dialog, F4 MIDI-In field object, Shift-F1 button
 #
@@ -32,8 +34,9 @@
 #   b5a0c66  Shift-F4 gated to Instrument mode      <- SUPERSEDED by 8c32fd2
 #   8c32fd2  3-state Shift-F4 cycle + Shift-F1 router toggle + gate removed
 #
-# WATCH: Music_CreateMIDIInInstruments Music_ExpandMIDIInTo96 Music_ResetMIDIInTo16 MCMI_BuildSlot Music_GetMIDIMultiBanks Music_GetMIDIMultiEnable Music_SetMIDIMultiEnable MIDIMultiEnable MIDIMultiBanks Glbl_Shift_F4 Glbl_MIDIMulti_Toggle MIDIMulti_Route MMR_FindInst MIDIMultiToggleButton O1_ConfirmCreateMIDIIn InstrumentMIDIInChannel
+# WATCH: Music_CreateMIDIInInstruments Music_ExpandMIDIInTo96 Music_ResetMIDIInTo16 MCMI_BuildSlot Music_GetMIDIMultiBanks Music_GetMIDIMultiEnable Music_SetMIDIMultiEnable MIDIMultiEnable MIDIMultiBanks Glbl_Shift_F4 Glbl_MIDIMulti_Toggle Glbl_MIDIMulti_ToggleGuarded MIDIMulti_Route MMR_FindInst MIDIMultiToggleButton O1_ConfirmCreateMIDIIn InstrumentMIDIInChannel
 # RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
+#   2026-08-14  direct-commit  touched: Music_CreateMIDIInInstruments Music_GetMIDIMultiEnable Music_SetMIDIMultiEnable MIDIMultiEnable Glbl_MIDIMulti_Toggle Glbl_MIDIMulti_ToggleGuarded O1_ConfirmCreateMIDIIn
 #   2026-06-04  direct-commit  touched: Music_CreateMIDIInInstruments MIDIMultiEnable Glbl_Shift_F4 MIDIMulti_Route MMR_FindInst O1_ConfirmCreateMIDIIn
 #   2026-06-03  direct-commit  touched: Glbl_Shift_F4
 #   2026-06-03  direct-commit  touched: Glbl_Shift_F4
@@ -146,6 +149,43 @@ Feature: Multitimbral MIDI-In
     When the user activates it
     Then the live router is flipped on or off without destroying any instruments
     And the info line confirms "Multitimbral MIDI-In: ON" / ": OFF"
+
+  @shipped @build-verified @hw-untested
+  Scenario: Enabling it from Sample mode offers to make the whole move
+    # cite: IT_G.ASM Glbl_MIDIMulti_ToggleGuarded -- the button's handler as of
+    #       2026-08-14; IT_OBJ1.ASM MIDIMultiToggleButton now points here
+    # cite: same O1_ConfirmCreateMIDIIn dialog and Music_CreateMIDIInInstruments
+    #       proc that Shift-F4 uses -- a second doorway, not a second implementation
+    Given the song is in Sample mode
+    When the user activates the Shift-F1 multitimbral toggle
+    Then IT asks whether to map the current samples to MIDI-In 01-16
+    And on yes it creates instruments 01-16, switches the song to Instrument mode,
+      and turns the router on
+    And on no it leaves the router OFF and says it needs Instrument mode
+
+  @design-note
+  Scenario: Why "ON" in Sample mode was a lie worth removing
+    # The router matches an incoming channel against each INSTRUMENT's MIDI-In
+    # channel field (MMR_FindInst). In Sample mode there are no instruments to
+    # match, so the old handler flipped the flag, reported "Multitimbral MIDI-In:
+    # ON", and then routed nothing -- a success message for a no-op, which is the
+    # worst kind. Esa's framing: it should ask, switch mode, then create the rig,
+    # "cos that's how it should roll".
+    #
+    # Declining therefore leaves it OFF rather than enabling it anyway: an enabled
+    # router with nothing to route to is the exact state this change exists to stop
+    # reporting as success.
+    Given a switch whose effect depends on state the user has not set up
+    Then offer to set that state up, and do not claim success without it
+
+  @design-note
+  Scenario: Why the flag is set directly and not through F12
+    # cite: IT_G.ASM -- Or Byte Ptr [DS:2Ch], 4 on the song segment
+    # Bit 2 of [songseg:2Ch] is the Instrument-mode flag. Setting it directly is
+    # deliberate, and copied from Shift-F4: F12's F_SetControlInstrument runs a
+    # clear/remap path that would discard the 01-16 mapping just created.
+    Given the mapping has just been built
+    Then the mode flag is set directly, so the mapping survives it
 
   # --- Known limits carried forward (open report-card items) -----------------
 

@@ -28,7 +28,7 @@
       "id": "alt-r-replicate-at-cursor",
       "kind": "feature",
       "name": "Alt-R replicate at cursor",
-      "claims": 11
+      "claims": 13
     },
     {
       "id": "conversation-2026-06-03-what-we-accomplished",
@@ -316,14 +316,14 @@
       "name": "os"
     },
     {
-      "id": "subprocess",
-      "kind": "entity",
-      "name": "subprocess"
-    },
-    {
       "id": "re",
       "kind": "entity",
       "name": "re"
+    },
+    {
+      "id": "subprocess",
+      "kind": "entity",
+      "name": "subprocess"
     },
     {
       "id": "json",
@@ -349,12 +349,7 @@
     },
     {
       "from": "features-gen-keymaps-py",
-      "to": "os",
-      "type": "depends_on"
-    },
-    {
-      "from": "features-gen-keymaps-py",
-      "to": "subprocess",
+      "to": "glob",
       "type": "depends_on"
     },
     {
@@ -364,12 +359,17 @@
     },
     {
       "from": "features-gen-keymaps-py",
-      "to": "glob",
+      "to": "os",
       "type": "depends_on"
     },
     {
       "from": "features-gen-keymaps-py",
       "to": "re",
+      "type": "depends_on"
+    },
+    {
+      "from": "features-gen-keymaps-py",
+      "to": "subprocess",
       "type": "depends_on"
     },
     {

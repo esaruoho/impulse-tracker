@@ -42,6 +42,7 @@
 #
 # WATCH: Glbl_Shift_F4 Music_CreateMIDIInInstruments Glbl_F4
 # RESULT-LOG >> (auto-maintained by .githooks/post-merge)
+#   2026-08-14  direct-commit  touched: Music_CreateMIDIInInstruments
 #   2026-06-04  direct-commit  touched: Glbl_Shift_F4 Music_CreateMIDIInInstruments
 #   2026-06-03  direct-commit  touched: Glbl_Shift_F4 Glbl_F4
 #

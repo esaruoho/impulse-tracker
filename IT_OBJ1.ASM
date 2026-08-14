@@ -188,6 +188,7 @@ ENDIF
                 Extrn   Glbl_Alt_F12:Far
                 Extrn   Glbl_MIDITransport_Toggle:Far
                 Extrn   Glbl_MIDIMulti_Toggle:Far
+                Extrn   Glbl_MIDIMulti_ToggleGuarded:Far
                 Extrn   Glbl_MIDIStopF8_Toggle:Far
                 Extrn   Glbl_LoadSample:Far
                 Extrn   Glbl_LoadInstrument:Far
@@ -8824,7 +8825,7 @@ MIDIMultiToggleButton   DW      2
                         DW      0
                         DW      0, 0
                         DW      2
-                        DD      DWord Ptr Glbl_MIDIMulti_Toggle
+                        DD      DWord Ptr Glbl_MIDIMulti_ToggleGuarded
                         DW      0, 0, 0
                         DB      2, 46, 32, 48
                         DB      8
