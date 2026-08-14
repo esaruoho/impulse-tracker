@@ -66,6 +66,7 @@
 # WATCH: PE_ScrollLockFollow TracePlayback PEFunction_ToggleTrace Glbl_F2 K_SetScrollLock SampleGlobalKeyList InstrumentGlobalKeyList
 # RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
 #   2026-08-14  direct-commit  touched: Glbl_F2
+#   2026-08-14  direct-commit  touched: Glbl_F2
 #   2026-08-14  direct-commit  touched: PE_ScrollLockFollow Glbl_F2
 #   2026-08-14  direct-commit  touched: PE_ScrollLockFollow Glbl_F2
 #   2026-08-14  direct-commit  touched: Glbl_F2

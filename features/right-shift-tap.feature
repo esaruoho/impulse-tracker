@@ -8,7 +8,8 @@
 #
 # STATUS: shipped and HARDWARE-VERIFIED by Esa on the DOS PC, 2026-08-14 -- tapped
 # from F5, F3, F4 and F11, each time landing in the pattern editor with Follow Mode
-# on, and tapping again inside the editor switches Follow off. BOTH halves confirmed. The tap is polled in the dispatcher's idle path and dispatches Scroll
+# on, and tapping again inside the editor switches Follow off. BOTH halves are
+# confirmed. The tap is polled in the dispatcher's idle path and dispatches Scroll
 # Lock's key word, reusing PE_ScrollLockFollow unchanged. The transition probe that
 # proved it out has been removed again -- see the @corrected scenarios.
 #
