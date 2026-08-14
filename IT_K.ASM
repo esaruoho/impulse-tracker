@@ -1624,7 +1624,15 @@ K_PRST_HaveNow:
                                                 ; DH = is any OTHER key down?
                 Xor     DH, DH
                 Mov     SI, 0
-                Mov     CX, 518
+                Mov     CX, 256                 ; the KEY-DOWN map is 256 bytes.
+                                                ; K_ResetKeyboardTables zeroes 518
+                                                ; because a second table follows it,
+                                                ; and K_DrawTables draws 20h*8 = 256
+                                                ; entries. Scanning 518 read into
+                                                ; that second table, which is never
+                                                ; all-zero, so every poll decided
+                                                ; "another key is down" and no tap
+                                                ; was ever reported.
 
 K_PRST_ScanLoop:
                 Cmp     SI, 36h                 ; skip right shift itself

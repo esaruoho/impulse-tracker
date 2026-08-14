@@ -718,7 +718,6 @@ DumpSampleName          DB      "SMP00.WAV", 0
 DumpSampleCount         DW      0
 DumpAllSamplesMsg       DB      "Dumped ", 0FDh, 'D', " samples as SMPnn.WAV", 0
 DumpNoSamplesMsg        DB      "No samples to dump", 0
-DumpBadPathMsg          DB      "Dump aborted: Quicksave folder invalid (check F12)", 0
 
 DiskOptions             DB      0
 EditTimer               DD      0
@@ -8963,8 +8962,15 @@ Proc            D_DumpAllSamplesWAV Far
                 Cld                             ; the two Rep MovsB below depend on
                                                 ; it; cheaper than trusting callers
 
-                Call    D_GotoRenderDirectory
-                JC      D_DumpAll_BadPath
+                                                ; Samples go where the SAMPLE
+                                                ; browser is pointing, not to the
+                                                ; Quicksave folder: a pattern render
+                                                ; is a hand-off artefact, a sample
+                                                ; dump belongs next to the samples
+                                                ; you are working with. Shift-Right
+                                                ; still uses Quicksave.
+                Mov     SI, Offset SampleDirectory
+                Call    D_SetDriveDirectory
 
                 Mov     CS:[DumpSampleCount], 0
                 Mov     BX, 1
@@ -9032,12 +9038,6 @@ D_DumpAll_None:
                 Mov     SI, Offset DumpNoSamplesMsg
                 Call    SetInfoLine
                 Jmp     D_DumpAll_End
-
-D_DumpAll_BadPath:
-                Push    CS
-                Pop     DS
-                Mov     SI, Offset DumpBadPathMsg
-                Call    SetInfoLine
 
 D_DumpAll_End:
                 Pop     ES

@@ -13,5 +13,5 @@ Source module in impulse-tracker.
 - .py module · 13 functions. !/usr/bin/env python3
 
 ## Relationships
-- depends_on [[termios]]
 - depends_on [[glob]]
+- depends_on [[termios]]
