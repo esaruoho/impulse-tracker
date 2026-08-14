@@ -14,7 +14,7 @@
 | alt-r-replicate | 8 | ✓ | ~ partial | ✓ | @build-verified @design-note @hw-untested @hw-verified @runtime-untested @runtime-verified @shipped |
 | ctrl-o-empty-orderlist-crash | 7 | ✓ | ✗ | ✗ | @build-verified @hw-untested @known-limit @runtime-untested @shipped |
 | debug-logging-channels | 9 | ✗ | — | ✓ | @design-note @hw-verified @shipped @todo |
-| dump-all-samples-wav | 8 | ✓ | — | ✗ | @build-verified @corrected @hw-untested @shipped @todo |
+| dump-all-samples-wav | 9 | ✓ | — | ✓ | @build-verified @corrected @hw-untested @hw-verified @shipped @todo |
 | f11-order-list | 9 | ✓ | — | ✓ | @build-verified @hw-untested @hw-verified @shipped @stock |
 | f12-song-variables | 4 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
 | f2-pattern-editor | 4 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
@@ -54,5 +54,5 @@
 - Cards: 38
 - Build-verified: 35
 - Runtime-verified in DOSBox-X: 3 full + 8 partial
-- **Hardware-verified: 15**  ·  hardware-untested: 20
+- **Hardware-verified: 16**  ·  hardware-untested: 19
 

@@ -52,7 +52,7 @@
       "id": "dumping-every-sample-in-the-song-to-wav-in-one-keystroke",
       "kind": "feature",
       "name": "Dumping every sample in the song to WAV in one keystroke",
-      "claims": 6
+      "claims": 8
     },
     {
       "id": "external-midi-real-time-sync",
@@ -317,6 +317,11 @@
       "name": "glob"
     },
     {
+      "id": "os",
+      "kind": "entity",
+      "name": "os"
+    },
+    {
       "id": "subprocess",
       "kind": "entity",
       "name": "subprocess"
@@ -325,11 +330,6 @@
       "id": "re",
       "kind": "entity",
       "name": "re"
-    },
-    {
-      "id": "os",
-      "kind": "entity",
-      "name": "os"
     },
     {
       "id": "json",
@@ -355,12 +355,7 @@
     },
     {
       "from": "features-gen-keymaps-py",
-      "to": "subprocess",
-      "type": "depends_on"
-    },
-    {
-      "from": "features-gen-keymaps-py",
-      "to": "re",
+      "to": "os",
       "type": "depends_on"
     },
     {
@@ -370,12 +365,17 @@
     },
     {
       "from": "features-gen-keymaps-py",
-      "to": "os",
+      "to": "sys",
       "type": "depends_on"
     },
     {
       "from": "features-gen-keymaps-py",
-      "to": "sys",
+      "to": "subprocess",
+      "type": "depends_on"
+    },
+    {
+      "from": "features-gen-keymaps-py",
+      "to": "re",
       "type": "depends_on"
     },
     {
@@ -390,12 +390,12 @@
     },
     {
       "from": "features-hwtest-py",
-      "to": "glob",
+      "to": "termios",
       "type": "depends_on"
     },
     {
       "from": "features-hwtest-py",
-      "to": "termios",
+      "to": "glob",
       "type": "depends_on"
     },
     {

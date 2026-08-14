@@ -71,14 +71,22 @@ Feature: Dumping every sample in the song to WAV in one keystroke
     When the user presses Ctrl-Shift-Right
     Then nothing is written and the info line says the folder is invalid
 
-  @shipped @build-verified @hw-untested
-  Scenario: Dumping while the song plays does not shriek, and playback comes back
-    # cite: IT_DISK.ASM D_DumpAllSamplesWAV -- Music_GetPlayMode snapshot, Music_Stop
-    #       before the first EMS mapping, Music_PlayPartSong / Music_PlayPattern after
+  @shipped @build-verified @hw-verified
+  Scenario: Dumping while the song plays keeps playing, and the files are correct
+    # cite: IT_DISK.ASM D_SaveBlockEMSSafe -- per 512-byte chunk: Cli,
+    #       E_SaveEMSPageFrame, map, copy to DumpChunkBuf, E_RestoreEMSPageFrame,
+    #       Sti, and only THEN D_SaveBlock. The mapping is never wrong while an
+    #       interrupt can fire, and the disk write happens with interrupts enabled.
+    # cite: both writers route through it while DumpSafeCopy is set --
+    #       D_SaveSampleData (16-bit) and D_SaveSampleDataConvert (8-bit)
+    # HW-verified 2026-08-14: 12 files off 05_LRPAN.IT dumped during playback. All
+    # structurally valid, all real audio (roughness 0.3-11%, worst eighth <= 19.7%,
+    # so no mid-file glitch), 8-bit files centred 127-132 as unsigned PCM should be.
+    # Playback was not interrupted and there was no noise.
     Given the song is playing
     When the user dumps the samples
-    Then playback stops for the duration and resumes at the same order and row
-    And no noise is produced, and the files are correct
+    Then playback continues, unbroken and quiet
+    And every file is correct
 
   @corrected
   Scenario: Dumping during playback made the mixer scream
@@ -102,7 +110,31 @@ Feature: Dumping every sample in the song to WAV in one keystroke
     # Worth remembering for anything else that walks sample memory in bulk: the EMS
     # page frame is shared with the live mixer.
     Given two readers share one EMS page frame with no interlock
-    Then the bulk reader has to stop the realtime one first
+    Then the bulk reader has to interlock with the realtime one
+
+  @corrected
+  Scenario: The 8-bit writer was mutating the song's own sample memory
+    # The second half of the noise, and the reason the first fix only fixed half the
+    # files: 16-bit samples go through D_SaveSampleData, 8-bit through
+    # D_SaveSampleDataConvert -- and only the former had been interlocked. Dumping
+    # during playback produced perfect 16-bit files and ~77%-roughness garbage for
+    # every 8-bit one, which is what pointed at the split.
+    #
+    # Worse, that 8-bit path did this:
+    #     ClI / ConvertWriteData / D_SaveBlock / ConvertWriteData / StI
+    # where ConvertWriteData is "Xor Byte Ptr [SI], 80h" -- it flips the sign bit IN
+    # PLACE in the live sample memory to make WAV's unsigned 8-bit, writes, then
+    # flips it back. So while the song played the mixer read those bytes mid-flip and
+    # played 8-bit samples with a +128 DC offset. That is the burst of noise, and for
+    # 8-bit it was never EMS contention at all. It also held Cli across an Int 21h
+    # write: the documented hang hazard, and pointless, since DOS re-enables
+    # interrupts itself.
+    #
+    # The dump now copies out, converts ITS OWN buffer, and writes that. The song's
+    # sample memory is never modified. The single-sample save from F3 keeps the
+    # original in-place path -- one short write, and not what was breaking.
+    Given a converter that edits the data in place to save it
+    Then anything else reading that data at the time hears the conversion
 
   @corrected
   Scenario: Ctrl-Shift-Right cannot be a keymap row -- it is a live modifier test

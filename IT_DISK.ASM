@@ -32,6 +32,11 @@ EndS
 
                 Extrn   E_UnInitEMS:Far
                 Extrn   E_MapEMSMemory:Far
+                                                ; the interlock that lets the sample
+                                                ; dump run while the mixer plays
+                                                ; FEATURE-CARD >> features/dump-all-samples-wav.feature
+                Extrn   E_SaveEMSPageFrame:Far
+                Extrn   E_RestoreEMSPageFrame:Far
                 Extrn   E_GetEMSPageFrame:Far
 
                 Extrn   Glbl_F3:Far
@@ -744,6 +749,18 @@ DumpResumeMode          DW      0       ; play state to restore after the dump
 DumpResumeRow           DW      0
 DumpResumePattern       DW      0
 DumpResumeOrder         DW      0
+DumpSafeCopy            DB      0       ; 1 = route sample reads through the interlock
+DUMPCHUNK               EQU     512     ; bytes copied per interrupts-off window.
+                                        ; Small on purpose: this is how long the mixer
+                                        ; is kept waiting, and Cli windows in this
+                                        ; codebase have a history of causing hangs.
+DumpChunkBuf            DB      DUMPCHUNK Dup (0)
+DumpSafeSample          DW      0       ; scratch for D_SaveBlockEMSSafe
+DumpSafePage            DW      0
+DumpSafeOffset          DW      0
+DumpSafeLeft            DW      0
+DumpSafeThis            DW      0
+DumpSafeConvert         DB      0       ; 1 = flip the sign bit in OUR buffer (8-bit)
 DumpNoSamplesMsg        DB      "No samples to dump", 0
 
 DiskOptions             DB      0
@@ -3464,6 +3481,8 @@ D_SaveSampleDataConvert5:
 D_SaveSampleDataConvert3:
                 Push    AX                      ; AX = sample no.
                 Push    CX                      ; CX = page no.
+                Mov     CS:[DumpSafeSample], AX
+                Mov     CS:[DumpSafePage], CX
 
                 Call    Music_GetSampleLocation
                 Mov     DX, SI
@@ -3475,6 +3494,25 @@ D_SaveSampleDataConvert3:
                 Mov     CX, DI
 
 D_SaveSampleDataConvert4:
+                                                ; Bulk dump: copy out, convert our
+                                                ; copy, write it -- the song's sample
+                                                ; memory is never modified and the
+                                                ; interrupts-off window is one 512-byte
+                                                ; copy instead of a whole Int 21h write.
+                                                ; FEATURE-CARD >> features/dump-all-samples-wav.feature
+                Cmp     Byte Ptr CS:[DumpSafeCopy], 0
+                JE      D_SaveSampleDataConvert6
+                Test    BP, 2                   ; safe path handles 8-bit only
+                JNZ     D_SaveSampleDataConvert6
+
+                Mov     CS:[DumpSafeOffset], DX
+                Mov     CS:[DumpSafeLeft], CX
+                Mov     Byte Ptr CS:[DumpSafeConvert], 1
+                Call    D_SaveBlockEMSSafe
+                Mov     Byte Ptr CS:[DumpSafeConvert], 0
+                Jmp     D_SaveSampleDataConvert7
+
+D_SaveSampleDataConvert6:
                 ClI
 
                 Call    ConvertWriteData
@@ -3482,6 +3520,8 @@ D_SaveSampleDataConvert4:
                 Call    ConvertWriteData
 
                 StI
+
+D_SaveSampleDataConvert7:
 
                 Pop     CX
                 Pop     AX
@@ -4136,6 +4176,12 @@ D_SaveSampleData1:
 D_SaveSampleData3:
                 Push    AX                      ; AX = sample no.
                 Push    CX                      ; CX = page no.
+                                                ; Stash both before they are clobbered
+                                                ; -- the interlocked writer re-maps per
+                                                ; chunk and needs them again.
+                                                ; FEATURE-CARD >> features/dump-all-samples-wav.feature
+                Mov     CS:[DumpSafeSample], AX
+                Mov     CS:[DumpSafePage], CX
 
                 Call    Music_GetSampleLocation
                 Mov     DX, SI
@@ -4147,7 +4193,23 @@ D_SaveSampleData3:
                 Mov     CX, DI
 
 D_SaveSampleData4:
+                                                ; The bulk dump routes through the
+                                                ; EMS interlock so it can run while the
+                                                ; mixer plays. The single-sample save
+                                                ; from F3 keeps the original path
+                                                ; exactly: it is one short write, and
+                                                ; not the thing that was breaking.
+                Cmp     Byte Ptr CS:[DumpSafeCopy], 0
+                JE      D_SaveSampleData5
+
+                Mov     CS:[DumpSafeOffset], DX
+                Mov     CS:[DumpSafeLeft], CX
+                Call    D_SaveBlockEMSSafe
+                Jmp     D_SaveSampleData6
+
+D_SaveSampleData5:
                 Call    D_SaveBlock
+D_SaveSampleData6:
                 Pop     CX
                 Pop     AX
                 JC      D_SaveSampleData2
@@ -4970,6 +5032,124 @@ Proc            D_NoSaveMessage Far
 EndP            D_NoSaveMessage
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
+; D_SaveBlockEMSSafe -- write CX bytes of sample data to BX (the file) while the
+; mixer is playing.
+;
+;   In: BX = file handle, and the caller has set DumpSafeSample (sample number),
+;       DumpSafePage (CH = the 32K page, as Music_GetSampleLocation wants it),
+;       DumpSafeOffset (offset of this block inside that page) and DumpSafeLeft
+;       (byte count). Registers are not used for these because the page number and
+;       the byte count would both want CX.
+;
+; The problem this exists for: reading a sample maps its pages into the EMS page
+; frame, and the mixer maps ITS pages into that same frame from the IRQ. Handing
+; DOS a pointer into the frame and letting it read for milliseconds loses that race
+; both ways -- the mixer plays whatever we mapped (white noise), and we write
+; whatever the mixer mapped (garbage in the WAV).
+;
+; So the data is taken in DUMPCHUNK-byte bites, each one: interrupts off, save the
+; page map, map our page, copy into a conventional-memory buffer, put the map back,
+; interrupts on -- and only THEN hand the buffer to DOS. The mapping is never wrong
+; while an interrupt can fire, and the write happens with interrupts enabled.
+;
+; E_SaveEMSPageFrame / E_RestoreEMSPageFrame (Int 67h AH=47h/48h) already existed in
+; IT_EMS.ASM, exported and called by nobody. This is what they were for.
+; FEATURE-CARD >> features/dump-all-samples-wav.feature
+Proc            D_SaveBlockEMSSafe
+
+                Push    AX
+                Push    CX
+                Push    DX
+                Push    SI
+                Push    DI
+                Push    DS
+                Push    ES
+
+D_SBES_Chunk:
+                Mov     CX, CS:[DumpSafeLeft]
+                JCXZ    D_SBES_Done
+                Cmp     CX, DUMPCHUNK
+                JBE     D_SBES_HaveCount
+                Mov     CX, DUMPCHUNK
+D_SBES_HaveCount:
+                Mov     CS:[DumpSafeThis], CX
+
+                                                ; --- interrupts off: map, copy, unmap
+                Cli
+                Call    E_SaveEMSPageFrame
+
+                Mov     AX, CS:[DumpSafeSample]
+                Mov     CX, CS:[DumpSafePage]
+                Call    Music_GetSampleLocation ; DS:SI -> start of this 32K page
+                Add     SI, CS:[DumpSafeOffset]
+
+                Push    CS
+                Pop     ES
+                Mov     DI, Offset DumpChunkBuf
+                Mov     CX, CS:[DumpSafeThis]
+                ClD
+                Rep     MovsB
+
+                Call    E_RestoreEMSPageFrame
+                StI
+
+                                                ; 8-bit: IT stores samples SIGNED and
+                                                ; WAV wants UNSIGNED. The stock path
+                                                ; flips the sign bit IN PLACE in the
+                                                ; sample memory, writes, and flips it
+                                                ; back -- so while the song plays the
+                                                ; mixer reads those bytes mid-flip and
+                                                ; plays 8-bit samples with a +128 DC
+                                                ; offset. THAT is the burst of noise,
+                                                ; and it is not EMS contention at all.
+                                                ; Converting our own copy leaves the
+                                                ; song's memory alone.
+                Cmp     Byte Ptr CS:[DumpSafeConvert], 0
+                JE      D_SBES_NoConvert
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset DumpChunkBuf
+                Mov     CX, CS:[DumpSafeThis]
+                JCXZ    D_SBES_NoConvert
+D_SBES_Flip:
+                Xor     Byte Ptr [SI], 80h
+                Inc     SI
+                Loop    D_SBES_Flip
+D_SBES_NoConvert:
+                                                ; --- and now the slow part, safely
+                Push    CS
+                Pop     DS
+                Mov     DX, Offset DumpChunkBuf
+                Mov     CX, CS:[DumpSafeThis]
+                Call    D_SaveBlock
+                JC      D_SBES_Failed
+
+                Mov     AX, CS:[DumpSafeThis]
+                Add     CS:[DumpSafeOffset], AX
+                Sub     CS:[DumpSafeLeft], AX
+                Jmp     D_SBES_Chunk
+
+D_SBES_Done:
+                ClC
+                Jmp     D_SBES_Exit
+
+D_SBES_Failed:
+                StC
+
+D_SBES_Exit:
+                Pop     ES
+                Pop     DS
+                Pop     DI
+                Pop     SI
+                Pop     DX
+                Pop     CX
+                Pop     AX
+                Ret
+
+EndP            D_SaveBlockEMSSafe
+
+;-------------------------------------------------------------------------------
 
 Proc            D_SaveBlock             ; DS:DX points to buffer
                                         ; BX = file handle
@@ -9044,15 +9224,18 @@ Proc            D_DumpAllSamplesWAV Far
                                                 ; remapped under it. Play state is put
                                                 ; back at the end.
                                                 ; FEATURE-CARD >> features/dump-all-samples-wav.feature
-                Call    Music_GetPlayMode       ; AX=mode BX=row CX=pattern DX=order
-                Mov     CS:[DumpResumeMode], AX
-                Mov     CS:[DumpResumeRow], BX
-                Mov     CS:[DumpResumePattern], CX
-                Mov     CS:[DumpResumeOrder], DX
-                Test    AX, AX
-                JZ      D_DumpAll_WasStopped
-                Call    Music_Stop
-D_DumpAll_WasStopped:
+                                                ; Playback keeps running. Every sample
+                                                ; read goes through D_SaveBlockEMSSafe
+                                                ; instead, which holds the EMS mapping
+                                                ; only for a 512-byte copy with
+                                                ; interrupts off and puts the mixer's
+                                                ; own mapping back before letting it
+                                                ; run again. Stopping the song for the
+                                                ; length of the export worked, but
+                                                ; being thrown out of playback to
+                                                ; export a few samples is not a trade
+                                                ; worth making.
+                Mov     Byte Ptr CS:[DumpSafeCopy], 1
 
                 Mov     CS:[DumpSampleCount], 0
                 Mov     BX, 1
@@ -9136,43 +9319,7 @@ D_DumpAll_None:
                 Jmp     D_DumpAll_End
 
 D_DumpAll_End:
-                                                ; Put playback back where it was.
-                Mov     AX, CS:[DumpResumeMode]
-                Test    AX, AX
-                JZ      D_DumpAll_NoResume
-                Cmp     AX, 2                   ; 2 = playing the song
-                JNE     D_DumpAll_ResumePattern
-
-                Mov     AX, CS:[DumpResumeOrder]
-                Mov     BX, CS:[DumpResumeRow]
-                Call    Music_PlayPartSong
-                Jmp     D_DumpAll_NoResume
-
-D_DumpAll_ResumePattern:
-                                                ; Pattern loop: Music_PlayPattern wants
-                                                ; the row COUNT in BX, which lives in
-                                                ; the pattern header (word 0 = packed
-                                                ; length, word 1 = rows). Getting this
-                                                ; wrong is what made renders silently
-                                                ; write no file at all.
-                                                ; cite: features/wav-render-quicksave.feature
-                Push    DS
-                Mov     AX, CS:[DumpResumePattern]
-                Push    AX
-                Call    Music_GetPattern        ; DS:SI -> pattern data
-                LodsW
-                LodsW                           ; AX = number of rows
-                Mov     BX, AX
-                Pop     AX
-                Pop     DS
-                Test    BX, BX
-                JNZ     D_DumpAll_HaveRows
-                Mov     BX, 64
-D_DumpAll_HaveRows:
-                Mov     CX, CS:[DumpResumeRow]
-                Call    Music_PlayPattern
-
-D_DumpAll_NoResume:
+                Mov     Byte Ptr CS:[DumpSafeCopy], 0
                 Pop     ES
                 Pop     DS
                 PopAD
