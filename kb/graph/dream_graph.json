@@ -187,6 +187,12 @@
       "claims": 15
     },
     {
+      "id": "rendering-a-module-without-touching-the-interface",
+      "kind": "feature",
+      "name": "Rendering a module without touching the interface",
+      "claims": 10
+    },
+    {
       "id": "sample-amplify-keeps-the-song-playing",
       "kind": "feature",
       "name": "Sample Amplify keeps the song playing",
@@ -310,14 +316,14 @@
       "name": "os"
     },
     {
-      "id": "subprocess",
-      "kind": "entity",
-      "name": "subprocess"
-    },
-    {
       "id": "re",
       "kind": "entity",
       "name": "re"
+    },
+    {
+      "id": "subprocess",
+      "kind": "entity",
+      "name": "subprocess"
     },
     {
       "id": "json",
@@ -343,17 +349,7 @@
     },
     {
       "from": "features-gen-keymaps-py",
-      "to": "sys",
-      "type": "depends_on"
-    },
-    {
-      "from": "features-gen-keymaps-py",
       "to": "os",
-      "type": "depends_on"
-    },
-    {
-      "from": "features-gen-keymaps-py",
-      "to": "subprocess",
       "type": "depends_on"
     },
     {
@@ -363,7 +359,17 @@
     },
     {
       "from": "features-gen-keymaps-py",
+      "to": "subprocess",
+      "type": "depends_on"
+    },
+    {
+      "from": "features-gen-keymaps-py",
       "to": "glob",
+      "type": "depends_on"
+    },
+    {
+      "from": "features-gen-keymaps-py",
+      "to": "sys",
       "type": "depends_on"
     },
     {
@@ -388,12 +394,12 @@
     },
     {
       "from": "features-print-card-py",
-      "to": "sys",
+      "to": "os",
       "type": "depends_on"
     },
     {
       "from": "features-print-card-py",
-      "to": "os",
+      "to": "sys",
       "type": "depends_on"
     }
   ]

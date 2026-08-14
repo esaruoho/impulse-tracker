@@ -10,13 +10,13 @@ updated: 2026-08-14
 Convey feature: features/wav-render-quicksave.feature.
 
 ## Claims
-- Scenario (L84): Shift-Right at the order-list right edge renders to Quicksave only
-- Scenario (L96): Plain Right at the same edge renders AND auto-imports
-- Scenario (L107): A single-pattern Quicksave render is named by wall-clock time
-- Scenario (L119): The prefix is a static "LL" (Lackluster), not derived from the song
-- Scenario (L130): The extension is a real .WAV, not the 3-digit pattern number
-- Scenario (L141): The auto-import opens the exact file WAVDRV wrote
-- Scenario (L155): Multi-WAV, full-song, and user-named renders keep <PFX><NNNN>
-- Scenario (L167): Two renders in the same second overwrite
+- Scenario (L85): Shift-Right at the order-list right edge renders to Quicksave only
+- Scenario (L97): Plain Right at the same edge renders AND auto-imports
+- Scenario (L108): A single-pattern Quicksave render is named by wall-clock time
+- Scenario (L120): The prefix is a static "LL" (Lackluster), not derived from the song
+- Scenario (L131): The extension is a real .WAV, not the 3-digit pattern number
+- Scenario (L142): The auto-import opens the exact file WAVDRV wrote
+- Scenario (L156): Multi-WAV, full-song, and user-named renders keep <PFX><NNNN>
+- Scenario (L168): Two renders in the same second overwrite
 
 ## Relationships

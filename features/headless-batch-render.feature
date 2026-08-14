@@ -9,8 +9,13 @@
 # the single-pattern render became SYNCHRONOUS (WAV_SyncRenderLoop), so the pump
 # loop already exists and this turned out to be mostly plumbing.
 #
-# STATUS: shipped, verified under DOSBox-X on the Mac (33 patterns of
-# 004_what.it rendered to 33 WAVs of real audio, plus 27 sample WAVs, clean exit).
+# STATUS: shipped and verified under DOSBox-X on the Mac, from a FRESH CLONE of the
+# pushed commit (which builds a byte-identical IT.EXE, md5 0e7e46dc...):
+#   OTUTE.IT  -> 9 WAVs, 747KB-1.6MB each, exit code 0 -- the whole cycle including
+#               the automatic quit, unattended
+#   O004_what.it -> 42+ WAVs, still going when the harness timeout cut it (a 1.4MB
+#               module at ~13s/pattern under DOSBox; not a hang)
+#   UTUTE.IT  -> 27 sample WAVs, clean exit
 # NOT yet run on the real DOS PC.
 #
 # WHAT THIS CARD SPAWNS (generative SEED):
@@ -49,7 +54,7 @@ Feature: Rendering a module without touching the interface
   @shipped @build-verified @dosbox-verified @hw-untested
   Scenario: Every pattern that has data becomes its own WAV
     # cite: IT_MUSIC.ASM Music_BatchRenderPatterns -- AX=0FFFFh walks 0..199
-    # Verified: IT.EXE S0 O004_what.it -> WHA0001..WHA0033.WAV, 458KB-1.1MB each
+    # Verified: IT.EXE S0 OTUTE.IT -> TWI0001..TWI0009.WAV, exit 0, no interaction
     Given a module named on the command line after /O
     When IT is started
     Then each pattern holding data is written to the Quicksave folder as a WAV
