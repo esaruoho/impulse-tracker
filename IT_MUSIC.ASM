@@ -4138,9 +4138,11 @@ Proc            Music_CreateMIDIInInstruments Far
                 Push    CS
                 Pop     DS
                 Assume DS:Music
-                Mov     BX, 2                   ; multitimbral parts at slots 02-17
-MCMI_Loop:                                      ;  (slot 01 is the drumkit, below)
-                Cmp     BX, 17
+                Mov     BX, 1                   ; multitimbral parts at slots 01-16,
+MCMI_Loop:                                      ;  so instrument N answers MIDI-in
+                                                ;  channel N. The drumkit sits at 97,
+                                                ;  clear of the 6-bank expand range.
+                Cmp     BX, 16
                 JA      MCMI_Done
                 Call    MCMI_BuildSlot
                 Inc     BX
@@ -4166,9 +4168,9 @@ Proc            Music_ExpandMIDIInTo96 Far
                 Push    CS
                 Pop     DS
                 Assume DS:Music
-                Mov     BX, 2                   ; banks fill slots 02-97 (01 = drumkit)
-MEXP_Loop:
-                Cmp     BX, 97
+                Mov     BX, 1                   ; banks fill slots 01-96
+MEXP_Loop:                                      ;  (the drumkit at 97 is above them)
+                Cmp     BX, 96
                 JA      MEXP_Done
                 Call    MCMI_BuildSlot
                 Inc     BX
@@ -4195,9 +4197,9 @@ Proc            Music_ResetMIDIInTo16 Far
                 Push    CS
                 Pop     DS
                 Assume DS:Music
-                Mov     BX, 18                  ; clear 18-97; keep 01 (drumkit) + 02-17
-MRST_Loop:
-                Cmp     BX, 97
+                Mov     BX, 17                  ; clear 17-96; keep 01-16 (the parts)
+MRST_Loop:                                      ;  and 97 (the drumkit)
+                Cmp     BX, 96
                 JA      MRST_Done
                 Mov     DI, BX
                 Add     DI, DI
@@ -4234,9 +4236,10 @@ Proc            MCMI_BuildSlot Near
                 Push    DI
                 Push    ES
                 Mov     AX, BX
-                Sub     AX, 2                   ; slot 02 -> ch 1 (slot 01 is the
-                                                ;  drumkit). channel = sample =
-                                                ;  ((BX-2) mod 16)+1.
+                Dec     AX                      ; slot 01 -> ch 1: channel = sample =
+                                                ;  ((BX-1) mod 16)+1, so instrument N
+                                                ;  answers MIDI-in channel N for the
+                                                ;  first bank.
                 Xor     DX, DX
                 Mov     CX, 16
                 Div     CX
@@ -4300,13 +4303,21 @@ Proc            MCMI_BuildDrumkit Near
                 Push    DI
                 Push    ES
 
-                Mov     AX, 1
+                Mov     AX, 97
                 Call    Music_ClearInstrument
-                Mov     DI, 2                   ; 1 * 2 -> drumkit is instrument 01
-                Mov     ES, SongDataArea
-                Mov     DI, [ES:DI+64712]       ; ES:DI -> instrument 01 header
+                Mov     DI, 97*2                ; drumkit is instrument 97 -- above the
+                Mov     ES, SongDataArea        ;  6-bank expand range (01-96) so the
+                Mov     DI, [ES:DI+64712]       ;  cycle never overwrites it
 
-                Mov     Byte Ptr [ES:DI+1Fh], 10 ; respond to MIDI channel 10
+                                                ; MIDI-in channel 0 = not routed. It
+                                                ; used to claim channel 10, but with
+                                                ; the parts back at 01-16 instrument 10
+                                                ; IS channel 10 and wins the router's
+                                                ; first match anyway -- so claiming it
+                                                ; would only look like it worked.
+                                                ; Set a channel here by hand (and clear
+                                                ; part 10's) to drive the kit over MIDI.
+                Mov     Byte Ptr [ES:DI+1Fh], 0
 
                 Push    DI                      ; name at +20h
                 Add     DI, 20h

@@ -10,10 +10,10 @@ updated: 2026-08-14
 Convey feature: features/no-samples-to-instruments-envelope-retention.feature.
 
 ## Claims
-- Scenario (L73): Initialise Instruments = YES does the upstream clear + remap
-- Scenario (L84): The envelope-retention feature and its IMPI checker are gone
-- Scenario (L93): Shift-Enter bulk-load can no longer feed the crash class
-- Scenario (L105): The I_MapEnvelope MaxNode<=25 clamp stays as defensive insurance
-- Scenario (L113): (guardrail) Do not re-introduce envelope retention without HW verify
+- Scenario (L74): Initialise Instruments = YES does the upstream clear + remap
+- Scenario (L85): The envelope-retention feature and its IMPI checker are gone
+- Scenario (L94): Shift-Enter bulk-load can no longer feed the crash class
+- Scenario (L106): The I_MapEnvelope MaxNode<=25 clamp stays as defensive insurance
+- Scenario (L114): (guardrail) Do not re-introduce envelope retention without HW verify
 
 ## Relationships

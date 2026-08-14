@@ -10,9 +10,9 @@ updated: 2026-08-14
 Convey feature: features/f12-song-variables.feature.
 
 ## Claims
-- Scenario (L65): F12 opens the song variables & configuration screen
-- Scenario (L76): A Quicksave directory row is on the F12 screen
-- Scenario (L85): Each directory row is Enter-pickable through a file browser
-- Scenario (L97): Samples->Instruments keeps drawn envelopes
+- Scenario (L66): F12 opens the song variables & configuration screen
+- Scenario (L77): A Quicksave directory row is on the F12 screen
+- Scenario (L86): Each directory row is Enter-pickable through a file browser
+- Scenario (L98): Samples->Instruments keeps drawn envelopes
 
 ## Relationships

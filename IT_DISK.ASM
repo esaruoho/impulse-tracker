@@ -143,6 +143,8 @@ ENDIF
                 Extrn   S_SetPalette:Far
 
                 Extrn   SetInfoLine:Far
+                Extrn   S_SetDirectMode:Far     ; force-painting the "starting" line
+                Extrn   UpdateInfoLine:Far      ; features/dump-all-samples-wav.feature
                 Extrn   SetInfoLine2:Far
                 Extrn   ClearInfoLine:Far
 
@@ -715,8 +717,23 @@ IF SAVESAMPLEWAV
 ENDIF
 
 DumpSampleName          DB      "SMP00.WAV", 0
+                                        ; The 80-byte header copy the dump hands to
+                                        ; D_SaveRawSampleInternal. It used to be
+                                        ; staged in DiskDataArea, which is IT's
+                                        ; SHARED disk buffer -- fine on a machine with
+                                        ; room to spare, garbage on Esa's real DOS box,
+                                        ; where it is reused (it overlaps the EMS
+                                        ; window / file cache) between the copy and the
+                                        ; read. The writer then took Length, C5Speed
+                                        ; and the 8/16-bit flag from whatever had
+                                        ; landed there: WAVs with nonsense sample
+                                        ; rates, wrong bit depth, and IT's own code
+                                        ; segment as audio.
+                                        ; FEATURE-CARD >> features/dump-all-samples-wav.feature
+DumpHeaderCopy          DB      80 Dup (0)
 DumpSampleCount         DW      0
 DumpAllSamplesMsg       DB      "Dumped ", 0FDh, 'D', " samples as SMPnn.WAV", 0
+DumpStartMsg            DB      "Starting batch export of samples as .WAV...", 0
 DumpNoSamplesMsg        DB      "No samples to dump", 0
 
 DiskOptions             DB      0
@@ -8977,6 +8994,30 @@ Proc            D_DumpAllSamplesWAV Far
                                                 ; SampleDirectory when it is empty.
                 Call    D_GotoRenderDirectory
 
+                                                ; Say so BEFORE the work, so a slow
+                                                ; dump cannot look like a failure.
+                                                ; SetInfoLine only STORES the text --
+                                                ; the main loop paints it, and this
+                                                ; proc blocks until every sample is
+                                                ; written, so without the force-paint
+                                                ; below the message would appear only
+                                                ; AFTER the dump finished. Same reason
+                                                ; the WAV render paints "Rendering..."
+                                                ; by hand (IT_MUSIC.ASM:6473).
+                Push    CS
+                Pop     DS
+                        Assume DS:Disk
+                Mov     SI, Offset DumpStartMsg
+                Call    SetInfoLine
+
+                Push    AX
+                Mov     AL, 1
+                Call    S_SetDirectMode
+                Call    UpdateInfoLine
+                Xor     AL, AL
+                Call    S_SetDirectMode
+                Pop     AX
+
                 Mov     CS:[DumpSampleCount], 0
                 Mov     BX, 1
 
@@ -8993,11 +9034,26 @@ D_DumpAll_Loop:
                 Test    Byte Ptr [SI+12h], 1    ; does the sample exist?
                 JZ      D_DumpAll_Next
 
-                                                ; Copy the header so the filename
-                                                ; can be replaced without editing
-                                                ; the song's own sample record.
-                Mov     ES, CS:DiskDataArea
-                Xor     DI, DI
+                                                ; TEMPORARY probe. The dump is
+                                                ; byte-exact in DOSBox for this very
+                                                ; module, but writes IT's CODE segment
+                                                ; on Esa's real DOS box -- so log where
+                                                ; Music_GetSampleLocation is being sent:
+                                                ; [SI+48h] memory type (1=conventional,
+                                                ; 2=EMS, 0=none), [SI+49h] EMS page,
+                                                ; [SI+4Ah] segment-or-handle.
+                                                ; cite: features/debug-logging-channels.feature
+                Call    D_DumpProbe
+
+                                                ; Copy the header so the filename can
+                                                ; be replaced without editing the
+                                                ; song's own sample record. The
+                                                ; destination is OUR OWN buffer in the
+                                                ; Disk segment -- never DiskDataArea,
+                                                ; which IT reuses underneath us.
+                Push    CS
+                Pop     ES
+                Mov     DI, Offset DumpHeaderCopy
                 Push    SI
                 Mov     CX, 80
                 Rep     MovsB
@@ -9008,13 +9064,12 @@ D_DumpAll_Loop:
                 Push    CS                      ; splice the name in at offset 4
                 Pop     DS
                 Mov     SI, Offset DumpSampleName
-                Mov     DI, 4
+                Mov     DI, Offset DumpHeaderCopy+4
                 Mov     CX, 10
                 Rep     MovsB
 
-                Push    ES                      ; DS:SI = the patched copy
-                Pop     DS
-                Xor     SI, SI
+                                                ; DS:SI = the patched copy, in CS
+                Mov     SI, Offset DumpHeaderCopy
 
                 Call    D_SaveRawSampleInternal
                 JC      D_DumpAll_Next          ; per-sample failure: it has already
@@ -9056,6 +9111,99 @@ EndP            D_DumpAllSamplesWAV
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 ; BX = slot 1..99 -> patch the two digits of CS:DumpSampleName ("SMPnn.WAV").
+
+DumpProbeName   DB      "SMPLOG.TXT", 0
+DumpProbeBuf    DB      "nn t=TT pg=PP seg=SSSS flg=FF", 13, 10
+DumpProbeLen    EQU     $ - DumpProbeBuf
+
+Proc            D_DumpProbeHex Near             ; AL = byte, DI -> 2 chars (CS)
+                Push    AX
+                Push    BX
+                Mov     BL, AL
+                ShR     AL, 4
+                Call    D_DumpProbeNib
+                Mov     [CS:DI], AL
+                Mov     AL, BL
+                And     AL, 0Fh
+                Call    D_DumpProbeNib
+                Mov     [CS:DI+1], AL
+                Pop     BX
+                Pop     AX
+                Ret
+EndP            D_DumpProbeHex
+
+Proc            D_DumpProbeNib Near
+                Add     AL, '0'
+                Cmp     AL, '9'
+                JBE     D_DPN_Done
+                Add     AL, 'A'-'0'-10
+D_DPN_Done:
+                Ret
+EndP            D_DumpProbeNib
+
+; BX = sample number, DS:SI -> real sample header. Appends one line to SMPLOG.TXT
+; in the current directory. All registers preserved.
+Proc            D_DumpProbe Near
+                PushF
+                PushAD
+                Push    DS                      ; PushAD does NOT save DS/ES, and this
+                Push    ES                      ; proc sets DS=CS -- without these the
+                                                ; caller's DS (the SONG segment) came
+                                                ; back as the Disk segment and the
+                                                ; header copy that follows read 80
+                                                ; bytes of code instead of the sample
+                                                ; header.
+
+                Mov     AL, BL                  ; sample number
+                Mov     DI, Offset DumpProbeBuf
+                Call    D_DumpProbeHex
+                Mov     AL, [SI+48h]            ; memory type
+                Mov     DI, Offset DumpProbeBuf+5
+                Call    D_DumpProbeHex
+                Mov     AL, [SI+49h]            ; EMS page
+                Mov     DI, Offset DumpProbeBuf+11
+                Call    D_DumpProbeHex
+                Mov     AX, [SI+4Ah]            ; segment / handle
+                Push    AX
+                Mov     AL, AH
+                Mov     DI, Offset DumpProbeBuf+18
+                Call    D_DumpProbeHex
+                Pop     AX
+                Mov     DI, Offset DumpProbeBuf+20
+                Call    D_DumpProbeHex
+                Mov     AL, [SI+12h]            ; flags
+                Mov     DI, Offset DumpProbeBuf+27
+                Call    D_DumpProbeHex
+
+                Push    CS
+                Pop     DS
+                Mov     DX, Offset DumpProbeName
+                Mov     AX, 3D02h
+                Int     21h
+                JNC     D_DP_Open
+                Mov     AH, 3Ch
+                Xor     CX, CX
+                Int     21h
+                JC      D_DP_Done
+D_DP_Open:
+                Mov     BX, AX
+                Mov     AX, 4202h
+                Xor     CX, CX
+                Xor     DX, DX
+                Int     21h
+                Mov     DX, Offset DumpProbeBuf
+                Mov     CX, DumpProbeLen
+                Mov     AH, 40h
+                Int     21h
+                Mov     AH, 3Eh
+                Int     21h
+D_DP_Done:
+                Pop     ES
+                Pop     DS
+                PopAD
+                PopF
+                Ret
+EndP            D_DumpProbe
 
 Proc            D_DumpBuildName Near
 
