@@ -8835,6 +8835,12 @@ IF SAVESAMPLEWAV
 D_SaveWAVHeader1:
                 Mov     [CS:WAVEDataSize], EAX
                 Mov     [CS:WAVEBytesPerSecond], ECX
+                                                ; RIFF chunk size = 36 + data.
+                                                ; Upstream left this at 0, which
+                                                ; some hosts reject outright and
+                                                ; others read as a 0-length file.
+                Add     EAX, 36
+                Mov     [CS:WAVEFileSize], EAX
 ENDIF
                 Push    DS
                 Push    SI
@@ -8954,6 +8960,9 @@ Proc            D_DumpAllSamplesWAV Far
                 Pop     DS
                         Assume DS:Disk
 
+                Cld                             ; the two Rep MovsB below depend on
+                                                ; it; cheaper than trusting callers
+
                 Call    D_GotoRenderDirectory
                 JC      D_DumpAll_BadPath
 
@@ -8997,6 +9006,8 @@ D_DumpAll_Loop:
                 Xor     SI, SI
 
                 Call    D_SaveRawSampleInternal
+                JC      D_DumpAll_Next          ; per-sample failure: it has already
+                                                ; put a message up; don't count it
 
                 Inc     CS:[DumpSampleCount]
 

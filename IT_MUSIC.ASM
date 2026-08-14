@@ -97,6 +97,7 @@ include network.inc
         Global  Music_SetUserBase:Far
         Global  Music_ClearRenderNoImport:Far
         Global  Music_GetMuteChannelTable:Far
+        Global  Music_InvertChannelMutes:Far
         Global  Music_FindFreePattern:Far
         Global  PE_AppendCloneLog:Far
         Global  PE_AppendExtendLog:Far
@@ -10554,6 +10555,37 @@ EndP            Music_InitMuteTable
 ; Used by IT_PE.ASM's clone-pattern path to optionally wipe events in muted
 ; channels when producing a "what-you-heard" snapshot.
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+; Invert every channel's mute: what was muted plays, what played goes quiet.
+; Pressing it twice returns exactly to the starting state, so it flips between two
+; halves of an arrangement. Loops Music_ToggleChannel rather than poking
+; MuteChannelTable directly, so the song's own per-channel bit (SongData+40h) and
+; the mixer-side Mute/Unmute calls stay consistent -- that pairing is easy to get
+; wrong by hand.
+;
+; features/invert-channel-mutes.feature
+
+Proc            Music_InvertChannelMutes Far
+
+                PushA
+
+                Xor     AX, AX
+
+Music_ICM_Loop:
+                Push    AX
+                Call    Music_ToggleChannel     ; AX = channel
+                Pop     AX
+                Inc     AX
+                Cmp     AX, 64
+                JB      Music_ICM_Loop
+
+                PopA
+                Mov     AX, 1
+                Ret
+
+EndP            Music_InvertChannelMutes
+
+;ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
 Proc            Music_GetMuteChannelTable Far
                 Push    CS
                 Pop     ES

@@ -3415,6 +3415,75 @@ PTTL_NoWrap:
                 Pop     CX
                 Loop    PTTL_RowLoop
 
+                ; --- clear the pattern breaks tiling just carried ------------
+                ; A Cxx (3) or Bxx (2) on the source's LAST row is the usual
+                ; "end of pattern" marker. Tiling copies it to the end of every
+                ; repeat, so an extended pattern still stops dead at the first
+                ; copy -- 128 rows of audio out of a 512-row pattern. Clear those,
+                ; but leave the one landing on the NEW final row so the pattern
+                ; still ends the way it did before it was tiled.
+                ;
+                ; Only runs when the source really did end with one, so a break
+                ; deliberately placed elsewhere is never touched.
+                ; BP = OLD, BX = NEW, DS = ES = PatternDataArea.
+
+                Push    AX                      ; SI = (OLD-1)*320
+                Mov     AX, BP
+                Dec     AX
+                Mov     DX, 320
+                Mul     DX
+                Mov     SI, AX
+                Pop     AX
+
+                Mov     DI, SI                  ; scan that row's 64 command bytes
+                Add     DI, 3                   ; event = note,ins,vol,cmd,data
+                Mov     CX, 64
+PTTL_ScanSrc:
+                Cmp     Byte Ptr [DI], 2        ; Bxx position jump
+                JE      PTTL_HasBreak
+                Cmp     Byte Ptr [DI], 3        ; Cxx pattern break
+                JE      PTTL_HasBreak
+                Add     DI, 5
+                Loop    PTTL_ScanSrc
+                Jmp     PTTL_Done               ; source doesn't end in a break
+
+PTTL_HasBreak:
+                Push    AX                      ; BP = row step = OLD*320
+                Mov     AX, 320
+                Mul     BP
+                Mov     BP, AX
+                Pop     AX
+
+                Push    AX                      ; DX = (NEW-1)*320 = final row
+                Mov     AX, BX
+                Dec     AX
+                Mov     DX, 320
+                Mul     DX
+                Mov     DX, AX
+                Pop     AX
+
+PTTL_BoundLoop:
+                Cmp     SI, DX
+                JAE     PTTL_Done               ; reached the final row: leave it
+
+                Mov     DI, SI
+                Add     DI, 3
+                Mov     CX, 64
+PTTL_ClrLoop:
+                Cmp     Byte Ptr [DI], 2
+                JE      PTTL_Clr
+                Cmp     Byte Ptr [DI], 3
+                JNE     PTTL_ClrNext
+PTTL_Clr:
+                Mov     Byte Ptr [DI], 0        ; command
+                Mov     Byte Ptr [DI+1], 0      ; command data
+PTTL_ClrNext:
+                Add     DI, 5
+                Loop    PTTL_ClrLoop
+
+                Add     SI, BP                  ; next repeat boundary
+                Jmp     PTTL_BoundLoop
+
 PTTL_Done:
                 Pop     ES
                 Pop     DS
@@ -13610,6 +13679,28 @@ Proc            PE_ScrollLockFollow Far
                 Pop     DS                      ; restore for Glbl_F2
                 Assume DS:Nothing
 
+                ; Land on the pattern being PLAYED, not whichever one the editor
+                ; was last left on. Follow Mode would drag the cursor there within
+                ; a row or two anyway, but arriving in the right pattern is the
+                ; point of the gesture. Stopped: leave the editor where it was.
+                Call    Music_GetPlayMode       ; AX=PlayMode, CX=CurrentPattern
+                Test    AX, AX
+                JZ      PE_SLF_NoRetarget
+                Cmp     CX, 200
+                JAE     PE_SLF_NoRetarget
+
+                Push    DS
+                Push    CS
+                Pop     DS
+                        Assume DS:Pattern
+                Mov     AX, CX                  ; AX = playing pattern
+                Xor     BX, BX                  ; row 0; Follow takes over at once
+                Mov     CX, Channel             ; keep the column you were on
+                Pop     DS
+                        Assume DS:Nothing
+                Call    PE_GotoPattern
+
+PE_SLF_NoRetarget:
                 Jmp     Glbl_F2                 ; enter Pattern Editor; Glbl_F2's
                                                 ; Far Ret hands AX=5 / DX=Offset
                                                 ; O1_PatternEditList back to the

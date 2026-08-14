@@ -192,6 +192,7 @@ ENDIF
                 Extrn   Glbl_LoadSample:Far
                 Extrn   Glbl_LoadInstrument:Far
                 Extrn   PE_ScrollLockFollow:Far ; Scroll Lock on F3/F4 -> F2+Follow
+                Extrn   Music_InvertChannelMutes:Far ; Ctrl-F9 -> flip all mutes
                                                 ; FEATURE-CARD >> features/scrolllock-follow-from-lists.feature
                 Extrn   Glbl_LeftBrace:Far
                 Extrn   Glbl_RightBrace:Far
@@ -3241,6 +3242,14 @@ OrderKeyValue           DW      157h
                         DB      1               ; Fork: Ctrl 'F' (06h, was free) ->
                         DW      6               ;   force Pattern Follow ON + jump to
                         DD      DWord Ptr PE_ScrollLockFollow ; the Pattern Editor.
+
+                        DB      0               ; Fork: Scroll Lock, same handler,
+                        DW      146h            ;   also global -- it was bound only
+                        DD      DWord Ptr PE_ScrollLockFollow ; on the F3/F4 lists.
+
+                        DB      3               ; Fork: Ctrl-F9 -> invert every
+                        DW      143h            ;   channel mute. Alt-F9 already
+                        DD      DWord Ptr Music_InvertChannelMutes ; toggles one.
                                                 ; In GlobalKeyList so it works on every
                                                 ; screen that falls through here
                                                 ; (F2/F3/F4/F11/F12, ...). A screen
