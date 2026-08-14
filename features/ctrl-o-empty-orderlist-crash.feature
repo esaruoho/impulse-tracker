@@ -60,6 +60,7 @@
 #               4041e66  terminate single-pattern WAV render (hang)
 # SESSION:      features/ctrl-o-empty-orderlist-crash.session.md
 # RESULT-LOG >> (auto-maintained by convey hooks — newest below)
+#   2026-08-14  direct-commit  touched: Music_PlayPartSong WAV_LogState
 #   2026-08-14  direct-commit  touched: Music_PlayPartSong
 #   2026-08-14  direct-commit  touched: Music_PlayPartSong
 #   2026-08-14  direct-commit  touched: Music_PlayPartSong

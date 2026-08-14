@@ -10,9 +10,12 @@ updated: 2026-08-14
 Convey feature: features/right-shift-tap.feature.
 
 ## Claims
-- Scenario (L32): A tap is detected and logged
-- Scenario (L41): Holding it as a modifier is not a tap
-- Scenario (L49): The tap actually performs the jump
-- Scenario (L66): Why the probe ships before the behaviour
+- Scenario (L44): A tap from any other screen opens the playing pattern with Follow on
+- Scenario (L56): A tap inside the pattern editor toggles Follow Mode off
+- Scenario (L65): Holding it as a modifier is not a tap
+- Scenario (L73): The tap must have exactly ONE consumer
+- Scenario (L84): The probe-first plan was right about the ISR and wrong about the queue
+- Scenario (L95): Why Scroll Lock's key word and not a new one
+- Scenario (L105): Left shift is deliberately untouched
 
 ## Relationships

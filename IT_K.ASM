@@ -1215,34 +1215,17 @@ K_GetKeyNoStartupKeyList:
 K_GetKey1:
                 Call    K_IsKeyWaiting
                 And     AX, AX
-                JNZ     K_GetKey1_HaveKey
-
-                ; --- right-shift TAP -> synthesize Scroll Lock ----------------
-                ; A bare modifier never reaches the translate chain, so it can
-                ; never produce a key word of its own. But this idle spin is the
-                ; one place that (a) runs constantly while IT waits for input and
-                ; (b) is INSIDE K_GetKey, so it can hand the dispatcher a key
-                ; word as if one had really been typed. Feed it Scroll Lock's own
-                ; word, 146h: that is bound globally to PE_ScrollLockFollow
-                ; (IT_OBJ1.ASM:3247), which already does exactly the two halves
-                ; wanted here -- from any other screen, force Follow Mode on and
-                ; enter the pattern being PLAYED; from inside the pattern editor,
-                ; toggle Follow Mode off. So the tap is not a second
-                ; implementation of the gesture, it is a second trigger for it.
-                ;
-                ; Must be the ONLY consumer of K_PollRightShiftTap: the tap is a
-                ; one-shot, so a second caller (Music_Poll used to log here)
-                ; would eat it before the dispatcher ever saw it.
-                ; features/right-shift-tap.feature
-                Call    K_PollRightShiftTap
-                Test    AX, AX
                 JZ      K_GetKey1
 
-                Mov     CX, 146h                ; Scroll Lock, as a code-0 row
-                Mov     DX, CX                  ;   sees it (full CX compare)
-                Jmp     K_GetKey20
-
-K_GetKey1_HaveKey:
+                                                ; The right-shift tap is NOT polled
+                                                ; here. This spin looks like the idle
+                                                ; loop but is not one: the dispatcher
+                                                ; polls K_IsKeyWaiting itself
+                                                ; (IT_M.ASM M_KeyBoardInput1) and only
+                                                ; calls K_GetKey once a key is already
+                                                ; queued, so this loop is barely ever
+                                                ; entered and a poll placed here saw
+                                                ; nothing. features/right-shift-tap.feature
                 Xor     SI, SI
 
                 Mov     BX, KBStart
@@ -1293,6 +1276,20 @@ K_GetKey3:
                 JE      K_GetKey17
 
                 Mov     [KeyBoardTable+SI], BH
+
+                                                ; Right-shift tap: any scancode that
+                                                ; is not right shift's own means the
+                                                ; shift was being used as a modifier
+                                                ; (or was not involved at all), so it
+                                                ; is no longer a tap candidate. Driven
+                                                ; by the key QUEUE rather than by the
+                                                ; key-down map, so one missed release
+                                                ; cannot disarm it permanently.
+                                                ; features/right-shift-tap.feature
+                Cmp     SI, 36h
+                JE      K_GetKeyNotTapBreaker
+                Mov     [RShiftTapArmed], 0
+K_GetKeyNotTapBreaker:
 
                 Cmp     CX, 13Ah
                 JNE     K_GetKey14
@@ -1631,6 +1628,13 @@ EndP            K_IsAnyKeyDown
 RShiftTapPrev   DB      0                       ; was it down last poll?
 RShiftTapArmed  DB      0                       ; still a candidate for a tap?
 
+; The D / U / T transition probe that proved this out is REMOVED: PE_LogStage
+; opens, writes and closes the log per character, and a navigation key must not
+; touch the disk -- least of all a network share. It is only ever needed again if
+; detection itself regresses, in which case: log one char at each transition and
+; read CTRLOLOG.TXT -- "D" with no "U" means the release is not being seen at all,
+; nothing at all means the poll is not running.
+
 Proc            K_PollRightShiftTap Far
 
                 Push    BX
@@ -1647,32 +1651,18 @@ Proc            K_PollRightShiftTap Far
                 Mov     DL, 1
 
 K_PRST_HaveNow:
-                                                ; DH = is any OTHER key down?
-                Xor     DH, DH
-                Mov     SI, 0
-                Mov     CX, 256                 ; the KEY-DOWN map is 256 bytes.
-                                                ; K_ResetKeyboardTables zeroes 518
-                                                ; because a second table follows it,
-                                                ; and K_DrawTables draws 20h*8 = 256
-                                                ; entries. Scanning 518 read into
-                                                ; that second table, which is never
-                                                ; all-zero, so every poll decided
-                                                ; "another key is down" and no tap
-                                                ; was ever reported.
-
-K_PRST_ScanLoop:
-                Cmp     SI, 36h                 ; skip right shift itself
-                JE      K_PRST_ScanNext
-                Cmp     [CS:KeyboardTable+SI], 0
-                JE      K_PRST_ScanNext
-                Mov     DH, 1
-                Jmp     K_PRST_ScanDone
-
-K_PRST_ScanNext:
-                Inc     SI
-                Loop    K_PRST_ScanLoop
-
-K_PRST_ScanDone:
+                                                ; "Was it used as a modifier?" is NOT
+                                                ; asked here any more. It used to scan
+                                                ; the whole key-down map for any other
+                                                ; key -- which trusts every one of 256
+                                                ; entries to be accurate, and a single
+                                                ; key whose RELEASE IT never processed
+                                                ; leaves a 1 there forever and disarms
+                                                ; the tap for the rest of the session.
+                                                ; K_GetKey now clears RShiftTapArmed as
+                                                ; it processes any scancode that is not
+                                                ; right shift's own -- driven by the key
+                                                ; QUEUE, which cannot go stale.
                 Test    DL, DL
                 JZ      K_PRST_NotDown
 
@@ -1682,9 +1672,6 @@ K_PRST_ScanDone:
                 Mov     [CS:RShiftTapArmed], 1  ; fresh press: candidate
 
 K_PRST_StillDown:
-                Test    DH, DH                  ; used as a modifier?
-                JZ      K_PRST_Store
-                Mov     [CS:RShiftTapArmed], 0  ; then it is not a tap
                 Jmp     K_PRST_Store
 
 K_PRST_NotDown:

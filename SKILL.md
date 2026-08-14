@@ -352,6 +352,102 @@ DOSBox-X without an external MIDI source streaming clock bytes can't reproduce t
 
 Audit pattern: search for `Cli` blocks in `IT_MUSIC.ASM` / sound drivers, identify what they protect, then ask "if a MIDI byte buffered during this window, would the post-PopF dispatch into `MIDISend` re-enter state we just tore down?" The fix shape is the same in each case: a scoped suppress flag, set/clear via Far helpers, gated where `MIDISend` would otherwise call back.
 
+## Keyboard state: the ISR does NOT maintain the key-down map — VERIFIED 2026-08-14
+
+This is the single most misleading thing in `IT_K.ASM`, and it cost several round
+trips. Read it before writing anything that asks "is key X held?".
+
+| Thing | Where | Who maintains it |
+|-------|-------|------------------|
+| `KeyBoardTable` — 256-byte key-down map | `IT_K.ASM:85` | **`K_GetKey`**, at `IT_K.ASM:1295` (`Mov [KeyBoardTable+SI], BH`), as it DRAINS the queue |
+| `KeyBoardBuffer` + `KBStart`/`KBEnd` — raw scancode queue | `IT_K.ASM` | `K_KBHandler` (the ISR) |
+| `Ctrl` / `Alt` flags | `IT_K.ASM` | `K_KBHandler` (the ISR) — the ONLY key state the ISR tracks |
+
+Consequences:
+
+- **`K_IsKeyDown` (BX = index) reads a map that is only as fresh as the queue has
+  been drained.** Any key whose RELEASE was never processed leaves a `1` there for
+  the rest of the session. Do not build "is any other key down?" on a full scan of
+  it — one stale byte poisons the answer permanently. Drive that kind of question
+  off the queue instead (see the right-shift tap: `K_GetKey` clears the armed flag
+  as it processes any scancode that is not the one being watched).
+- **Index = scancode with the extended-key base folded in**: base 0 for a normal
+  key, +64 or +128 for the `E0`/`E1` paths, then `AND 07Fh` of the scancode. So
+  Right Shift is `36h`, Left Shift `2Ah`, Left Ctrl `1Dh`, **Right Ctrl `9Dh`**,
+  Left Alt `38h`, Right Alt `0B8h` — IT's own uses at `IT_K.ASM:1319-1349`.
+- `BH` is 1 for a make code and 0 for a break code (`And AL,AL / JS ... / Inc BH`).
+- `K_ResetKeyboardTables` zeroes **518** bytes because a second table follows the
+  256-byte map. Scanning 518 reads into that second table, which is never all
+  zero. The map is 256 bytes; `K_DrawTables` drawing 20h*8 entries confirms it.
+
+### The main loop: `K_GetKey`'s spin is NOT the idle loop
+
+`K_GetKey` does contain `K_GetKey1: Call K_IsKeyWaiting / loop while empty`, which
+looks like the place to hook idle work. **It is not**: the dispatcher polls
+`K_IsKeyWaiting` itself at `M_KeyBoardInput1` (`IT_M.ASM:384`) and only calls
+`K_GetKey` once a key is already queued, so that spin is barely ever entered.
+
+```
+M_KeyBoardInput1:  Call MIDIBufferEmpty  -> JAE M_FunctionHandler8 (fetch key)
+                   Call K_IsKeyWaiting   -> JNZ M_FunctionHandler8 (fetch key)
+                   <-- IDLE PATH: put polled work HERE
+                   M_FunctionHandler6: IdleList, mouse, timeslice release
+M_FunctionHandler8: Call K_GetKey        ; CX = key data, DX = translated
+M_FunctionHandler9: <-- dispatch entry. Jump here with CX/DX set to inject a key.
+```
+
+**To make a gesture that has no key word of its own dispatch anyway** — a bare
+modifier tap, a timer, anything polled — detect it on that idle path, set
+`CX`/`DX` to an existing key word, and `Jmp M_FunctionHandler9`. That is the
+instruction `K_GetKey` returns to, so the synthesized key travels the identical
+route a real one does: no ISR patch, no key-queue surgery, no new binding.
+Shipped example: `features/right-shift-tap.feature` synthesizes Scroll Lock
+(`146h`) and so reuses `PE_ScrollLockFollow` untouched.
+
+### Ctrl+Shift has NO dispatcher code — discriminate in the handler
+
+There are codes for Alt, Ctrl and Shift, and nothing for combinations. Worse,
+codes 2/3/4 test only their OWN modifier bit and reject nothing else, so:
+
+- a code-4 (Shift) row **already matches Ctrl-Shift-\<key\>**;
+- a code-3 (Ctrl) row on an arrow **also swallows plain Ctrl-\<arrow\>**, which
+  in the pattern editor and on F5 is pattern navigation.
+
+So bind the Shift form and test the extra modifier live inside the handler with
+`K_IsKeyDown` (`1Dh` for either Ctrl, `2Ah`/`36h` for the shifts) — the same
+post-dispatch test the F11 order-list edge uses at `IT_PE.ASM:2308`. A "Ctrl+Shift
+row" does not exist and cannot be faked with row ordering.
+
+## Getting facts back off the DOS PC (logging channels)
+
+`features/debug-logging-channels.feature` in the repo is the authority; the
+essentials:
+
+| Channel | Call | File | Use for |
+|---------|------|------|---------|
+| char trace | `PE_LogStage` (AL = char), `PE_LogEndLine` — both Far + Global | **`PATLOG.TXT`** (`WAV_PatLogName`) | tracing a state machine: one distinct char per transition |
+| field lines | `WAV_AppendErrorLog` (DS:SI = prefix), `WAV_LogState` (AL = label) | **`CTRLOLOG.TXT`** (`WAV_ErrorLogName`) | a one-shot operation's inputs + outcome |
+| filesystem | `WAV_ProbeRenderedFile`, `WAV_PreCreateRenderedFile` | logs into CTRLOLOG.TXT | "it says it saved but there is no file" |
+
+Gotchas, each of which has cost a round trip:
+
+1. **Both open by RELATIVE name, so the log lands in cwd.** A render chdirs to the
+   Quicksave folder first, so its log lands there; an idle-path probe never
+   chdirs, so its log lands in IT's startup directory (`E:\ITNU2026`). Reading
+   the wrong folder is indistinguishable from "the probe never fired".
+2. **`PE_LogStage` opens/writes/closes per CHARACTER.** Log edges, never polls,
+   and remove the probe once it has answered — shipped navigation keys must not
+   touch a network share.
+3. **Main-loop context only.** Both use `Int 21h`: safe from the dispatcher, the
+   idle path and `Music_Poll`; never from `K_KBHandler` or the mixer IRQ. If the
+   subject is at IRQ level, have the ISR set a byte and log it from the main loop.
+4. **An empty log file is data.** It means the code holding the probe never ran —
+   that is what identified the wrong injection point for the right-shift tap.
+5. **A "healthy-looking" counter can mean never-ran.** `it=86A0` was read as a
+   good render for a whole session: `ECX` starts at 100000 = `0186A0h` and only
+   the low word is logged, so `86A0` is the counter UNTOUCHED — the loop exited on
+   its first pass. Write down what untouched looks like next to any such field.
+
 ## VRAM Debug Markers (standard hard-hang triage)
 
 For hard hangs where the screen redraw machinery is dead, IT uses a direct B800h text-buffer poke as the diagnostic primitive — established in commit `3537c0d` (Ctrl-O WAV leave hang investigation) and replicated in `ec91331` (F3 loader keyjazz hang). The proc is ~20 lines:
@@ -1133,4 +1229,4 @@ Accessor: `PE_GetForkExtConfigOffset Far` (IT_PE.ASM), returns
 | Driver↔host table | `SoundDrivers/REQPROC.INC` + `IT_MUSIC.ASM:716-742` |
 | WAV render flags | `WAV_RenderMode` (0=idle, 1=rendering), `WAV_NoImport` (armed by dispatcher), `WAV_SessionNoImport` (latched at enter, read at leave) |
 | WAV hold proc | `WAV_HoldForMarkers` (IT_MUSIC.ASM), key-dismissable 15s timeout via Int 16h AH=01h |
-| Last Analyzed | 2026-08-14 (keymap tables re-dumped from source; F5 section added) |
+| Last Analyzed | 2026-08-14 (keyboard-state ownership, the real idle path, Ctrl+Shift, logging channels) |

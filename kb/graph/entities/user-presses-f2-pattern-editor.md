@@ -10,9 +10,9 @@ updated: 2026-08-14
 Convey feature: features/f2-pattern-editor.feature.
 
 ## Claims
-- Scenario (L58): First F2 enters the pattern editor
-- Scenario (L68): Second F2 (already in the editor) opens Pattern Edit Config
-- Scenario (L80): F2-F2 remembers the chosen pattern length for new patterns
-- Scenario (L91): A freshly-entered empty pattern uses the remembered length
+- Scenario (L59): First F2 enters the pattern editor
+- Scenario (L69): Second F2 (already in the editor) opens Pattern Edit Config
+- Scenario (L81): F2-F2 remembers the chosen pattern length for new patterns
+- Scenario (L92): A freshly-entered empty pattern uses the remembered length
 
 ## Relationships

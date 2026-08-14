@@ -19,14 +19,14 @@ Convey feature: features/dist/scrolllock-follow-from-lists.gherkin.feature.
 - Scenario (L86): Follow Mode is forced ON, never toggled off, from the lists
 - Scenario (L97): The handler hands Glbl_F2 the dispatcher's own DS (no segment damage)
 - Scenario (L110): (not built) Scroll Lock / Ctrl-F from other screens (Order list F11, Song vars F12)
-- Scenario (L94): Scroll Lock inside the Pattern Editor still just toggles Follow Mode
-- Scenario (L104): Scroll Lock in the Sample List opens the Pattern Editor with Follow Mode on
-- Scenario (L118): Scroll Lock in the Instrument List does the same
-- Scenario (L135): Ctrl-F in the Sample List (F3) or Instrument List (F4)
-- Scenario (L144): Ctrl-F INSIDE the Pattern Editor (F2) toggles Follow Mode, not the config dialog
-- Scenario (L162): Ctrl-F on the Order List (F11) or Song Variables (F12) enters the editor
-- Scenario (L171): Follow Mode is forced ON, never toggled off, from the lists
-- Scenario (L182): The handler hands Glbl_F2 the dispatcher's own DS (no segment damage)
-- Scenario (L195): (not built) Scroll Lock / Ctrl-F from other screens (Order list F11, Song vars F12)
+- Scenario (L95): Scroll Lock inside the Pattern Editor still just toggles Follow Mode
+- Scenario (L105): Scroll Lock in the Sample List opens the Pattern Editor with Follow Mode on
+- Scenario (L119): Scroll Lock in the Instrument List does the same
+- Scenario (L136): Ctrl-F in the Sample List (F3) or Instrument List (F4)
+- Scenario (L145): Ctrl-F INSIDE the Pattern Editor (F2) toggles Follow Mode, not the config dialog
+- Scenario (L163): Ctrl-F on the Order List (F11) or Song Variables (F12) enters the editor
+- Scenario (L172): Follow Mode is forced ON, never toggled off, from the lists
+- Scenario (L183): The handler hands Glbl_F2 the dispatcher's own DS (no segment damage)
+- Scenario (L196): (not built) Scroll Lock / Ctrl-F from other screens (Order list F11, Song vars F12)
 
 ## Relationships

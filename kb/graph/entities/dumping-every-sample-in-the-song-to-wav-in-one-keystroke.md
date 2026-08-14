@@ -10,11 +10,11 @@ updated: 2026-08-14
 Convey feature: features/dump-all-samples-wav.feature.
 
 ## Claims
-- Scenario (L37): Ctrl-Shift-Right writes every loaded sample
-- Scenario (L46): 8-bit samples are converted, not dumped raw
-- Scenario (L57): The song's own sample filenames are left alone
-- Scenario (L66): A bad Quicksave path aborts before writing anything
-- Scenario (L73): Why the Ctrl row sits before the Shift row in the keymap
-- Scenario (L84): Names carry the sample name, not just the slot
+- Scenario (L37): Ctrl-Shift-Right, or D, writes every loaded sample
+- Scenario (L48): 8-bit samples are converted, not dumped raw
+- Scenario (L59): The song's own sample filenames are left alone
+- Scenario (L68): A bad Quicksave path aborts before writing anything
+- Scenario (L75): Ctrl-Shift-Right cannot be a keymap row -- it is a live modifier test
+- Scenario (L94): Names carry the sample name, not just the slot
 
 ## Relationships
