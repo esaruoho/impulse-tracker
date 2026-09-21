@@ -3879,11 +3879,12 @@ Proc            Music_ReleaseSample Far         ; AX = sample number, 0 based
                 Mov     DX, AX
                 And     AX, 0FFh
 
-                                                ; Silence any slave channel
-                                                ; currently reading this slot
-                                                ; before its EMS pages are
-                                                ; freed / overwritten. Other
-                                                ; voices keep playing.
+                                                ; FEATURE-CARD >> features/loader-keyjazz-hang.feature
+                                                ; Music_ReleaseSample receives a
+                                                ; zero-based slot, matching slave
+                                                ; [SI+36h]. Silence that slot
+                                                ; before freeing/reallocating
+                                                ; its sample pages.
                 Call    Music_SilenceSampleVoices
 
                 Mov     BX, AX
@@ -10164,7 +10165,7 @@ EndP            Music_StopChannels
 ; against the mixer holding cached pointers into the slot's EMS pages,
 ; without the brute "stop the whole song" hammer that Music_Stop is.
 ;
-; AX = sample number, 1-based (1..99). MIDI slaves are tagged 100 in
+; AX = sample number, zero-based (0..99). MIDI slaves are tagged 100 in
 ; [SI+36h] so the equality test below naturally skips them.
 ;
 ; Preserves all general-purpose registers and flags.

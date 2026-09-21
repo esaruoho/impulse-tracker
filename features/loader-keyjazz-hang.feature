@@ -17,7 +17,9 @@
 #   @runtime-untested - NOT yet exercised against a running IT.EXE
 #
 # Source files linked back to this card:
+#   IT_DISK.ASM   LoadSample -- loader preview uses zero-based slot 99
 #   IT_MUSIC.ASM  Music_SilenceSampleVoices (175) -- silence one slot's voices, keep song
+#                 Music_ReleaseSample -- silences zero-based release slot before free
 #   IT_K.ASM      MIDISyncLoaderSuppress (127); MIDI_SetLoaderSuppress (~2257) /
 #                 MIDI_ClearLoaderSuppress (~2270); guard checks (2097, 2120, 2140)
 #
@@ -25,13 +27,15 @@
 #   a44c41b  Music_SilenceSampleVoices (keep playback alive across reloads)
 #   ec91331  F3 loader keyjazz hang VRAM markers (triage)
 #   64fa1ce  F3 loader keyjazz hang fix via MIDISyncLoaderSuppress
+#   WORKTREE  Fix loader preview waveform corruption after pattern restore
 #
 # RESULT (triad: .feature spec + .session convo + what shipped):
 #   Feature delivery : a44c41b, ec91331, 64fa1ce  (direct to esaruoho/main, no PR)
 #   Triad: this .feature <-> loader-keyjazz-hang.session.md <-> those commits
 #
-# WATCH: Music_SilenceSampleVoices MIDISyncLoaderSuppress MIDI_SetLoaderSuppress MIDI_ClearLoaderSuppress
+# WATCH: LoadSample Music_ReleaseSample Music_SilenceSampleVoices MIDISyncLoaderSuppress MIDI_SetLoaderSuppress MIDI_ClearLoaderSuppress
 # RESULT-LOG >> (auto-maintained by .githooks/pre-commit / post-merge)
+#   2026-09-21  direct-commit  touched: LoadSample Music_ReleaseSample
 #
 # IT.TXT source of truth: CLAUDE.md "Loader screens (after F9)" table, status as of a44c41b.
 # =============================================================================
@@ -51,16 +55,28 @@ Feature: F3/F4 loader keyjazz keeps the song playing
 
   @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Keyjazz preview in the browser silences only the preview voice
-    # cite: IT_MUSIC.ASM Music_SilenceSampleVoices -- preview uses slot 99; only slot-99
+    # cite: IT_DISK.ASM LoadSample -- preview load uses zero-based slot 99.
+    # cite: IT_MUSIC.ASM Music_SilenceSampleVoices -- only matching zero-based slot
     #       voices fall silent (the 200h voice-off sentinel), every other channel plays on.
     # cite: commit a44c41b
     Given a song is playing and the user is in the sample-loader file browser
     When the user keyjazzes a note to preview a sample
-    Then only the preview (slot 99) voice is silenced; the song keeps playing
+    Then only the preview voice for sample slot 99 is silenced; the song keeps playing
+
+  @shipped @build-verified @runtime-untested @hw-untested
+  Scenario: Preview waveform redraw reads the freshly loaded preview slot
+    # cite: IT_DISK.ASM LoadSample calls D_DrawWaveForm after loading zero-based
+    #       preview slot 99, then regenerates it again after PE_RestoreCurrentPattern
+    #       so the loader waveform glyphs are not replaced by pattern/numeric glyphs.
+    Given the user has entered the sample-loader browser from F3
+    When the user selects a sample and presses a key to preview it
+    Then the loader waveform area is redrawn from the freshly loaded preview sample
+    And it does not show stale pattern/numeric glyphs in the waveform rectangle
 
   @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Loading a sample silences only that slot, song continues
-    # cite: Music_SilenceSampleVoices(target slot) replaces the old Music_Stop calls
+    # cite: IT_MUSIC.ASM Music_ReleaseSample passes the zero-based release slot
+    #       to Music_SilenceSampleVoices before freeing sample pages.
     Given a song is playing
     When the user presses Enter on a sample file to load it into a slot
     Then only that slot's voices are silenced; the song does not stop

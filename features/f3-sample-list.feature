@@ -21,6 +21,7 @@
 #                  MIDI_ClearLoaderSuppress (2145); FA/FC guards (1991, 2014)
 #   IT_DISK.ASM  - D_PreLoadSampleWindow suppress/clear (6108/6157);
 #                  LSWindow_ShiftEnter bulk suppress/clear (7859/7922)
+#   IT_DISK.ASM  - LoadSample preview path loads zero-based slot 99
 #   IT_MUSIC.ASM - Music_SilenceSampleVoices (9230), called from LoadSample (7363)
 #
 # Commit log (the ingest trail):
@@ -28,14 +29,16 @@
 #   a44c41b  Music_SilenceSampleVoices: keep playback alive across (re)loads
 #   64fa1ce  F3 loader keyjazz hang fix: suppress MIDI sync during LoadSample
 #   ec91331  F3 loader keyjazz: instrument LoadSample + PlaySample w/ VRAM markers
+#   WORKTREE  Fix loader preview waveform corruption after pattern restore
 #
 # RESULT (third leg of the triad: .feature spec + .session convo + what shipped):
 #   Feature delivery : a44c41b, 64fa1ce, ec91331  (direct to esaruoho/main, no PR)
 #   This card authored: 8ca97e9 (cards) + 009dbab (session + back-links)
 #   Triad: this .feature  <->  fkey-report-cards.session.md  <->  those commits
 #
-# WATCH: Glbl_F3 Glbl_Ctrl_F3 MIDISyncLoaderSuppress MIDI_SetLoaderSuppress MIDI_ClearLoaderSuppress Music_SilenceSampleVoices D_PreLoadSampleWindow LSWindow_ShiftEnter
+# WATCH: Glbl_F3 Glbl_Ctrl_F3 LoadSample Music_ReleaseSample MIDISyncLoaderSuppress MIDI_SetLoaderSuppress MIDI_ClearLoaderSuppress Music_SilenceSampleVoices D_PreLoadSampleWindow LSWindow_ShiftEnter
 # RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
+#   2026-09-21  direct-commit  touched: LoadSample Music_ReleaseSample
 #   2026-06-04  direct-commit  touched: MIDISyncLoaderSuppress
 #   2026-06-04  direct-commit  touched: Glbl_F3
 #   2026-06-04  direct-commit  touched: MIDISyncLoaderSuppress
@@ -82,9 +85,19 @@ Feature: User Presses F3 (Sample List)
     #       slot ([SI+36h]) matches the slot being (re)loaded (writes 200h)
     # cite: commits a44c41b, 64fa1ce
     Given a song is playing
-    When the user keyjazz-previews a sample in the loader (LoadSample slot 99)
-    Then only the voices reading that one slot are silenced (200h sentinel)
+    When the user keyjazz-previews a sample in the loader (LoadSample zero-based slot 99)
+    Then only the voices reading sample slot 99 are silenced (200h sentinel)
     And the rest of the song keeps playing
+
+  @shipped @build-verified @runtime-untested @hw-untested
+  Scenario: Loader keyjazz redraws the selected sample waveform
+    # cite: IT_DISK.ASM LoadSample loads zero-based preview slot 99, then calls
+    #       D_DrawWaveForm again after PE_RestoreCurrentPattern so the browser
+    #       waveform uses freshly generated loader glyphs.
+    Given the user has pressed Enter from F3 into the loader sample area
+    When the user selects a sample and presses a note key
+    Then the loader waveform viewer redraws the selected sample's waveform
+    And it does not render stale pattern/numeric glyphs in the waveform area
 
   @shipped @build-verified @hw-untested
   Scenario: MIDI transport bytes can't restart the song mid-load

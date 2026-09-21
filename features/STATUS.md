@@ -19,7 +19,7 @@
 | f12-song-variables | 4 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
 | f2-pattern-editor | 4 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
 | f2-resize-tiles-pattern | 6 | ✓ | ✓ | ✓ | @build-verified @hw-untested @hw-verified @runtime-verified @shipped |
-| f3-sample-list | 5 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
+| f3-sample-list | 6 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped @stock |
 | f4-f3-cursor-translate | 4 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped |
 | f4-instrument-list | 4 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
 | f5-info-page-shift-right-quicksave | 8 | ✓ | — | ✓ | @build-verified @corrected @design-note @hw-untested @hw-verified @shipped @todo |
@@ -27,7 +27,7 @@
 | headless-batch-render | 10 | ✓ | — | ✗ | @build-verified @corrected @design-note @dosbox-verified @hw-untested @shipped @todo |
 | headless-screenshot | 9 | ✓ | — | ✓ | @build-verified @corrected @design-note @dosbox-verified @hw-verified @shipped @todo |
 | invert-channel-mutes | 4 | ✓ | — | ✗ | @build-verified @design-note @hw-untested @shipped @todo |
-| loader-keyjazz-hang | 4 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped @stock |
+| loader-keyjazz-hang | 5 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped @stock |
 | midi-in-multitimbral | 12 | ✓ | — | ✗ | @build-verified @design-note @hw-untested @shipped @stock @todo |
 | midi-out-stop-on-f8 | 8 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped |
 | midi-realtime-sync | 11 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @todo |

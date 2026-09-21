@@ -320,6 +320,7 @@ include debug.inc
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 SampleInMemory          DW      0FFFFh
+LoadSampleWasPreview    DB      0
 NoSaveError             DB      0
 Specific                DB      0
 DiskDataArea            DW      DiskData
@@ -7581,9 +7582,11 @@ Proc            LoadSample              ; AX = Sample number
                 Pop     AX
                 PopF
 
+                Mov     CS:LoadSampleWasPreview, 0
                 Cmp     AX, 99
                 JNE     LoadSample4
 
+                Mov     CS:LoadSampleWasPreview, 1
                 Mov     DX, CS:CurrentSample
                 Cmp     DX, CS:SampleInMemory
                 JE      LoadSample3
@@ -7603,11 +7606,14 @@ LoadSample4:
                 Pop     AX
                 PopF
 
-                                                ; Silence only the slaves
-                                                ; currently reading the target
-                                                ; slot. Song keeps playing.
-                                                ; AX still = target sample
-                                                ; number from LoadSample entry.
+                                                ; FEATURE-CARD >> features/loader-keyjazz-hang.feature
+                                                ; Silence only slaves currently
+                                                ; reading this zero-based target
+                                                ; slot. The loader preview uses
+                                                ; slot 99; slave [SI+36h] uses
+                                                ; the same zero-based numbering,
+                                                ; while 100 is reserved for MIDI.
+                                                ; Song playback keeps running.
                 Call    Music_SilenceSampleVoices
 
                 PushF
@@ -7729,6 +7735,25 @@ LoadSample6:
 LoadSample1:
                 PushF
                 Call    PE_RestoreCurrentPattern
+                PopF
+                PushF
+                JC      LoadSample1NoPreviewWaveform
+
+                Cmp     CS:LoadSampleWasPreview, 0
+                JE      LoadSample1NoPreviewWaveform
+
+                                                ; FEATURE-CARD >> features/loader-keyjazz-hang.feature
+                                                ; PE_RestoreCurrentPattern
+                                                ; reloads the pattern editor and
+                                                ; its character set. The loader
+                                                ; preview waveform uses generated
+                                                ; chars too, so regenerate those
+                                                ; glyphs after the restore or the
+                                                ; visible waveform rectangle shows
+                                                ; stale pattern/numeric glyphs.
+                Call    D_DrawWaveForm
+
+LoadSample1NoPreviewWaveform:
                 PopF
                 Ret
 

@@ -287,17 +287,18 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **What it does:** As someone working with raw samples, I want F3 to open the sample list and Ctrl-F3 to reach the disk library, And I want previewing a sample in the loader to NOT kill the playing song, So that sample work never silences the tune I'm building it for.
 
-**Behaviour (5 scenarios):**
+**Behaviour (6 scenarios):**
 
 - F3 opens the sample list — `@stock @build-verified`
 - Ctrl-F3 opens the disk Sample Library from anywhere — `@stock @build-verified`
 - Previewing a sample in the loader does not stop the song — `@shipped @build-verified`
+- Loader keyjazz redraws the selected sample waveform — `@shipped @build-verified @runtime-untested`
 - MIDI transport bytes can't restart the song mid-load — `@shipped @build-verified`
 - Shift-Enter bulk sample load is guarded the same way — `@shipped @build-verified`
 
-**How it does it:** **Key procs:** `Glbl_F3`, `Glbl_Ctrl_F3`, `MIDISyncLoaderSuppress`, `MIDI_SetLoaderSuppress`, `MIDI_ClearLoaderSuppress`, `Music_SilenceSampleVoices`, `D_PreLoadSampleWindow`, `LSWindow_ShiftEnter` · **Source files:** `IT_I.ASM`
+**How it does it:** **Key procs:** `Glbl_F3`, `Glbl_Ctrl_F3`, `LoadSample`, `Music_ReleaseSample`, `MIDISyncLoaderSuppress`, `MIDI_SetLoaderSuppress`, `MIDI_ClearLoaderSuppress`, `Music_SilenceSampleVoices`, `D_PreLoadSampleWindow`, `LSWindow_ShiftEnter` · **Source files:** `IT_I.ASM`, `IT_DISK.ASM`
 
-**Grade:** @build-verified ×5 · @shipped ×3 · @stock ×2
+**Grade:** @build-verified ×6 · @runtime-untested ×1 · @shipped ×4 · @stock ×2
 
 **Commits:** `fb47b32` Import code (upstream base: F3 sample list, Ctrl-F3 library) · `a44c41b` Music_SilenceSampleVoices: keep playback alive across (re)loads · `64fa1ce` F3 loader keyjazz hang fix: suppress MIDI sync during LoadSample · `ec91331` F3 loader keyjazz: instrument LoadSample + PlaySample w/ VRAM markers
 
@@ -464,16 +465,17 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **What it does:** As someone auditioning samples against a playing song from the loader browser, I want previewing or loading a sample to NOT stop playback, So that I can hear a candidate sample in the mix without the song halting and without IT hanging on a half-loaded sample header.
 
-**Behaviour (4 scenarios):**
+**Behaviour (5 scenarios):**
 
 - (pre-fork) keyjazz / load in the browser used to kill the song — `@stock @build-verified`
 - Keyjazz preview in the browser silences only the preview voice — `@shipped @build-verified @runtime-untested`
+- Preview waveform redraw reads the freshly loaded preview slot — `@shipped @build-verified @runtime-untested`
 - Loading a sample silences only that slot, song continues — `@shipped @build-verified @runtime-untested`
 - The MIDI-sync mixer path is gated against a half-loaded header — `@shipped @build-verified @runtime-untested`
 
-**How it does it:** **Key procs:** `Music_SilenceSampleVoices`, `MIDISyncLoaderSuppress`, `MIDI_SetLoaderSuppress`, `MIDI_ClearLoaderSuppress` · **Source files:** `IT_MUSIC.ASM`, `IT_K.ASM`
+**How it does it:** **Key procs:** `LoadSample`, `Music_ReleaseSample`, `Music_SilenceSampleVoices`, `MIDISyncLoaderSuppress`, `MIDI_SetLoaderSuppress`, `MIDI_ClearLoaderSuppress` · **Source files:** `IT_DISK.ASM`, `IT_MUSIC.ASM`, `IT_K.ASM`
 
-**Grade:** @build-verified ×4 · @runtime-untested ×3 · @shipped ×3 · @stock ×1
+**Grade:** @build-verified ×5 · @runtime-untested ×4 · @shipped ×4 · @stock ×1
 
 **Commits:** `a44c41b` Music_SilenceSampleVoices (keep playback alive across reloads) · `ec91331` F3 loader keyjazz hang VRAM markers (triage) · `64fa1ce` F3 loader keyjazz hang fix via MIDISyncLoaderSuppress
 
