@@ -10026,7 +10026,21 @@ Proc            DecodePattern           ; DS:SI points to pattern info to decode
 
                 LodsW                   ; AX = number of bytes
                 Mov     CS:DecodePatternBytes, AX
-                LodsW                   ; AX = maxrow
+                LodsW                   ; AX = row count
+                                        ; FORK GUARD (features/pattern-rows-guard.feature):
+                                        ; a valid IT pattern has 1..256 rows. A corrupt file
+                                        ; (rows==0) made Dec AX underflow MaxRow to 0FFFFh,
+                                        ; so the row loop ran 65536 times reading past the
+                                        ; packed data -> memory trash + hang before the size-
+                                        ; mismatch dialog. Treat rows==0 as an empty 64-row
+                                        ; pattern and skip the decode entirely; clamp absurd
+                                        ; counts to 256.
+                And     AX, AX
+                JZ      DecodePatternEmpty
+                Cmp     AX, 256
+                JBE     DecodePatternRowsOK
+                Mov     AX, 256
+DecodePatternRowsOK:
                 Mov     CX, AX
                 Dec     AX
                 Mov     CS:MaxRow, AX
@@ -10159,6 +10173,13 @@ DecodePattern2:
                 Mov     CX, 0FFFFh
                 Mov     DI, Offset O1_PatternSizeMismatchList
                 Call    M_Object1List
+                Jmp     DecodePatternEnd
+
+DecodePatternEmpty:                     ; FORK: rows==0 -> render as empty 64-row pattern.
+                                        ; PE_ClearPatternData has NOT run yet on this path,
+                                        ; so clear here after fixing MaxRow, then skip decode.
+                Mov     Word Ptr CS:MaxRow, 63
+                Call    PE_ClearPatternData
 
 DecodePatternEnd:
                 Pop     ES
@@ -10198,7 +10219,14 @@ Proc            EncodePattern           ; ES:DI points to area to deposit data
 
                 Mov     CX, CS:MaxRow
                 Inc     CX
-
+                                        ; FORK GUARD (features/pattern-rows-guard.feature):
+                                        ; never write rows==0 into a stored pattern. If MaxRow
+                                        ; was 0FFFFh (corrupt), Inc CX -> 0 would save rows=0,
+                                        ; which the loader would then choke on. Clamp to 64.
+                JNZ     EncodePatternRowsOK
+                Mov     CX, 64
+                Mov     Word Ptr CS:MaxRow, 63
+EncodePatternRowsOK:
                 Mov     AX, CX
                 StosW
 

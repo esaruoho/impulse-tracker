@@ -24,6 +24,10 @@
 
 ## Carded features
 
+### ✅ pattern-rows-guard.feature
+A pattern header with rows==0 can neither freeze the loader nor be written on save. Enforces "1..256 rows" at both the decode and encode boundary. Build-verified, runtime/HW-untested. (Repro: `ad_stim.it`, 2026-09-21.)
+- `<hash>` DecodePattern rows==0 guard (freeze fix) + EncodePattern rows=0 guard (save fix)
+
 ### ✅ ctrl-o-empty-orderlist-crash.feature
 Two crash fixes for the single-pattern WAV-render gestures (Ctrl-O / right-arrow / Shift-right). Build-verified, HW-untested.
 - `128ab04` bound-check Music_GetPattern — empty-order-list reboot (invalid pattern → wild pointer)

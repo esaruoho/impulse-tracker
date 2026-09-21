@@ -14,7 +14,19 @@ here is reachable from XP, the DOS PC, AND the Mac (mounted at `/Volumes/netdriv
 
 ## Connection reference (the workspace fleet)
 - **XP box:** `192.168.32.50` · hostname `droidi` · Windows XP Pro SP3
-- **Login:** user `fleet` · password `Lackluster1!` (admin we made for remote access; `esaruoho` console user untouched)
+- **Login (preferred): user `esaruoho`, password EMPTY** — the console user just presses Enter at
+  the SMB prompt. This is what actually mounts cleanly from the Mac headlessly (verified 2026-09-21).
+- **Login (alt): user `fleet` · password `Lackluster1!`** (admin we made for remote access). Note:
+  in 2026-09-21 testing the `fleet` account gave a connection-level auth failure while `esaruoho`
+  (empty password) succeeded — prefer `esaruoho`.
+- **Headless mount that works** (GUI `open smb://` needs Finder focus and fails from a tool call;
+  `mount_smbfs` is the reliable path — empty password is the bare `user:@host` form):
+  ```bash
+  MP=/tmp/netdrive; mkdir -p "$MP"
+  mount_smbfs '//esaruoho:@192.168.32.50/netdrive' "$MP"   # rc=0, mounts SMB1 to XP SP3
+  ```
+  XP SP3 speaks only SMB1; modern macOS still negotiates it via `mount_smbfs`. Other shares:
+  `CDrive`, `SharedDocs` mount the same way; `DDrive`/`EDrive` currently error (I/O / absent).
 - **DOS PC:** `192.168.200.1`, on XP's *second* NIC (`192.168.200.2`); maps `E: → \\DROIDI\NETDRIVE`
 - **SMB shares on XP:** `netdrive` (=`C:\netdrive`), `CDrive` (=`C:\`), `DDrive`, `EDrive`, `SharedDocs`
 - **Shell:** `ssh XP32Bit` (interactive only — Bitvise's non-interactive exec is flaky)

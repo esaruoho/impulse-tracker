@@ -10,6 +10,8 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - [A Convey conversation self-archives when it ends](#convey-session-distiller) — `convey-session-distiller.feature`
 - [Convey test-runner conveys the test situation to a User and routes the verdict back](#convey-test-runner) — `convey-test-runner.feature`
 - [Order-list and Ctrl-O render gestures must never crash, reboot, or hang](#ctrl-o-empty-orderlist-crash) — `ctrl-o-empty-orderlist-crash.feature`
+- [Getting facts back off the DOS PC](#debug-logging-channels) — `debug-logging-channels.feature`
+- [Dumping every sample in the song to WAV in one keystroke](#dump-all-samples-wav) — `dump-all-samples-wav.feature`
 - [User Presses F11 (Order List)](#f11-order-list) — `f11-order-list.feature`
 - [User Presses F12 (Song Variables & Directory Configuration)](#f12-song-variables) — `f12-song-variables.feature`
 - [User Presses F2 (Pattern Editor)](#f2-pattern-editor) — `f2-pattern-editor.feature`
@@ -17,7 +19,11 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - [User Presses F3 (Sample List)](#f3-sample-list) — `f3-sample-list.feature`
 - [F4<->F3 carry the cursor selection across the two list screens](#f4-f3-cursor-translate) — `f4-f3-cursor-translate.feature`
 - [User Presses F4 (Instrument List)](#f4-instrument-list) — `f4-instrument-list.feature`
+- [Shift-Right on the F5 Info Page renders the playing pattern to Quicksave](#f5-info-page-shift-right-quicksave) — `f5-info-page-shift-right-quicksave.feature`
 - [Order List F6 loops the selected order's pattern; F7 plays from it at the cursor row](#f6-play-from-order-list-row) — `f6-play-from-order-list-row.feature`
+- [Rendering a module without touching the interface](#headless-batch-render) — `headless-batch-render.feature`
+- [Reading the screen from the build machine](#headless-screenshot) — `headless-screenshot.feature`
+- [Flipping every channel mute at once](#invert-channel-mutes) — `invert-channel-mutes.feature`
 - [F3/F4 loader keyjazz keeps the song playing](#loader-keyjazz-hang) — `loader-keyjazz-hang.feature`
 - [Multitimbral MIDI-In](#midi-in-multitimbral) — `midi-in-multitimbral.feature`
 - [Send MIDI Stop (FC) out on F8](#midi-out-stop-on-f8) — `midi-out-stop-on-f8.feature`
@@ -27,8 +33,11 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - [F12 Samples->Instruments uses upstream clear+remap (no envelope retention)](#no-samples-to-instruments-envelope-retention) — `no-samples-to-instruments-envelope-retention.feature`
 - ['1' toggles the note cut under the cursor](#note-cut-toggle) — `note-cut-toggle.feature`
 - [Pattern length beyond 200 rows (256 / 512)](#pattern-length-beyond-200) — `pattern-length-beyond-200.feature`
+- [A rows==0 pattern is survivable on load and unwritable on save](#pattern-rows-guard) — `pattern-rows-guard.feature`
 - [Impulse Tracker fork — what got baked in 2026-06-03 → 04](#recent-features-2026-06-03_to_04) — `recent-features-2026-06-03_to_04.feature`
+- [Tapping right shift jumps to the pattern being played](#right-shift-tap) — `right-shift-tap.feature`
 - [Sample Amplify keeps the song playing](#sample-amplify-keeps-playback) — `sample-amplify-keeps-playback.feature`
+- [Feature parity between Impulse Tracker and Schism Tracker](#schismtracker-port-backlog) — `schismtracker-port-backlog.feature`
 - [User Presses Scroll Lock while in F3 (Sample List) or F4 (Instrument List)](#scrolllock-follow-from-lists) — `scrolllock-follow-from-lists.feature`
 - [Shift-Enter Load from Sample List (bulk-load a module's samples)](#shift-enter-bulk-load-from-module) — `shift-enter-bulk-load-from-module.feature`
 - [Shift-Enter Load from Sample List](#shift-enter-load-from-sample-list) — `shift-enter-load-from-sample-list.feature`
@@ -48,8 +57,10 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **What it does:** As someone filling a pattern channel with a repeating figure, I want Alt-R to tile the rows above the cursor down to the end of the channel, So that I can lay down a one- or few-row loop and stamp it across the pattern without copy/paste — while Shift-Alt-R does the same across the WHOLE pattern (all channels).
 
-**Behaviour (6 scenarios):**
+**Behaviour (8 scenarios):**
 
+- Ctrl-Down and Ctrl-Shift-Down do the same thing as Alt-R — `@shipped @build-verified`
+- What Ctrl-Down displaced, and why that is free
 - Alt-R and Shift-Alt-R are disambiguated by live shift state — `@shipped @build-verified @hw-verified`
 - Cursor above row 0 tiles the rows-above-cursor chunk downward — `@shipped @build-verified @runtime-verified @hw-verified`
 - Cursor on row 0 tiles row 0 down the whole channel — `@shipped @build-verified @runtime-verified @hw-verified`
@@ -59,7 +70,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **How it does it:** **Key procs:** `PEFunction_AltR_Dispatch`, `PEFunction_ReplicateAtCursor`, `PEFunction_ReplicatePatternAtCursor`, `PEFunction_ClearViews` · **Source files:** `IT_PE.ASM`
 
-**Grade:** @build-verified ×6 · @hw-verified ×6 · @runtime-untested ×1 · @runtime-verified ×3 · @shipped ×6
+**Grade:** @build-verified ×7 · @hw-verified ×6 · @runtime-untested ×1 · @runtime-verified ×3 · @shipped ×7
 
 **Commits:** `d506486` Alt-R = Replicate at Cursor · `aaada5e` Alt-R tile at row 0 + Shift-Alt-R = ClearViews (original Alt-R) · `3a3b7ff` Alt-R / Shift-Alt-R get their own undo labels (UndoBufferType23/24)
 
@@ -128,6 +139,54 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **Grade:** @build-verified ×6 · @runtime-untested ×6 · @shipped ×6
 
 **Commits:** `4041e66` terminate single-pattern WAV render (hang)
+
+
+<a id="debug-logging-channels"></a>
+## Getting facts back off the DOS PC
+
+`features/debug-logging-channels.feature`
+
+**What it does:** As someone whose build target is a machine across the room with no debugger, I want two ready-made log channels and a written record of their gotchas, So that a question about runtime behaviour costs one round trip, not four.
+
+**Behaviour (9 scenarios):**
+
+- PATLOG.TXT -- one character per event, for tracing a state machine — `@shipped @hw-verified`
+- A worked example -- the right-shift tap — `@shipped @hw-verified`
+- CTRLOLOG.TXT -- structured named fields, for one-shot operations — `@shipped @hw-verified`
+- Probing the filesystem rather than the code — `@shipped @hw-verified`
+- Gotcha 1 -- the log lands in cwd, so cwd is part of the question
+- Gotcha 2 -- log transitions, never polls
+- Gotcha 3 -- main-loop context only, never the ISR
+- Gotcha 4 -- a clean-looking value can still mean failure
+- VRAM markers, for when there is no file to read — `@todo`
+
+**How it does it:** **Key procs:** `PE_LogStage`, `PE_LogEndLine`, `PE_LogOpenForAppend`, `WAV_PatLogName` · **Source files:** `IT_MUSIC.ASM`
+
+**Grade:** @hw-verified ×4 · @shipped ×4 · @todo ×1
+
+
+<a id="dump-all-samples-wav"></a>
+## Dumping every sample in the song to WAV in one keystroke
+
+`features/dump-all-samples-wav.feature`
+
+**What it does:** As someone moving a module's sounds to another machine, I want one key to write every loaded sample out as its own WAV, So that the whole sample set lands in the Quicksave folder the Mac reads, without saving them one at a time.
+
+**Behaviour (9 scenarios):**
+
+- Ctrl-Shift-Right, or D, writes every loaded sample — `@shipped @build-verified`
+- 8-bit samples are converted, not dumped raw — `@shipped @build-verified`
+- The song's own sample filenames are left alone — `@shipped @build-verified`
+- A bad Quicksave path aborts before writing anything — `@shipped @build-verified`
+- Dumping while the song plays keeps playing, and the files are correct — `@shipped @build-verified @hw-verified`
+- Dumping during playback made the mixer scream
+- The 8-bit writer was mutating the song's own sample memory
+- Ctrl-Shift-Right cannot be a keymap row -- it is a live modifier test
+- Names carry the sample name, not just the slot — `@todo`
+
+**How it does it:** **Key procs:** `D_DumpAllSamplesWAV`, `D_DumpBuildName`, `D_SaveRawSampleInternal` · **Source files:** `IT_DISK.ASM`, `IT_DISPL.ASM`
+
+**Grade:** @build-verified ×5 · @hw-verified ×1 · @shipped ×5 · @todo ×1
 
 
 <a id="f11-order-list"></a>
@@ -285,6 +344,29 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **Commits:** `fb47b32` Import code (upstream base: F4 instrument list + tab cycle) · `10c837b` per-instrument MIDI-In channel field (hdr 1Fh) on the Pitch tab
 
 
+<a id="f5-info-page-shift-right-quicksave"></a>
+## Shift-Right on the F5 Info Page renders the playing pattern to Quicksave
+
+`features/f5-info-page-shift-right-quicksave.feature`
+
+**What it does:** As someone watching playback on the Info Page, I want Shift-Right to write the pattern I can hear out as a WAV, So that capturing a loop is one key from the screen I am already looking at, without going to F11 first.
+
+**Behaviour (8 scenarios):**
+
+- Shift-Right renders the playing pattern, no sample import — `@shipped @build-verified @hw-verified`
+- Plain Right still moves the channel selection — `@shipped @build-verified @hw-verified`
+- Stopped, it falls back to the pattern in the editor — `@shipped @build-verified`
+- A bogus pattern number is refused rather than rendered — `@shipped @build-verified`
+- It IS a "DB 4" keymap row -- the first attempt got this wrong
+- Why the Info Page resolves the pattern differently from F11
+- Ctrl-Shift-Right dumps every sample in the song as WAVs — `@todo`
+- Enter on the Info Page jumps to the playing pattern at the playing row — `@todo`
+
+**How it does it:** **Key procs:** `Display_RenderQuicksave`, `Display_ResolvePattern`, `DisplayListKeys`, `DisplayDown` · **Source files:** `IT_DISPL.ASM`, `IT_MUSIC.ASM`
+
+**Grade:** @build-verified ×4 · @hw-verified ×2 · @shipped ×4 · @todo ×2
+
+
 <a id="f6-play-from-order-list-row"></a>
 ## Order List F6 loops the selected order's pattern; F7 plays from it at the cursor row
 
@@ -305,6 +387,74 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **Grade:** @build-verified ×5 · @runtime-untested ×2 · @shipped ×4 · @stock ×1
 
 **Commits:** `8acb41f` first cut: F6 = Music_PlaySong(Order) (superseded -- wrong: that · `5b37353` F6 loops the selected order's pattern; F7 plays from order+current row
+
+
+<a id="headless-batch-render"></a>
+## Rendering a module without touching the interface
+
+`features/headless-batch-render.feature`
+
+**What it does:** As someone who wants a module's patterns as WAVs without driving the UI, I want IT to load a module, write the files and quit, So that a whole module can be bounced from one command line.
+
+**Behaviour (10 scenarios):**
+
+- Every pattern that has data becomes its own WAV — `@shipped @build-verified`
+- One pattern only — `@shipped @build-verified`
+- Every sample becomes its own WAV — `@shipped @build-verified`
+- No sound card is needed — `@shipped @build-verified`
+- Why the work runs on the idle path and not at startup
+- Why the filename hangs directly off the switch letter
+- How a module gets loaded with no interface
+- Batch naming must not be the timestamp
+- Two assembly traps, both found with breadcrumbs rather than argument
+- Rendering the whole song rather than per-pattern — `@todo`
+
+**How it does it:** **Key procs:** `BatchRenderFlag`, `BatchRenderPattern`, `BatchDumpFlag`, `Music_BatchRenderPatterns` · **Source files:** `IT_MUSIC.ASM`, `IT.ASM`, `IT_DISK.ASM`, `IT_M.ASM`
+
+**Grade:** @build-verified ×4 · @shipped ×4 · @todo ×1
+
+
+<a id="headless-screenshot"></a>
+## Reading the screen from the build machine
+
+`features/headless-screenshot.feature`
+
+**What it does:** As someone changing a layout on a tracker that runs on a DOS box across the room, I want the screen written out as text I can read where I build, So that "is this cut off?" is a thing I can see rather than a thing I ask about.
+
+**Behaviour (9 scenarios):**
+
+- Shift-Alt-Y writes the current screen from any page — `@shipped @build-verified @hw-verified`
+- The file lands in the Quicksave folder, under a rotating name — `@shipped @build-verified @hw-verified`
+- /G captures without anyone pressing anything — `@shipped @build-verified`
+- The layout bug it found in one press, after three blind attempts
+- Two self-inflicted bugs, both found by using the tool on itself
+- Why it reads B800:0000 and drops the attributes
+- Why the key binding matters more than the switch
+- Shift-Alt-Y is 1515h, and the pattern editor keeps its own Shift-Alt-Y
+- Capturing colours — `@todo`
+
+**How it does it:** **Key procs:** `M_ScreenGrab`, `M_ScreenGrabKey`, `ScreenGrabFlag`, `ScreenGrabKeys`, `ScreenGrabCount` · **Source files:** `IT_OBJ1.ASM`, `IT_K.ASM`, `IT_M.ASM`, `IT.ASM`
+
+**Grade:** @build-verified ×3 · @hw-verified ×2 · @shipped ×3 · @todo ×1
+
+
+<a id="invert-channel-mutes"></a>
+## Flipping every channel mute at once
+
+`features/invert-channel-mutes.feature`
+
+**What it does:** As someone auditioning the complement of a mix, I want one key to invert all the mutes, So that I can flip between two halves of an arrangement without clicking through channels.
+
+**Behaviour (4 scenarios):**
+
+- Ctrl-F9 inverts all 64 channels — `@shipped @build-verified`
+- Pressing it twice returns exactly to the start — `@shipped @build-verified`
+- Why it loops Music_ToggleChannel instead of writing the table
+- A key that does not need the fn row on a laptop — `@todo`
+
+**How it does it:** **Key procs:** `Music_InvertChannelMutes`, `Music_ToggleChannel`, `MuteChannelTable`, `GlobalKeyList` · **Source files:** `IT_MUSIC.ASM`, `IT_OBJ1.ASM`
+
+**Grade:** @build-verified ×2 · @shipped ×2 · @todo ×1
 
 
 <a id="loader-keyjazz-hang"></a>
@@ -335,7 +485,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **What it does:** As a musician driving the DOS PC from an external MIDI source, I want incoming notes on MIDI channels 01-16 to each trigger their own Impulse Tracker instrument live, So that Impulse Tracker becomes a 16-part sampler-synth, even while the transport is stopped.
 
-**Behaviour (9 scenarios):**
+**Behaviour (12 scenarios):**
 
 - Output MIDI fields are independent of the input field — `@stock @shipped @build-verified`
 - Each instrument can claim an incoming MIDI channel — `@shipped @build-verified`
@@ -345,11 +495,14 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - An incoming note on channel N triggers the matching instrument — `@shipped`
 - Channel 1 note entry is unchanged when the router is off — `@shipped`
 - The router on/off switch lives on the Shift-F1 MIDI screen — `@shipped @build-verified`
+- Enabling it from Sample mode offers to make the whole move — `@shipped @build-verified`
+- Why "ON" in Sample mode was a lie worth removing
+- Why the flag is set directly and not through F12
 - Polyphony per channel — `@todo`
 
-**How it does it:** **Key procs:** `Music_CreateMIDIInInstruments`, `Music_ExpandMIDIInTo96`, `Music_ResetMIDIInTo16`, `MCMI_BuildSlot`, `Music_GetMIDIMultiBanks`, `Music_GetMIDIMultiEnable`, `Music_SetMIDIMultiEnable`, `MIDIMultiEnable`, `MIDIMultiBanks`, `Glbl_Shift_F4`, `Glbl_MIDIMulti_Toggle`, `MIDIMulti_Route`, `MMR_FindInst`, `MIDIMultiToggleButton`, `O1_ConfirmCreateMIDIIn`, `InstrumentMIDIInChannel` · **Source files:** `IT_MUSIC.ASM`, `IT_OBJ1.ASM`, `IT_G.ASM`, `IT_K.ASM`, `IT_I.ASM`
+**How it does it:** **Key procs:** `Music_CreateMIDIInInstruments`, `Music_ExpandMIDIInTo96`, `Music_ResetMIDIInTo16`, `MCMI_BuildSlot`, `Music_GetMIDIMultiBanks`, `Music_GetMIDIMultiEnable`, `Music_SetMIDIMultiEnable`, `MIDIMultiEnable`, `MIDIMultiBanks`, `Glbl_Shift_F4`, `Glbl_MIDIMulti_Toggle`, `Glbl_MIDIMulti_ToggleGuarded`, `MIDIMulti_Route`, `MMR_FindInst`, `MIDIMultiToggleButton`, `O1_ConfirmCreateMIDIIn`, `InstrumentMIDIInChannel` · **Source files:** `IT_MUSIC.ASM`, `IT_OBJ1.ASM`, `IT_G.ASM`, `IT_K.ASM`, `IT_I.ASM`
 
-**Grade:** @build-verified ×6 · @shipped ×8 · @stock ×1 · @todo ×1
+**Grade:** @build-verified ×7 · @shipped ×9 · @stock ×1 · @todo ×1
 
 **Commits:** `b38dbcdee53d,` 2026-06-03; "claude --resume 1fa213d0-83aa-4fc1-a8fb-b38dbcdee53d") · `10c837b` per-instrument MIDI-In channel (hdr 1Fh) + Shift-F4 batch v1 · `7e3620a` live any-screen note router (MIDIMulti_Route) · `2dac7d5` Shift-F4 made a toggle (MIDIMultiEnable can be turned off) · `b5a0c66` Shift-F4 gated to Instrument mode <- SUPERSEDED by 8c32fd2 · `8c32fd2` 3-state Shift-F4 cycle + Shift-F1 router toggle + gate removed
 
@@ -513,6 +666,25 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **Grade:** @stock ×1
 
 
+<a id="pattern-rows-guard"></a>
+## A rows==0 pattern is survivable on load and unwritable on save
+
+`features/pattern-rows-guard.feature` · [session](pattern-rows-guard.session.md)
+
+**What it does:** As an Impulse Tracker user, I want a song with a malformed pattern header to load as an empty pattern instead of freezing, and I want IT to never save such a header, So that one bad pattern can never lose me a whole module.
+
+**Behaviour (4 scenarios):**
+
+- Loading a pattern whose header declares zero rows does not hang — `@shipped @build-verified @runtime-untested`
+- An absurd row count is clamped rather than trusted — `@shipped @build-verified @runtime-untested`
+- IT never stores a pattern with zero rows — `@shipped @build-verified @runtime-untested`
+- A healthy pattern is completely unaffected — `@shipped @build-verified @runtime-untested`
+
+**How it does it:** **Key procs:** `DecodePattern`, `EncodePattern` · **Source files:** `IT_PE.ASM`
+
+**Grade:** @build-verified ×4 · @runtime-untested ×4 · @shipped ×4
+
+
 <a id="recent-features-2026-06-03_to_04"></a>
 ## Impulse Tracker fork — what got baked in 2026-06-03 → 04
 
@@ -541,6 +713,30 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **Commits:** `e04be2c` Ctrl-F in Pattern Editor toggles Follow (not the F2 config dialog) · `eb6b4ea` Ctrl-F: one GlobalKeyList entry -> works F2/F3/F4/F11/F12 · `d437f78` Ctrl-F flag fix DB 0 -> DB 1 (was doing nothing) · `97b28e9` Ctrl-F on F3/F4 = Scroll-Lock action · `91dfc0b` Scroll Lock on F3/F4 -> Pattern Editor + Follow Mode · `460a6e1` e5e5c38 Sample Amplify (Alt-M) keeps playback · `3a6a434` 8c32fd2 Shift-F4 multitimbral 3-state cycle + enter Instrument mode · `478b638` F4 instrument-list play dots in multitimbral Sample mode · `05c70c9` F2 pattern-length increase tiles content (not blank rows) · `32e080c` Shift-Enter bulk-load .MOD hard-hang fix · `c9ff6b9` WAV render re-entry guard (2nd press early-stops to Quicksave) · `74c3fe8` be595b2 WAV Quicksave render -> LL<HHMMSS>.WAV (.000 -> .WAV)
 
 
+<a id="right-shift-tap"></a>
+## Tapping right shift jumps to the pattern being played
+
+`features/right-shift-tap.feature`
+
+**What it does:** As someone jamming with a song running, I want a tap of right shift to drop me into the playing pattern with Follow on, So that "listening" and "editing what I hear" are one key apart, while holding right shift as a modifier keeps working normally.
+
+**Behaviour (9 scenarios):**
+
+- A tap from any other screen opens the playing pattern with Follow on — `@shipped @build-verified @hw-verified`
+- A tap inside the pattern editor toggles Follow Mode off — `@shipped @build-verified @hw-verified`
+- Holding it as a modifier is not a tap — `@shipped @build-verified @hw-verified`
+- The tap must have exactly ONE consumer
+- K_GetKey's spin is NOT the idle loop -- that cost a whole round trip
+- "Any other key down?" must come from the key QUEUE, not the key-down map
+- The probe shipped, proved the point, and was removed again
+- Why Scroll Lock's key word and not a new one
+- Left shift is deliberately untouched — `@todo`
+
+**How it does it:** **Key procs:** `K_PollRightShiftTap`, `RShiftTapPrev`, `RShiftTapArmed`, `K_GetKey`, `K_IsKeyWaiting` · **Source files:** `IT_M.ASM`, `IT_OBJ1.ASM`, `IT_PE.ASM`, `IT_K.ASM`
+
+**Grade:** @build-verified ×3 · @hw-verified ×3 · @shipped ×3 · @todo ×1
+
+
 <a id="sample-amplify-keeps-playback"></a>
 ## Sample Amplify keeps the song playing
 
@@ -565,6 +761,43 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **Grade:** @build-verified ×8 · @hw-verified ×3 · @runtime-verified ×3 · @shipped ×5 · @stock ×3
 
 **Commits:** `e5e5c38` Sample Amplify (Alt-M) no longer stops the song (entry: Music_Stop
+
+
+<a id="schismtracker-port-backlog"></a>
+## Feature parity between Impulse Tracker and Schism Tracker
+
+`features/schismtracker-port-backlog.feature`
+
+**What it does:** As the person maintaining both forks, I want one ledger of what crossed over, what was already here, what cannot be, and what only exists here, So that nothing is ported twice, nothing impossible is attempted again, and the answer to "are they at parity yet" is a count rather than an impression.
+
+**Behaviour (22 scenarios):**
+
+- Right shift tapped on its own drops you into the playing pattern — `@hw-verified`
+- Shift-Right on the F5 Info Page renders the playing pattern — `@hw-verified`
+- Enter on the Info Page opens the playing pattern at the playing row — `@hw-verified`
+- Every sample in the song dumped as its own WAV — `@hw-verified`
+- Rendering from the command line, without the interactive screens
+- A shortcut inverts every channel mute at once
+- Alt-D clones verbatim and Shift-Alt-D clones wiping muted channels
+- Tiling a pattern clears the pattern breaks it carries into repeats
+- The order list follows the playing pattern for the render gestures
+- Things schism gained in August that IT already had
+- One schism commit has no counterpart here at all
+- 512-row patterns cannot be done in this fork
+- Shift-Enter loads a whole folder, or the module you are already inside — `@todo`
+- Remembering MIDI ports and MIDI flags across restarts — `@todo`
+- Ctrl-O works from any screen, not only F2, F11 and F5 — `@todo`
+- Reopening the module that was loaded last — `@todo`
+- The quicksave gestures work in the sample loader too — `@todo`
+- Enter in the pattern editor lifts the nearest instrument number — `@todo`
+- Alt-Up/Alt-Down page, Shift-Alt-Up/Down are home and end — `@todo`
+- Schism's Shift-F5 Preferences page has nothing worth porting
+- Things this fork has that schism does not
+- Why the counts will never reach a literal 1:1
+
+**How it does it:** **Key procs:** `schismtracker`, `parity`, `ledger`
+
+**Grade:** @hw-verified ×4 · @todo ×7
 
 
 <a id="scrolllock-follow-from-lists"></a>
@@ -752,7 +985,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **What it does:** As a musician rendering patterns to disk for use in another app, I want each single-pattern Quicksave render to come out as a real, time-stamped .WAV file (LL<HHMMSS>.WAV), So that the files sit time-sorted in the Quicksave folder and drag straight into another app, instead of clobbering each other or carrying a fake .000-style extension.
 
-**Behaviour (8 scenarios):**
+**Behaviour (10 scenarios):**
 
 - Shift-Right at the order-list right edge renders to Quicksave only — `@shipped @build-verified @runtime-verified @hw-verified`
 - Plain Right at the same edge renders AND auto-imports — `@shipped @build-verified @runtime-untested`
@@ -761,11 +994,13 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - The extension is a real .WAV, not the 3-digit pattern number — `@shipped @build-verified @runtime-verified @hw-verified`
 - The auto-import opens the exact file WAVDRV wrote — `@shipped @build-verified @runtime-untested`
 - Multi-WAV, full-song, and user-named renders keep <PFX><NNNN> — `@shipped @build-verified`
+- The render plays the pattern's actual number of rows — `@shipped @build-verified`
+- BX was never set, so renders intermittently wrote NO FILE AT ALL
 - Two renders in the same second overwrite
 
 **How it does it:** **Key procs:** `WAV_BuildTimestampBasename`, `WAV_Store2Dec`, `Music_ToggleWAVRender`, `Music_ImportRenderedPattern`, `PE_OrderList_RightDispatch`, `PE_OrderList_RenderDispatch`, `PE_OrderList_RenderQuicksave`, `PE_OrderList_GDispatch`, `CopyFileName` · **Source files:** `IT_PE.ASM`, `IT_MUSIC.ASM`, `SoundDrivers/WAVDRV.ASM`
 
-**Grade:** @build-verified ×7 · @hw-verified ×3 · @runtime-untested ×2 · @runtime-verified ×3 · @shipped ×7
+**Grade:** @build-verified ×8 · @hw-verified ×3 · @runtime-untested ×2 · @runtime-verified ×3 · @shipped ×8
 
 **Commits:** `be595b2` WAV render: .000 (3-digit pattern number) -> real .WAV extension · `74c3fe8` single-pattern Quicksave render named LL<HHMMSS>.WAV by the clock · `3fd46da` (generative-seed preamble)
 
