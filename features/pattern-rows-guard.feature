@@ -31,9 +31,9 @@
 # Source files linked back to this card (grep "features/pattern-rows-guard"):
 #   IT_PE.ASM - DecodePattern (~line 10029) rows==0 -> empty 64-row, skip decode
 #   IT_PE.ASM - EncodePattern (~line 10220) MaxRow+1==0 -> clamp rows to 64
-# Commit log:   <stamped by hook>
+# Commit log:   63e6ea1  IT_PE.ASM: guard pattern rows==0 on decode (freeze) and encode (save)
 # SESSION:      features/pattern-rows-guard.session.md
-# RESULT:       <stamped by hook>
+# RESULT:       Feature delivery 63e6ea1 (direct to main, no PR); deployed IT.EXE to E:\ITNU2026 2026-09-21
 # WATCH: DecodePattern EncodePattern
 # =============================================================================
 
@@ -44,7 +44,7 @@ Feature: A rows==0 pattern is survivable on load and unwritable on save
 
   @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Loading a pattern whose header declares zero rows does not hang
-    # cite: IT_PE.ASM DecodePattern (~line 10029) -- And AX,AX / JZ DecodePatternEmpty ; commit <hash>
+    # cite: IT_PE.ASM DecodePattern (~line 10029) -- And AX,AX / JZ DecodePatternEmpty ; commit 63e6ea1
     Given a saved .it whose pattern-offset table points at a pattern header with rows=0
     And that pattern is referenced by the order list (e.g. order[0])
     When IT decodes that pattern to display or play it
@@ -54,7 +54,7 @@ Feature: A rows==0 pattern is survivable on load and unwritable on save
 
   @shipped @build-verified @runtime-untested @hw-untested
   Scenario: An absurd row count is clamped rather than trusted
-    # cite: IT_PE.ASM DecodePattern (~line 10029) -- Cmp AX,256 / JBE / Mov AX,256 ; commit <hash>
+    # cite: IT_PE.ASM DecodePattern (~line 10029) -- Cmp AX,256 / JBE / Mov AX,256 ; commit 63e6ea1
     Given a pattern header that declares more than 256 rows
     When IT decodes that pattern
     Then the row count is clamped to 256 before use
@@ -62,7 +62,7 @@ Feature: A rows==0 pattern is survivable on load and unwritable on save
 
   @shipped @build-verified @runtime-untested @hw-untested
   Scenario: IT never stores a pattern with zero rows
-    # cite: IT_PE.ASM EncodePattern (~line 10220) -- Inc CX / JNZ / Mov CX,64 ; commit <hash>
+    # cite: IT_PE.ASM EncodePattern (~line 10220) -- Inc CX / JNZ / Mov CX,64 ; commit 63e6ea1
     Given a pattern whose in-memory MaxRow is 0FFFFh (corrupt)
     When IT encodes that pattern to store or save it
     Then "Inc CX" producing 0 is detected and the stored row count is clamped to 64
@@ -71,7 +71,7 @@ Feature: A rows==0 pattern is survivable on load and unwritable on save
 
   @shipped @build-verified @runtime-untested @hw-untested
   Scenario: A healthy pattern is completely unaffected
-    # cite: IT_PE.ASM DecodePattern (~line 10029) fall-through DecodePatternRowsOK ; commit <hash>
+    # cite: IT_PE.ASM DecodePattern (~line 10029) fall-through DecodePatternRowsOK ; commit 63e6ea1
     Given a normal pattern with 1..256 rows (e.g. 192, 96, 48)
     When IT decodes or encodes it
     Then the guards fall through with no change to the row count
