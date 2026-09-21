@@ -72,7 +72,7 @@ Feature: A rows==0 pattern is survivable on load and unwritable on save
 
   @shipped @build-verified @runtime-untested @hw-untested
   Scenario: The F2 "Set Pattern Length" dialog cannot store a zero-row pattern
-    # cite: IT_PE.ASM PE_SetPatternLength (~line 14300) -- clamp PatternSetLength 32..200 ; commit <hash>
+    # cite: IT_PE.ASM PE_SetPatternLength (~line 14300) -- clamp PatternSetLength 32..200 ; commit 1b4caa9
     # This is the ad_stim.it origin: F2 set-length with a 0/blank value made
     # MaxRow = PatternSetLength-1 = 0FFFFh, stored as rows=0.
     Given the F2 Set Pattern Length dialog returns a length below 32 or above 200 (e.g. 0)
