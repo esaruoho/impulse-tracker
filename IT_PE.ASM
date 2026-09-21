@@ -14298,6 +14298,21 @@ PE_SetPatternLength3:
                         Assume DS:Pattern
 
                 Mov     AX, PatternSetLength
+                                        ; FORK GUARD (features/pattern-rows-guard.feature):
+                                        ; the F2 "Set Pattern Length" dialog is where a bad
+                                        ; length (0 / blank field) turned into MaxRow=0FFFFh
+                                        ; and a stored rows=0 pattern -- the ad_stim.it repro.
+                                        ; Clamp to the same 32..200 the thumb-bar allows so a
+                                        ; corrupt length can never reach Dec/MaxRow.
+                Cmp     AX, 32
+                JAE     PE_SetLenClampHi
+                Mov     AX, 64
+PE_SetLenClampHi:
+                Cmp     AX, 200
+                JBE     PE_SetLenClampOK
+                Mov     AX, 200
+PE_SetLenClampOK:
+                Mov     PatternSetLength, AX
                 Mov     PatternModified, 1
                 Dec     AX
                 Mov     MaxRow, AX

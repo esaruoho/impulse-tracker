@@ -673,16 +673,17 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **What it does:** As an Impulse Tracker user, I want a song with a malformed pattern header to load as an empty pattern instead of freezing, and I want IT to never save such a header, So that one bad pattern can never lose me a whole module.
 
-**Behaviour (4 scenarios):**
+**Behaviour (5 scenarios):**
 
 - Loading a pattern whose header declares zero rows does not hang — `@shipped @build-verified @runtime-untested`
 - An absurd row count is clamped rather than trusted — `@shipped @build-verified @runtime-untested`
 - IT never stores a pattern with zero rows — `@shipped @build-verified @runtime-untested`
+- The F2 "Set Pattern Length" dialog cannot store a zero-row pattern — `@shipped @build-verified @runtime-untested`
 - A healthy pattern is completely unaffected — `@shipped @build-verified @runtime-untested`
 
-**How it does it:** **Key procs:** `DecodePattern`, `EncodePattern` · **Source files:** `IT_PE.ASM`
+**How it does it:** **Key procs:** `DecodePattern`, `EncodePattern`, `PE_SetPatternLength` · **Source files:** `IT_PE.ASM`
 
-**Grade:** @build-verified ×4 · @runtime-untested ×4 · @shipped ×4
+**Grade:** @build-verified ×5 · @runtime-untested ×5 · @shipped ×5
 
 
 <a id="recent-features-2026-06-03_to_04"></a>

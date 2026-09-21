@@ -31,10 +31,11 @@
 # Source files linked back to this card (grep "features/pattern-rows-guard"):
 #   IT_PE.ASM - DecodePattern (~line 10029) rows==0 -> empty 64-row, skip decode
 #   IT_PE.ASM - EncodePattern (~line 10220) MaxRow+1==0 -> clamp rows to 64
+#   IT_PE.ASM - PE_SetPatternLength (~line 14300) clamp F2 length to 32..200
 # Commit log:   63e6ea1  IT_PE.ASM: guard pattern rows==0 on decode (freeze) and encode (save)
 # SESSION:      features/pattern-rows-guard.session.md
 # RESULT:       Feature delivery 63e6ea1 (direct to main, no PR); deployed IT.EXE to E:\ITNU2026 2026-09-21
-# WATCH: DecodePattern EncodePattern
+# WATCH: DecodePattern EncodePattern PE_SetPatternLength
 # =============================================================================
 
 Feature: A rows==0 pattern is survivable on load and unwritable on save
@@ -68,6 +69,17 @@ Feature: A rows==0 pattern is survivable on load and unwritable on save
     Then "Inc CX" producing 0 is detected and the stored row count is clamped to 64
     And MaxRow is repaired to 63
     And the resulting file cannot contain a rows=0 pattern header
+
+  @shipped @build-verified @runtime-untested @hw-untested
+  Scenario: The F2 "Set Pattern Length" dialog cannot store a zero-row pattern
+    # cite: IT_PE.ASM PE_SetPatternLength (~line 14300) -- clamp PatternSetLength 32..200 ; commit <hash>
+    # This is the ad_stim.it origin: F2 set-length with a 0/blank value made
+    # MaxRow = PatternSetLength-1 = 0FFFFh, stored as rows=0.
+    Given the F2 Set Pattern Length dialog returns a length below 32 or above 200 (e.g. 0)
+    When PE_SetPatternLength applies it to the pattern(s) in range
+    Then the length is clamped to 32..200 before "Dec AX / Mov MaxRow"
+    And the stored pattern always has a valid 1..256 row count
+    And a normal 48- or 96-row set-length still stores exactly 48 or 96 rows
 
   @shipped @build-verified @runtime-untested @hw-untested
   Scenario: A healthy pattern is completely unaffected
