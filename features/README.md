@@ -25,6 +25,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - [Reading the screen from the build machine](#headless-screenshot) — `headless-screenshot.feature`
 - [Flipping every channel mute at once](#invert-channel-mutes) — `invert-channel-mutes.feature`
 - [F3/F4 loader keyjazz keeps the song playing](#loader-keyjazz-hang) — `loader-keyjazz-hang.feature`
+- [The load-sample waveform view follows the highlighted sample](#loader-sample-view-follows-cursor) — `loader-sample-view-follows-cursor.feature`
 - [Multitimbral MIDI-In](#midi-in-multitimbral) — `midi-in-multitimbral.feature`
 - [Send MIDI Stop (FC) out on F8](#midi-out-stop-on-f8) — `midi-out-stop-on-f8.feature`
 - [External MIDI Real-Time Sync](#midi-realtime-sync) — `midi-realtime-sync.feature`
@@ -478,6 +479,24 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **Grade:** @build-verified ×5 · @runtime-untested ×4 · @shipped ×4 · @stock ×1
 
 **Commits:** `a44c41b` Music_SilenceSampleVoices (keep playback alive across reloads) · `ec91331` F3 loader keyjazz hang VRAM markers (triage) · `64fa1ce` F3 loader keyjazz hang fix via MIDISyncLoaderSuppress
+
+
+<a id="loader-sample-view-follows-cursor"></a>
+## The load-sample waveform view follows the highlighted sample
+
+`features/loader-sample-view-follows-cursor.feature` · [session](loader-sample-view-follows-cursor.session.md)
+
+**What it does:** As someone browsing samples in the loader, I want the waveform to update as I move the cursor, So that I can see each sample without having to play a note.
+
+**Behaviour (3 scenarios):**
+
+- Moving to another sample repaints the waveform — `@shipped @build-verified @runtime-untested`
+- A cursor key that does not change the selection costs nothing — `@shipped @build-verified @runtime-untested`
+- The auto-preview keeps the keyjazz-hang protection — `@shipped @build-verified @runtime-untested`
+
+**How it does it:** **Key procs:** `LSWindow_PreviewCurrent`, `LSWindow_Up`, `LSWindow_Down`, `LSWindow_PgUp`, `LSWindow_PgDn`, `LSWindow_Home`, `LSWindow_End` · **Source files:** `IT_DISK.ASM`
+
+**Grade:** @build-verified ×3 · @runtime-untested ×3 · @shipped ×3
 
 
 <a id="midi-in-multitimbral"></a>
