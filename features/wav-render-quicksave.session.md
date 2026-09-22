@@ -31,6 +31,34 @@
 "Rename pattern renders so I can drag them out" → `.000`→`.WAV` → `LL<HHMMSS>.WAV`
 → "where's the Gherkin report card?" → "the card needs its session too (vibe diff)."
 
+## 2026-09-22 addendum — stereo disk-write follows the Stereo flag
+
+**Esa:**
+> so the shift-right arrow key in order list that makes a diskwritten thing. it
+> diskwrites a mono wavefile. it doesn't diskwrite a stereo wavefile. in stereo
+> mode it should diskwrite a stereo wavefile.. not a mono wavefile, unless if in
+> mono mode. so you have the mono down. but can you do the stereo thing.
+
+**Agent (vibe):** Traced the F11 Shift-Right route first (`PE_OrderList_RightDispatch`
+→ `PE_OrderList_RenderDispatch` → `Music_ToggleWAVRender`) and then the disk-writer
+driver. The initial suspicion was that `WAVDRV.ASM` had its stereo header/output
+logic compiled out, because the code is under `IF REGISTERED`; checking
+`wavswitc.inc` corrected that: `REGISTERED = 1`, so the branches are present.
+
+The actual failure is a timing latch. `Music_AutoDetectSoundCard` loads `ITWAV.DRV`
+and calls `Music_InitStereo`, but `WAVDRV.SetStereo` only wrote `StereoSet`. The
+`Stereo` byte used by `Poll10` for `WAVEChannels`, block align, byte rate, and the
+write loop was not copied until `Poll7`, which only runs on an idle `Poll(AX=0)` when
+no file is open. A render starts immediately with `Poll(AX=1)`, so the first output
+file was born mono even though the song/UI was in Stereo mode.
+
+Fix: `SoundDrivers/WAVDRV.ASM SetStereo` now writes both `Stereo` and `StereoSet`
+immediately. Built with `dosbox-x -conf buildall.conf -fastlaunch -exit -nogui
+-nomenu`; `BUILDALL.STAT` reported `BUILDALL_DONE`, and `MAKE.LOG` / `DRV_SND.LOG`
+had no `Error` or `Warning` lines. Runtime/hardware verification is still honest:
+the card is build-verified, but the actual Shift-Right stereo WAV file has not yet
+been rendered and inspected.
+
 ---
 
 ## Turn 1 — the seed (a workflow win, loosely specified)

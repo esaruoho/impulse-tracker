@@ -1227,6 +1227,7 @@ EndP            SetMixVolume
 Proc            SetStereo Far
 
 IF REGISTERED
+                  Mov     CS:Stereo, AL
                   Mov     CS:StereoSet, AL
 
 ENDIF
