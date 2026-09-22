@@ -24,6 +24,10 @@
 
 ## Carded features
 
+### ✅ loader-scrolllock-load-and-jam.feature
+Scroll Lock in the Load-Sample view loads the highlighted sample, forces Instrument mode, creates+selects an instrument, and jumps to the Pattern Editor with Follow on. New key (LSViewWindow_ScrollLock); keyjazz/Enter/cursors untouched. Build-verified, HW-untested.
+- `<hash>` Scroll Lock = load + make instrument + jam
+
 ### ✅ pattern-rows-guard.feature
 A pattern header with rows==0 can neither freeze the loader nor be written on save. Enforces "1..256 rows" at both the decode and encode boundary. Build-verified, runtime/HW-untested. (Repro: `ad_stim.it`, 2026-09-21.)
 - `63e6ea1` DecodePattern rows==0 guard (freeze fix) + EncodePattern rows=0 guard (save fix)

@@ -25,6 +25,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - [Reading the screen from the build machine](#headless-screenshot) — `headless-screenshot.feature`
 - [Flipping every channel mute at once](#invert-channel-mutes) — `invert-channel-mutes.feature`
 - [F3/F4 loader keyjazz keeps the song playing](#loader-keyjazz-hang) — `loader-keyjazz-hang.feature`
+- [Scroll Lock in the loader loads the sample and drops me into the editor](#loader-scrolllock-load-and-jam) — `loader-scrolllock-load-and-jam.feature`
 - [Multitimbral MIDI-In](#midi-in-multitimbral) — `midi-in-multitimbral.feature`
 - [Send MIDI Stop (FC) out on F8](#midi-out-stop-on-f8) — `midi-out-stop-on-f8.feature`
 - [External MIDI Real-Time Sync](#midi-realtime-sync) — `midi-realtime-sync.feature`
@@ -478,6 +479,24 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 **Grade:** @build-verified ×5 · @runtime-untested ×4 · @shipped ×4 · @stock ×1
 
 **Commits:** `a44c41b` Music_SilenceSampleVoices (keep playback alive across reloads) · `ec91331` F3 loader keyjazz hang VRAM markers (triage) · `64fa1ce` F3 loader keyjazz hang fix via MIDISyncLoaderSuppress
+
+
+<a id="loader-scrolllock-load-and-jam"></a>
+## Scroll Lock in the loader loads the sample and drops me into the editor
+
+`features/loader-scrolllock-load-and-jam.feature` · [session](loader-scrolllock-load-and-jam.session.md)
+
+**What it does:** As someone auditioning samples in the loader, I want one key that loads the highlighted sample, makes it an instrument, and puts me in the Pattern Editor, So that I can go from "found a sound" to "jamming with it" without a detour.
+
+**Behaviour (3 scenarios):**
+
+- Scroll Lock loads the sample, makes an instrument, and enters the editor — `@shipped @build-verified @runtime-untested`
+- It is a new key and does not disturb the loader's core tools — `@shipped @build-verified @runtime-untested`
+- If the instrument assign fails, it still drops me in to jam on the sample — `@shipped @build-verified @runtime-untested`
+
+**How it does it:** **Key procs:** `LSViewWindow_ScrollLock` · **Source files:** `IT_DISK.ASM`
+
+**Grade:** @build-verified ×3 · @runtime-untested ×3 · @shipped ×3
 
 
 <a id="midi-in-multitimbral"></a>

@@ -135,6 +135,8 @@ ENDIF
                 Extrn   PE_GetMaxPattern:Far
                 Extrn   PE_ConvAX2Num:Far
                 Extrn   PE_GetLastInstrument:Far
+                Extrn   PE_SetLastInstrument:Far
+                Extrn   PE_ScrollLockFollow:Far ; Scroll Lock -> Pattern Editor + Follow
                 Extrn   PE_GetPatternConfigOffset:Far
                 Extrn   PE_GetForkExtConfigOffset:Far
                 Extrn   MIDI_F8StopEnabled:Far
@@ -1087,6 +1089,10 @@ LSViewWindowKeys        Label
                         DB      0
                         DW      11Ch            ; Enter
                         DW      LSViewWindow_Enter
+
+                        DB      0               ; Scroll Lock = load sample, make
+                        DW      146h            ; + select instrument, jump to the
+                        DW      LSViewWindow_ScrollLock ; Pattern Editor to jam
 
                         DB      0FFh
 
@@ -8007,6 +8013,86 @@ LSWindow_Enter2:
                 Ret
 
 EndP            LSWindow_Enter
+                Assume  DS:Nothing
+
+;-----------------------------------------------------------------------------
+; LSViewWindow_ScrollLock -- FORK (features/loader-scrolllock-load-and-jam.feature)
+;
+; Scroll Lock on the highlighted sample in the Load-Sample view = the one-key
+; "audition it for real": load the sample into the song, force Instrument mode,
+; create + select an instrument for it, then jump to the Pattern Editor with
+; Follow Mode on so you can start jamming immediately. Composed entirely from
+; proven building blocks (same load path as LSWindow_EnterSample, same
+; assign+select block as the WAV auto-import, same PE_ScrollLockFollow the F3/F4
+; lists use). Added as a NEW key -- it does not touch keyjazz, Enter, or the
+; cursor keys, so the loader's core jamming tool is unaffected.
+;-----------------------------------------------------------------------------
+Proc            LSViewWindow_ScrollLock Far
+                Assume  DS:Disk
+
+                Cmp     NumSamples, 0           ; nothing highlighted -> bail
+                JE      LSVSL_Nothing
+
+                                                ; Force Instrument mode ON so the
+                                                ; instrument we make actually plays
+                                                ; when jamming. Bit 2 of
+                                                ; [songseg:2Ch] -- the same flag
+                                                ; Shift-F4 / F_SetControlInstrument
+                                                ; set. Idempotent if already on.
+                Call    Music_GetSongSegment
+                Mov     DS, AX
+                        Assume DS:Nothing
+                Or      Byte Ptr [DS:2Ch], 4
+
+                                                ; DS:SI -> the highlighted sample's
+                                                ; header (same setup as Enter).
+                Push    CS
+                Pop     DS
+                        Assume DS:Disk
+                Mov     AX, 96
+                Mul     CurrentSample
+                Mov     SI, AX
+                Mov     DS, DiskDataArea
+                        Assume DS:Nothing
+
+                Mov     AX, [Word Ptr CS:CheckDataArea+2Eh]
+                Mov     [SI+2Eh], AX
+
+                Mov     AX, 99                  ; release the keyjazz preview slot
+                Call    Music_ReleaseSample     ; (self-silences, song plays on)
+
+                                                ; Load the sample into the current
+                                                ; destination slot (0-based).
+                Call    PE_GetLastInstrument     ; BX = slot
+                Mov     AX, BX
+                Call    LoadSample              ; DS:SI = header, AX = slot
+
+                                                ; Create + select the instrument
+                                                ; for that sample (proven WAV-import
+                                                ; block). AX = instrument number.
+                Call    PE_GetLastInstrument     ; BX = 0-based sample number
+                Call    Music_AssignSampleToInstrument ; AX = inst num, CF on fail
+                JC      LSVSL_Go                ; assign failed -> jam on the sample
+
+                Push    AX
+                Call    D_SetCurrentInstrument  ; select it for F4 (AX = inst num)
+                Pop     AX
+                Call    PE_SetLastInstrument    ; cursor follows it (AL = inst num)
+
+LSVSL_Go:
+                                                ; Into the Pattern Editor + Follow
+                                                ; Mode, ready to jam. Tail-jump:
+                                                ; PE_ScrollLockFollow ends in
+                                                ; Glbl_F2, whose Far Ret hands
+                                                ; AX=5 / the pattern-edit list back
+                                                ; to the framework (same as F2).
+                Jmp     PE_ScrollLockFollow
+
+LSVSL_Nothing:
+                Mov     AX, 1
+                Ret
+
+EndP            LSViewWindow_ScrollLock
                 Assume  DS:Nothing
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
