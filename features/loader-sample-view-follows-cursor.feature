@@ -35,7 +35,7 @@ Feature: The load-sample waveform view follows the highlighted sample
 
   @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Moving to another sample repaints the waveform
-    # cite: IT_DISK.ASM LSWindow_Down (~line 8400) Call LSWindow_PreviewCurrent ; commit <hash>
+    # cite: IT_DISK.ASM LSWindow_Down (~line 8400) Call LSWindow_PreviewCurrent ; commit 614f689
     Given the Load-Sample-from-library window is open on a module with several samples
     When I press Down (or Up/PgUp/PgDn/Home/End) to change the highlighted sample
     Then that sample is loaded into the preview slot (99)
@@ -44,7 +44,7 @@ Feature: The load-sample waveform view follows the highlighted sample
 
   @shipped @build-verified @runtime-untested @hw-untested
   Scenario: A cursor key that does not change the selection costs nothing
-    # cite: IT_DISK.ASM LSWindow_PreviewCurrent (helper) CurrentSample vs SampleInMemory ; commit <hash>
+    # cite: IT_DISK.ASM LSWindow_PreviewCurrent (helper) CurrentSample vs SampleInMemory ; commit 614f689
     Given the cursor is already on the first sample
     When I press Up (a no-op at the top of the list)
     Then LSWindow_PreviewCurrent sees CurrentSample == SampleInMemory
@@ -52,7 +52,7 @@ Feature: The load-sample waveform view follows the highlighted sample
 
   @shipped @build-verified @runtime-untested @hw-untested
   Scenario: The auto-preview keeps the keyjazz-hang protection
-    # cite: IT_DISK.ASM LSWindow_PreviewCurrent (helper) MIDI loader-suppress bracket ; commit <hash>
+    # cite: IT_DISK.ASM LSWindow_PreviewCurrent (helper) MIDI loader-suppress bracket ; commit 614f689
     Given a song is playing while I browse samples in the loader
     When the waveform auto-loads on a cursor move
     Then the load runs inside MIDI_SetLoaderSuppress / MIDI_ClearLoaderSuppress
