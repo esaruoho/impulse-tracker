@@ -56,8 +56,8 @@ Feature: Scroll Lock in the loader loads the sample and drops me into the editor
 
   @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Scroll Lock in the editor round-trips back to the loader on a free slot
-    # cite: IT_PE.ASM PE_ScrollLockFollow PE_SLF_InEditor (armed -> Glbl_LoadSample) ; commit <hash>
-    # cite: IT_DISK.ASM LSViewWindow_ScrollLock Call PE_ArmScrollLockRoundTrip ; commit <hash>
+    # cite: IT_PE.ASM PE_ScrollLockFollow PE_SLF_InEditor (armed -> Glbl_LoadSample) ; commit 3944a9c
+    # cite: IT_DISK.ASM LSViewWindow_ScrollLock Call PE_ArmScrollLockRoundTrip ; commit 3944a9c
     Given I entered the Pattern Editor via loader Scroll Lock (round-trip armed)
     And I have jammed some notes
     When I press Scroll Lock again in the editor
@@ -67,7 +67,7 @@ Feature: Scroll Lock in the loader loads the sample and drops me into the editor
 
   @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Scroll Lock in the editor without the round-trip armed still toggles Follow
-    # cite: IT_PE.ASM PE_ScrollLockFollow PE_SLF_InEditor JE PE_SLF_Toggle ; commit <hash>
+    # cite: IT_PE.ASM PE_ScrollLockFollow PE_SLF_InEditor JE PE_SLF_Toggle ; commit 3944a9c
     Given I am in the Pattern Editor but did NOT arrive via loader Scroll Lock
     When I press Scroll Lock
     Then Follow Mode toggles exactly as before (no round-trip)
