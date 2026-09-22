@@ -137,6 +137,7 @@ ENDIF
                 Extrn   PE_GetLastInstrument:Far
                 Extrn   PE_SetLastInstrument:Far
                 Extrn   PE_ScrollLockFollow:Far ; Scroll Lock -> Pattern Editor + Follow
+                Extrn   PE_ArmScrollLockRoundTrip:Far ; arm loader<->editor ping-pong
                 Extrn   PE_GetPatternConfigOffset:Far
                 Extrn   PE_GetForkExtConfigOffset:Far
                 Extrn   MIDI_F8StopEnabled:Far
@@ -8080,12 +8081,21 @@ Proc            LSViewWindow_ScrollLock Far
                 Call    PE_SetLastInstrument    ; cursor follows it (AL = inst num)
 
 LSVSL_Go:
+                                                ; Arm the round-trip: the next
+                                                ; Scroll Lock pressed in the editor
+                                                ; comes BACK here on a free slot.
+                Call    PE_ArmScrollLockRoundTrip
+
                                                 ; Into the Pattern Editor + Follow
                                                 ; Mode, ready to jam. Tail-jump:
                                                 ; PE_ScrollLockFollow ends in
                                                 ; Glbl_F2, whose Far Ret hands
                                                 ; AX=5 / the pattern-edit list back
                                                 ; to the framework (same as F2).
+                                                ; (CurrentMode is still 13 here, so
+                                                ; PE_ScrollLockFollow enters the
+                                                ; editor rather than seeing the
+                                                ; armed flag and bouncing back.)
                 Jmp     PE_ScrollLockFollow
 
 LSVSL_Nothing:

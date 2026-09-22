@@ -32,6 +32,9 @@ EndS
                 Extrn   E_GetEMSPageFrame:Far
 
                 Extrn   Glbl_F2:Far, Glbl_F6:Far
+                Extrn   Glbl_LoadSample:Far     ; reopen the sample loader
+                Extrn   Music_GetNumberOfSamples:Far
+                Extrn   Music_GetNumberOfInstruments:Far
                 Extrn   Glbl_GetCurrentMode:Far
                 Extrn   Glbl_GetHeaderMode:Far
                 Extrn   Glbl_LeftBrace:Far, Glbl_RightBrace:Far
@@ -171,6 +174,7 @@ ENDIF
                 Global  PE_F7:Far
 
                 Global  PE_ScrollLockFollow:Far ; Scroll Lock from F3/F4 lists
+                Global  PE_ArmScrollLockRoundTrip:Far ; loader arms the round-trip
 
                 Global  PE_GetPatternConfigOffset:Far
                 Global  PE_GetForkExtConfigOffset:Far
@@ -13726,6 +13730,24 @@ EndP            PEFunction_ToggleTrace
 ;   save the dispatcher's DS first and restore it before tail-jumping into
 ;   Glbl_F2, so Glbl_F2 runs with exactly the DS a real F2 press would give it.
 ; FEATURE-CARD >> features/scrolllock-follow-from-lists.feature
+; Fork: the loader Scroll Lock (LSViewWindow_ScrollLock) ARMS this before it
+; enters the editor. When set, the NEXT Scroll Lock pressed IN the editor is a
+; round-trip back to the sample loader (on a free slot) instead of a Follow-mode
+; toggle. Consumed (cleared) by that round-trip. Ctrl-F always toggles Follow.
+; FEATURE-CARD >> features/loader-scrolllock-load-and-jam.feature
+ScrollLockRoundTrip     DB      0
+
+;-----------------------------------------------------------------------------
+; PE_ArmScrollLockRoundTrip -- called from the loader (IT_DISK) to arm the
+; loader<->editor Scroll Lock ping-pong. Same-segment CS-relative flag write.
+;-----------------------------------------------------------------------------
+Proc            PE_ArmScrollLockRoundTrip Far
+                Mov     Byte Ptr CS:ScrollLockRoundTrip, 1
+                Ret
+EndP            PE_ArmScrollLockRoundTrip
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
 Proc            PE_ScrollLockFollow Far
                 Assume DS:Pattern
 
@@ -13736,7 +13758,7 @@ Proc            PE_ScrollLockFollow Far
                 ; from a list / other screen do we force Follow ON and jump in.
                 Call    Glbl_GetCurrentMode     ; AL = CurrentMode
                 Cmp     AL, 2
-                JE      PE_SLF_Toggle
+                JE      PE_SLF_InEditor
 
                 ; --- From elsewhere: force Follow Mode ON + enter the editor ---
                 Push    DS                      ; preserve dispatcher DS for F2
@@ -13787,6 +13809,33 @@ PE_SLF_NoRetarget:
                                                 ; Far Ret hands AX=5 / DX=Offset
                                                 ; O1_PatternEditList back to the
                                                 ; key dispatcher (same as F2)
+
+PE_SLF_InEditor:
+                ; Fork round-trip: if the loader armed us (we got here via loader
+                ; Scroll Lock -> jam), this Scroll Lock goes BACK to the sample
+                ; loader on the next free slot, so you can grab the next sound and
+                ; build a kit. If NOT armed, fall through to the normal Follow
+                ; toggle (Ctrl-F always toggles regardless). CS-relative flag.
+                Cmp     Byte Ptr CS:ScrollLockRoundTrip, 0
+                JE      PE_SLF_Toggle
+                Mov     Byte Ptr CS:ScrollLockRoundTrip, 0   ; consume it
+
+                ; next free slot = max(highest sample, highest instrument) + 1,
+                ; capped at 99 (same rule as the WAV auto-import). Sets it as the
+                ; loader's destination so the next load lands on an empty slot.
+                Call    Music_GetNumberOfSamples        ; AX = highest sample
+                Mov     BX, AX
+                Call    Music_GetNumberOfInstruments    ; AX = highest instrument
+                Cmp     AX, BX
+                JAE     PE_SLF_HaveMax
+                Mov     AX, BX
+PE_SLF_HaveMax:
+                Cmp     AX, 99
+                JAE     PE_SLF_ReopenLoader             ; full -> keep current slot
+                Inc     AX
+                Call    PE_SetLastInstrument            ; AL = next free slot (1..99)
+PE_SLF_ReopenLoader:
+                Jmp     Glbl_LoadSample                 ; back to loader (AX=5, DX=list)
 
 PE_SLF_Toggle:
                 ; --- Already in the editor: toggle Follow Mode (mirrors

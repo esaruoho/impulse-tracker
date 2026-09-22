@@ -52,3 +52,26 @@ fix by binding 146h so the window handler is reached first. Failure mode is beni
 IT.EXE (482824 bytes), both new Extrns resolve. `@runtime-untested @hw-untested`
 until Esa confirms on the DOS box: Scroll Lock on a sample loads it, makes+selects
 an instrument, and lands in the Pattern Editor with Follow on, ready to jam.
+
+## Follow-up (same day): Scroll Lock became a loader<->editor ping-pong
+Esa: "if i was in sample load mode, and i ran scroll lock, and i input some notes,
+the scroll lock pressing again will bring me back to sample load mode but on a free
+slot." So the Pause/PrintScreen idea was dropped -- Scroll Lock itself round-trips.
+
+Design:
+- LSViewWindow_ScrollLock now calls PE_ArmScrollLockRoundTrip before entering the
+  editor. No immediate bounce: CurrentMode is still 13 (loader) when
+  PE_ScrollLockFollow runs, so it takes the enter-editor path, not the editor branch.
+- PE_ScrollLockFollow editor branch (CurrentMode==2) now: if armed -> consume the
+  flag, advance the loader destination to the next free slot
+  (max(Music_GetNumberOfSamples, Music_GetNumberOfInstruments)+1, cap 99) via
+  PE_SetLastInstrument, then Jmp Glbl_LoadSample. If NOT armed -> the original
+  Follow-mode toggle, unchanged. Ctrl-F still toggles Follow either way.
+- Flag ScrollLockRoundTrip is a CS-relative byte in the Pattern segment; the loader
+  arms it through the small Far setter PE_ArmScrollLockRoundTrip (avoids cross-
+  segment variable addressing).
+
+Known v1 limit: if you arrive via loader Scroll Lock, then do other work in the
+editor and press Scroll Lock expecting a Follow toggle, you'll round-trip instead
+(the flag is still armed). Ctrl-F is the always-Follow escape hatch. Build-verified
+(IT.EXE 483435); HW-untested.

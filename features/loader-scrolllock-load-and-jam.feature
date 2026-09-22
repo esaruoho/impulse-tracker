@@ -21,12 +21,14 @@
 # Report-card legend (tags): @stock @shipped @build-verified @runtime-verified
 #                            @runtime-untested @hw-untested @todo
 # Source files linked back to this card (grep "features/loader-scrolllock-load-and-jam"):
-#   IT_DISK.ASM - LSViewWindow_ScrollLock (the handler)
+#   IT_DISK.ASM - LSViewWindow_ScrollLock (loader -> load+instrument+editor, arms round-trip)
 #   IT_DISK.ASM - LSViewWindowKeys (146h entry)
+#   IT_PE.ASM   - PE_ArmScrollLockRoundTrip (loader arms the ping-pong)
+#   IT_PE.ASM   - PE_ScrollLockFollow (editor Scroll Lock: armed -> back to loader on a free slot)
 # Commit log:   <stamped by hook>
 # SESSION:      features/loader-scrolllock-load-and-jam.session.md
 # RESULT:       <stamped by hook>
-# WATCH: LSViewWindow_ScrollLock
+# WATCH: LSViewWindow_ScrollLock PE_ArmScrollLockRoundTrip PE_ScrollLockFollow
 # =============================================================================
 
 Feature: Scroll Lock in the loader loads the sample and drops me into the editor
@@ -51,6 +53,25 @@ Feature: Scroll Lock in the loader loads the sample and drops me into the editor
     When the Scroll Lock entry is added to LSViewWindowKeys
     Then keyjazz, Enter (LSViewWindow_Enter) and Up/Down are byte-for-byte unchanged
     And only the previously-unbound Scroll Lock gains behaviour in this window
+
+  @shipped @build-verified @runtime-untested @hw-untested
+  Scenario: Scroll Lock in the editor round-trips back to the loader on a free slot
+    # cite: IT_PE.ASM PE_ScrollLockFollow PE_SLF_InEditor (armed -> Glbl_LoadSample) ; commit <hash>
+    # cite: IT_DISK.ASM LSViewWindow_ScrollLock Call PE_ArmScrollLockRoundTrip ; commit <hash>
+    Given I entered the Pattern Editor via loader Scroll Lock (round-trip armed)
+    And I have jammed some notes
+    When I press Scroll Lock again in the editor
+    Then the armed flag is consumed
+    And the loader destination is advanced to the next free slot (max(samples,instruments)+1)
+    And the sample loader reopens, ready to grab the next sound onto a fresh slot
+
+  @shipped @build-verified @runtime-untested @hw-untested
+  Scenario: Scroll Lock in the editor without the round-trip armed still toggles Follow
+    # cite: IT_PE.ASM PE_ScrollLockFollow PE_SLF_InEditor JE PE_SLF_Toggle ; commit <hash>
+    Given I am in the Pattern Editor but did NOT arrive via loader Scroll Lock
+    When I press Scroll Lock
+    Then Follow Mode toggles exactly as before (no round-trip)
+    And Ctrl-F toggles Follow Mode regardless of how I got here
 
   @shipped @build-verified @runtime-untested @hw-untested
   Scenario: If the instrument assign fails, it still drops me in to jam on the sample
