@@ -8374,7 +8374,6 @@ Proc            LSWindow_Up  Far
                 Dec     CurrentSample
 
 LSWindow_Up1:
-                Call    LSWindow_PreviewCurrent ; waveform follows the selection
                 Mov     AX, 1
                 Ret
 
@@ -8399,7 +8398,6 @@ Proc            LSWindow_Down  Far
                 Mov     CurrentSample, AX
 
 LSWindow_Down1:
-                Call    LSWindow_PreviewCurrent ; waveform follows the selection
                 Mov     AX, 1
                 Ret
 
@@ -8423,7 +8421,6 @@ Proc            LSWindow_PgUp   Far
                 Mov     CurrentSample, AX
 
 LSWindow_PgUp1:
-                Call    LSWindow_PreviewCurrent ; waveform follows the selection
                 Mov     AX, 1
                 Ret
 
@@ -8448,7 +8445,6 @@ Proc            LSWindow_PgDn   Far
                 Mov     CurrentSample, AX
 
 LSWindow_PgDn1:
-                Call    LSWindow_PreviewCurrent ; waveform follows the selection
                 Mov     AX, 1
                 Ret
 
@@ -8467,7 +8463,6 @@ Proc            LSWindow_Home   Far
                 Mov     CurrentSample, 0
 
 LSWindow_Home1:
-                Call    LSWindow_PreviewCurrent ; waveform follows the selection
                 Mov     AX, 1
                 Ret
 
@@ -8491,56 +8486,13 @@ Proc            LSWindow_End    Far
                 Mov     CurrentSample, AX
 
 LSWindow_End1:
-                Call    LSWindow_PreviewCurrent ; waveform follows the selection
                 Mov     AX, 1
                 Ret
 
 EndP            LSWindow_End
                 Assume  DS:Nothing
 
-;-----------------------------------------------------------------------------
-; LSWindow_PreviewCurrent -- FORK (features/loader-sample-view-follows-cursor.feature)
-; Make the loader's waveform view FOLLOW the highlighted sample: whenever the
-; Up/Down/PgUp/PgDn/Home/End cursor moves change CurrentSample, load that sample
-; into the preview slot (99) so D_DrawWaveForm (driven off slot 100 with the
-; SampleInMemory guard inside LoadSample) repaints the waveform immediately --
-; no note-key press required. Reuses the EXACT keyjazz preview setup from
-; D_PostLoadSampleWindow (DisableStereoMenu gate + MIDI loader-suppress bracket),
-; so the proven keyjazz-hang protection applies here too. Register-safe and a
-; no-op when the selection did not change (guard below + inside LoadSample).
-Proc            LSWindow_PreviewCurrent
-                PushAD
-                Push    DS
-                Push    ES
-
-                Mov     AX, CS:CurrentSample            ; changed since last draw?
-                Cmp     AX, CS:SampleInMemory
-                JE      LSWindow_PreviewCurrent1        ; no -> nothing to do
-
-                Mov     AX, 96                          ; SI = 96 * CurrentSample
-                Mul     Word Ptr CS:CurrentSample       ;      = sample header offset
-                Mov     SI, AX
-
-                Mov     Byte Ptr CS:DisableStereoMenu, 1
-                Call    MIDI_SetLoaderSuppress          ; guard FA/FC during load
-
-                Mov     DS, CS:DiskDataArea
-                Mov     AX, 99                          ; preview slot; draws waveform
-                Call    LoadSample
-
-                Call    MIDI_ClearLoaderSuppress
-                Mov     Byte Ptr CS:DisableStereoMenu, 0
-
-LSWindow_PreviewCurrent1:
-                Pop     ES
-                Pop     DS
-                PopAD
-                Ret
-
-EndP            LSWindow_PreviewCurrent
-                Assume  DS:Nothing
-
-;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+;æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§æ§ï¿½
 
 Proc            D_LSCheckLoopValues Far
 

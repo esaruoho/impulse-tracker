@@ -24,10 +24,6 @@
 
 ## Carded features
 
-### ✅ loader-sample-view-follows-cursor.feature
-Loader waveform view repaints the instant you arrow between samples (not only on keyjazz). New LSWindow_PreviewCurrent reuses the slot-99 preview load + keyjazz-hang suppression. Build-verified, runtime/HW-untested.
-- `614f689` waveform follows loader cursor (6 cursor handlers + helper)
-
 ### ✅ pattern-rows-guard.feature
 A pattern header with rows==0 can neither freeze the loader nor be written on save. Enforces "1..256 rows" at both the decode and encode boundary. Build-verified, runtime/HW-untested. (Repro: `ad_stim.it`, 2026-09-21.)
 - `63e6ea1` DecodePattern rows==0 guard (freeze fix) + EncodePattern rows=0 guard (save fix)

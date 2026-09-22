@@ -15,4 +15,4 @@
 - Resume: `claude --resume 7af686cc-d5e9-4368-b03c-faeafd069b3b`
 - Transcript: file:///Users/esaruoho/.claude/projects/-Users-esaruoho-work-impulse-tracker/7af686cc-d5e9-4368-b03c-faeafd069b3b.jsonl
 - Convey tooling touched: CONVEY-SITUATION.md, GHERKIN-FEATURE-WIKI-PATTERN.md, INDEX.md, STATUS.md, gen-sessions.py, gen-status.py, report-card-stamp.sh
-- Cards touched (6): f2-resize-tiles-pattern.feature, loader-keyjazz-hang.feature, loader-sample-view-follows-cursor.feature, midi-in-multitimbral.feature, pattern-rows-guard.feature, sample-amplify-keeps-playback.feature
+- Cards touched (5): f2-resize-tiles-pattern.feature, loader-keyjazz-hang.feature, midi-in-multitimbral.feature, pattern-rows-guard.feature, sample-amplify-keeps-playback.feature

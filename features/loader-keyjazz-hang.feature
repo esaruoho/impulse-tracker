@@ -36,6 +36,7 @@
 # WATCH: LoadSample Music_ReleaseSample Music_SilenceSampleVoices MIDISyncLoaderSuppress MIDI_SetLoaderSuppress MIDI_ClearLoaderSuppress
 # RESULT-LOG >> (auto-maintained by .githooks/pre-commit / post-merge)
 #   2026-09-22  direct-commit  touched: LoadSample MIDI_SetLoaderSuppress MIDI_ClearLoaderSuppress
+#   2026-09-22  direct-commit  touched: LoadSample MIDI_SetLoaderSuppress MIDI_ClearLoaderSuppress
 #   2026-09-21  direct-commit  touched: LoadSample Music_ReleaseSample
 #
 # IT.TXT source of truth: CLAUDE.md "Loader screens (after F9)" table, status as of a44c41b.
