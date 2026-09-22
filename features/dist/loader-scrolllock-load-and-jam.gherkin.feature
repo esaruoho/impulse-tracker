@@ -1,36 +1,6 @@
-# =============================================================================
-# WIKI PAGE / REPORT CARD: Scroll Lock in the sample loader = load + make
-#                          instrument + jump to the Pattern Editor to jam
-# Convention: GHERKIN-FEATURE-WIKI-PATTERN.md
-#
-# In the Load-Sample view, pressing Scroll Lock on the highlighted sample does
-# the whole "audition it for real" chain in one key: load the sample into the
-# song, force Instrument mode, create + select an instrument for it, then open
-# the Pattern Editor with Follow Mode on so you can start jamming immediately.
-#
-# WHAT THIS CARD SPAWNS:
-#   - CODESPACE: this .feature + .session.md, the LSViewWindow_ScrollLock proc,
-#                the 146h entry in LSViewWindowKeys, and the two new Extrns
-#                (PE_ScrollLockFollow, PE_SetLastInstrument) in IT_DISK.ASM.
-#   - THINKSPACE: the .session.md -- why it's a NEW key (contained risk, keyjazz
-#                untouched) composed only from proven blocks (LSWindow_EnterSample
-#                load path, the WAV-import assign+select block, PE_ScrollLockFollow).
-#   - AREASPACE: OWNS the Scroll-Lock gesture in the sample-view window; must NOT
-#                touch keyjazz, Enter, or the cursor keys.
-#
-# Report-card legend (tags): @stock @shipped @build-verified @runtime-verified
-#                            @runtime-untested @hw-untested @todo
-# Source files linked back to this card (grep "features/loader-scrolllock-load-and-jam"):
-#   IT_DISK.ASM - LSViewWindow_ScrollLock (loader -> load+instrument+editor, arms round-trip)
-#   IT_DISK.ASM - LSViewWindowKeys (146h entry)
-#   IT_PE.ASM   - PE_ArmScrollLockRoundTrip (loader arms the ping-pong)
-#   IT_PE.ASM   - PE_ScrollLockLoadSample (Shift-Scroll Lock -> Sample Load)
-#   IT_PE.ASM   - PE_ScrollLockFollow (editor Scroll Lock: armed -> back to loader on a free slot)
-# Commit log:   <stamped by hook>
-# SESSION:      features/loader-scrolllock-load-and-jam.session.md
-# RESULT:       <stamped by hook>
-# WATCH: LSViewWindow_ScrollLock PE_ArmScrollLockRoundTrip PE_ScrollLockLoadSample PE_ScrollLockFollow
-# =============================================================================
+# Pure Gherkin test extracted from features/loader-scrolllock-load-and-jam.feature
+# (report-card banner stripped; inline # cite: traceability kept)
+# Regenerate: python3 features/print-card.py features/loader-scrolllock-load-and-jam.feature
 
 Feature: Scroll Lock in the loader loads the sample and drops me into the editor
   As someone auditioning samples in the loader, I want one key that loads the

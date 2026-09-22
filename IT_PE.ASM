@@ -764,6 +764,10 @@ ENDIF
                         DW      3h              ; Ctrl 'C'
                         DW      Offset PEFunction_ToggleCentralise
 
+                        DB      4               ; Shift-Scroll Lock
+                        DW      146h            ; force-open Sample Load
+                        DW      Offset PE_ScrollLockLoadSample
+
                         DB      0
                         DW      146h            ; Scroll Lock
                         DW      Offset PEFunction_ToggleTrace
@@ -13745,6 +13749,16 @@ Proc            PE_ArmScrollLockRoundTrip Far
                 Mov     Byte Ptr CS:ScrollLockRoundTrip, 1
                 Ret
 EndP            PE_ArmScrollLockRoundTrip
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
+; Shift-Scroll Lock from the Pattern Editor always reopens the sample loader.
+; This stays separate from PE_ScrollLockFollow so plain Scroll Lock keeps its
+; existing Follow toggle and loader round-trip behavior.
+; FEATURE-CARD >> features/loader-scrolllock-load-and-jam.feature
+Proc            PE_ScrollLockLoadSample Far
+                Jmp     Glbl_LoadSample
+EndP            PE_ScrollLockLoadSample
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 

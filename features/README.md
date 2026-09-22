@@ -488,17 +488,18 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **What it does:** As someone auditioning samples in the loader, I want one key that loads the highlighted sample, makes it an instrument, and puts me in the Pattern Editor, So that I can go from "found a sound" to "jamming with it" without a detour.
 
-**Behaviour (5 scenarios):**
+**Behaviour (6 scenarios):**
 
 - Scroll Lock loads the sample, makes an instrument, and enters the editor — `@shipped @build-verified @runtime-untested`
 - It is a new key and does not disturb the loader's core tools — `@shipped @build-verified @runtime-untested`
 - Scroll Lock in the editor round-trips back to the loader on a free slot — `@shipped @build-verified @runtime-untested`
 - Scroll Lock in the editor without the round-trip armed still toggles Follow — `@shipped @build-verified @runtime-untested`
+- Shift-Scroll Lock in the editor always reopens Sample Load — `@shipped @build-verified @runtime-untested`
 - If the instrument assign fails, it still drops me in to jam on the sample — `@shipped @build-verified @runtime-untested`
 
-**How it does it:** **Key procs:** `LSViewWindow_ScrollLock`, `PE_ArmScrollLockRoundTrip`, `PE_ScrollLockFollow` · **Source files:** `IT_DISK.ASM`, `IT_PE.ASM`
+**How it does it:** **Key procs:** `LSViewWindow_ScrollLock`, `PE_ArmScrollLockRoundTrip`, `PE_ScrollLockLoadSample`, `PE_ScrollLockFollow` · **Source files:** `IT_DISK.ASM`, `IT_PE.ASM`
 
-**Grade:** @build-verified ×5 · @runtime-untested ×5 · @shipped ×5
+**Grade:** @build-verified ×6 · @runtime-untested ×6 · @shipped ×6
 
 
 <a id="midi-in-multitimbral"></a>

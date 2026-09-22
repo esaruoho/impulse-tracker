@@ -75,3 +75,16 @@ Known v1 limit: if you arrive via loader Scroll Lock, then do other work in the
 editor and press Scroll Lock expecting a Follow toggle, you'll round-trip instead
 (the flag is still armed). Ctrl-F is the always-Follow escape hatch. Build-verified
 (IT.EXE 483435); HW-untested.
+
+## 2026-09-22 addendum -- Shift-Scroll Lock opens Sample Load directly
+
+Esa asked for Shift-Scroll Lock in the Pattern Editor to return directly to the
+Sample Load view. The editor keylist now adds a higher-priority code-4 (Shift)
+entry for key word `146h`, routed to `PE_ScrollLockLoadSample`. That small Far
+handler tail-jumps to the existing `Glbl_LoadSample` transition. Plain Scroll Lock
+remains unchanged: it still follows the armed loader round-trip or toggles Follow
+when unarmed.
+
+The new scenario is recorded in `features/loader-scrolllock-load-and-jam.feature`.
+Runtime verification remains pending until the rebuilt `IT.EXE` is driven with the
+actual Shift-Scroll Lock gesture.
