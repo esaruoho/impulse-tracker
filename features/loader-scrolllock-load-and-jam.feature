@@ -36,7 +36,7 @@ Feature: Scroll Lock in the loader loads the sample and drops me into the editor
 
   @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Scroll Lock loads the sample, makes an instrument, and enters the editor
-    # cite: IT_DISK.ASM LSViewWindow_ScrollLock ; commit <hash>
+    # cite: IT_DISK.ASM LSViewWindow_ScrollLock ; commit 8f6a5cd
     Given the Load-Sample view is open with a sample highlighted
     When I press Scroll Lock
     Then the highlighted sample is loaded into the current sample slot
@@ -46,7 +46,7 @@ Feature: Scroll Lock in the loader loads the sample and drops me into the editor
 
   @shipped @build-verified @runtime-untested @hw-untested
   Scenario: It is a new key and does not disturb the loader's core tools
-    # cite: IT_DISK.ASM LSViewWindowKeys 146h entry (added before the 0FFh terminator) ; commit <hash>
+    # cite: IT_DISK.ASM LSViewWindowKeys 146h entry (added before the 0FFh terminator) ; commit 8f6a5cd
     Given the loader keyjazz, Enter, and cursor keys work as before
     When the Scroll Lock entry is added to LSViewWindowKeys
     Then keyjazz, Enter (LSViewWindow_Enter) and Up/Down are byte-for-byte unchanged
@@ -54,7 +54,7 @@ Feature: Scroll Lock in the loader loads the sample and drops me into the editor
 
   @shipped @build-verified @runtime-untested @hw-untested
   Scenario: If the instrument assign fails, it still drops me in to jam on the sample
-    # cite: IT_DISK.ASM LSViewWindow_ScrollLock JC LSVSL_Go on Music_AssignSampleToInstrument ; commit <hash>
+    # cite: IT_DISK.ASM LSViewWindow_ScrollLock JC LSVSL_Go on Music_AssignSampleToInstrument ; commit 8f6a5cd
     Given the sample loaded but no instrument slot could be assigned
     When Music_AssignSampleToInstrument returns carry
     Then the macro skips the select step
