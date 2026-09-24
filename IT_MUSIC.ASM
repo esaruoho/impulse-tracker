@@ -79,7 +79,7 @@ include network.inc
         Extrn   GlobalKeyList:Far
         Extrn   GetEnvironment:Far
 
-        Extrn   MIDIBufferEmpty:Far, MIDISend:Far, MIDI_ClearTable:Far
+        Extrn   MIDIBufferEmpty:Far, MIDISend:Far, MIDI_ResetInputState:Far, MIDI_ClearTable:Far
         Extrn   O1_ShowTime
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿
@@ -114,6 +114,7 @@ include network.inc
         Global  Music_Poll:Far
 
         Global  Music_ReinitSoundCard:Far
+        Global  Music_ResetMIDIInput:Far
         Global  Music_InitMusic:Far
         Global  Music_UnInitMusic:Far
         Global  Music_GetSongSegment:Far
@@ -185,6 +186,8 @@ include network.inc
         Global  Music_GetSampleLocation:Far
         Global  Music_UpdatePatternOffset:Far
         Global  Music_AssignSampleToInstrument:Far
+        Global  Music_AssignSampleToInstrumentExact:Far
+        Global  Music_FindFreeMatchingSlot:Far
         Global  Music_KBPlaySong:Far
         Global  Music_IncreaseVolume:Far
         Global  Music_DecreaseVolume:Far
@@ -408,8 +411,11 @@ InstrumentHeader        Label   Byte
         DB      115, 0, 116, 0, 117, 0, 118, 0, 119, 0
         DB      0, 2, 4 Dup (0), 64, 0, 0, 64, 100, 0, 70 Dup (0)
         DB      0, 2, 4 Dup (0), 0, 0, 0, 0, 100, 0, 70 Dup (0)
+
         DB      0, 2, 4 Dup (0), 0, 0, 0, 0, 100, 0, 70 Dup (0)
         DB      7 Dup (0)
+
+MusicAssignExactOnly     DB      0
 
 SampleHeader            Label   Byte
         DB      "IMPS", 13 Dup (0), 64, 0, 64, 40 Dup (0)
@@ -3370,6 +3376,19 @@ Proc            Music_ReinitSoundCard Far
                 Jmp     Music_SoundCardLoadAllSamples
 
 EndP            Music_ReinitSoundCard
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
+; Re-arm the freshly selected driver once after startup and discard any
+; partial MIDI message left in the host-side parser. This is intentionally
+; separate from Music_ReinitSoundCard, which also reloads song samples.
+Proc            Music_ResetMIDIInput Far
+
+                Call    [DriverReinitSound]
+                Call    MIDI_ResetInputState
+                Ret
+
+EndP            Music_ResetMIDIInput
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
@@ -11169,6 +11188,9 @@ Proc            Music_AssignSampleToInstrument Far           ; BX = sample num
                 RepE    CmpsB
                 JE      Music_AssignSampleToInstrument4
 
+                Cmp     Byte Ptr CS:MusicAssignExactOnly, 0
+                JNE     Music_AssignSampleToInstrumentNoFallback
+
 ; Search
                 Mov     CX, 99
                 Mov     DI, 512         ; Points to first inst.
@@ -11188,6 +11210,7 @@ Music_AssignSampleToInstrument1:
                 Inc     AX
                 Loop    Music_AssignSampleToInstrument1
 
+Music_AssignSampleToInstrumentNoFallback:
                 StC
 
 Music_AssignSampleToInstrumentEnd:
@@ -11240,6 +11263,55 @@ Music_AssignSampleToInstrument3:
                 Jmp     Music_AssignSampleToInstrumentEnd
 
 EndP            Music_AssignSampleToInstrument
+                Assume DS:Nothing
+
+; Exact-match variant for loader/backfill paths. It accepts the matching
+; instrument slot or an empty slot, but never falls through to another free
+; instrument number when the matching slot is occupied by another sample.
+Proc            Music_AssignSampleToInstrumentExact Far
+                Mov     CS:MusicAssignExactOnly, 1
+                Call    Music_AssignSampleToInstrument
+                Mov     CS:MusicAssignExactOnly, 0
+                Ret
+EndP            Music_AssignSampleToInstrumentExact
+                Assume DS:Nothing
+
+; Return BX = first zero-based song slot whose sample and matching instrument
+; slots are both empty. Existing sample/instrument pairs are never reused.
+Proc            Music_FindFreeMatchingSlot Far
+                Push    CX DX DS SI ES DI
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+                Mov     ES, SongDataArea
+                Xor     BX, BX
+
+Music_FindFreeMatchingSlot1:
+                Mov     DI, BX
+                Add     DI, DI
+                Mov     SI, [ES:DI+64912]       ; sample pointer, slot 0-based
+                Test    Byte Ptr [ES:SI+12h], 1  ; sample exists?
+                JNZ     Music_FindFreeMatchingSlot2
+
+                Mov     AX, 554
+                Mul     BX
+                Mov     DI, AX
+                Add     DI, 512                 ; matching instrument slot
+                Mov     SI, Offset InstrumentHeader
+                Mov     CX, 554
+                RepE    CmpsB                   ; empty instrument template?
+                JE      Music_FindFreeMatchingSlotEnd
+
+Music_FindFreeMatchingSlot2:
+                Inc     BX
+                Cmp     BX, 99                  ; slot 99 is preview-reserved
+                JB      Music_FindFreeMatchingSlot1
+                StC
+
+Music_FindFreeMatchingSlotEnd:
+                Pop     DI ES SI DS DX CX
+                Ret
+EndP            Music_FindFreeMatchingSlot
                 Assume DS:Nothing
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½

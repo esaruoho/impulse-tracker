@@ -14,7 +14,7 @@
 | alt-r-replicate | 8 | ✓ | ~ partial | ✓ | @build-verified @design-note @hw-untested @hw-verified @runtime-untested @runtime-verified @shipped |
 | ctrl-o-empty-orderlist-crash | 7 | ✓ | ✗ | ✗ | @build-verified @hw-untested @known-limit @runtime-untested @shipped |
 | debug-logging-channels | 9 | ✗ | — | ✓ | @design-note @hw-verified @shipped @todo |
-| dump-all-samples-wav | 9 | ✓ | — | ✓ | @build-verified @corrected @hw-untested @hw-verified @shipped @todo |
+| dump-all-samples-wav | 10 | ✓ | ✗ | ✓ | @build-verified @corrected @hw-untested @hw-verified @runtime-untested @shipped @todo |
 | f11-order-list | 9 | ✓ | — | ✓ | @build-verified @hw-untested @hw-verified @shipped @stock |
 | f12-song-variables | 4 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
 | f2-pattern-editor | 4 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @stock |
@@ -27,11 +27,11 @@
 | headless-batch-render | 10 | ✓ | — | ✗ | @build-verified @corrected @design-note @dosbox-verified @hw-untested @shipped @todo |
 | headless-screenshot | 9 | ✓ | — | ✓ | @build-verified @corrected @design-note @dosbox-verified @hw-verified @shipped @todo |
 | invert-channel-mutes | 4 | ✓ | — | ✗ | @build-verified @design-note @hw-untested @shipped @todo |
-| loader-keyjazz-hang | 5 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped @stock |
-| loader-scrolllock-load-and-jam | 6 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped |
+| loader-keyjazz-hang | 7 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped @stock |
+| loader-scrolllock-load-and-jam | 13 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped |
 | midi-in-multitimbral | 12 | ✓ | — | ✗ | @build-verified @design-note @hw-untested @shipped @stock @todo |
 | midi-out-stop-on-f8 | 8 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped |
-| midi-realtime-sync | 11 | ✓ | — | ✗ | @build-verified @hw-untested @shipped @todo |
+| midi-realtime-sync | 15 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped @todo |
 | multi-wav | 5 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped |
 | multitimbral-instrument-play-dots | 5 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped @stock |
 | no-samples-to-instruments-envelope-retention | 5 | ✓ | ✗ | — | @build-verified @removed @runtime-untested @stock @todo |

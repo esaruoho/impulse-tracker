@@ -46,12 +46,14 @@ EndS
                 Extrn   I_GetInstrumentOffset:Far
                 Extrn   I_ClearTables:Far
                 Extrn   I_GetPresetEnvelopeOffset:Far
+                Extrn   I_GetPlayChannel:Far
 
                 Extrn   K_UnInitKeyBoard:Far
                 Extrn   K_IsAnyKeyDown:Far
                 Extrn   K_IsKeyDown:Far
                 Extrn   K_ClearKeyBoardQueue:Far
                 Extrn   K_GetKey:Far
+                Extrn   PE_TranslateMIDI:Far
 
                 Extrn   MIDI_SetLoaderSuppress:Far
                 Extrn   MIDI_ClearLoaderSuppress:Far
@@ -81,6 +83,8 @@ EndS
                 Extrn   Music_ClearAllInstruments:Far
                 Extrn   Music_GetInstrumentMode:Far
                 Extrn   Music_AssignSampleToInstrument:Far
+                Extrn   Music_AssignSampleToInstrumentExact:Far
+                Extrn   Music_FindFreeMatchingSlot:Far
                 Extrn   Music_SoundCardLoadSample:Far
                 Extrn   Music_SoundCardLoadAllSamples:Far
                 Extrn   Music_GetPitchTable:Far
@@ -137,11 +141,20 @@ ENDIF
                 Extrn   PE_GetLastInstrument:Far
                 Extrn   PE_SetLastInstrument:Far
                 Extrn   PE_ScrollLockFollow:Far ; Scroll Lock -> Pattern Editor + Follow
-                Extrn   PE_ArmScrollLockRoundTrip:Far ; arm loader<->editor ping-pong
+                Extrn   PE_CapsReturnPending:Far ; Caps Lock loader round trip
+                Extrn   PE_ClearCapsRoundTrip:Far
+                Extrn   PE_GetCapsTargetSlot:Far
+                Extrn   Glbl_F2:Far            ; direct editor entry for Caps return
                 Extrn   PE_GetPatternConfigOffset:Far
                 Extrn   PE_GetForkExtConfigOffset:Far
                 Extrn   MIDI_F8StopEnabled:Far
                 Extrn   MIDI_SetF8StopEnable:Far
+                Extrn   MIDI_SyncEnabled:Far
+                Extrn   MIDI_SetSyncEnable:Far
+                Extrn   MIDI_TransportEnabled:Far
+                Extrn   MIDI_SetTransportEnable:Far
+                Extrn   Music_GetMIDIMultiEnable:Far
+                Extrn   Music_SetMIDIMultiEnable:Far
                 Extrn   PE_SaveCurrentPattern:Far
                 Extrn   PE_RestoreCurrentPattern:Far
 
@@ -279,6 +292,7 @@ ENDIF
                 Global  D_SaveSample:Far
                 Global  D_SaveRawSample:Far
                 Global  D_DumpAllSamplesWAV:Far
+                Global  D_SetDumpOnlySample:Far
                 Global  D_SaveST3Sample:Far
 
                 Global  D_GotoStartingDirectory:Far
@@ -289,6 +303,7 @@ ENDIF
                 Global  DiskDataArea:Word
                 Global  SampleName:Byte
                 Global  DiskOptions:Byte
+                Global  DumpOnlySample:Word
 
                 Public  D_Resettimer
                 Public  D_ShowTime
@@ -731,7 +746,7 @@ IF SAVESAMPLEWAV
  WAVEDataSize    DD      0
 ENDIF
 
-DumpSampleName          DB      "SMP00.WAV", 0
+DumpSampleName          DB      "00000000.WAV", 0
                                         ; The 80-byte header copy the dump hands to
                                         ; D_SaveRawSampleInternal. It used to be
                                         ; staged in DiskDataArea, which is IT's
@@ -747,13 +762,31 @@ DumpSampleName          DB      "SMP00.WAV", 0
                                         ; FEATURE-CARD >> features/dump-all-samples-wav.feature
 DumpHeaderCopy          DB      80 Dup (0)
 DumpSampleCount         DW      0
+DumpLastSample          DW      0
 DumpAllSamplesMsg       DB      "Dumped ", 0FDh, 'D', " samples as SMPnn.WAV", 0
+DumpOneSampleMsg        DB      "Dumped ", 13 Dup (0), " as ", 13 Dup (0), 0
 DumpStartMsg            DB      "Starting batch export of samples as .WAV...", 0
+DumpWritingMsg          DB      "Writing SMPnn.WAV...", 0
+SelectedWAVNoSampleMsg  DB      "Selected sample is empty.", 0
+SelectedWAVStartMsg     DB      "Saving selected sample as C-4 44.1kHz WAV...", 0
+SelectedWAVSavedMsg     DB      "Saved C-4 44.1kHz WAV (sample ", 0FDh, "D)", 0
+SelectedWAVLogName      DB      "ITNU2026.LOG", 0
+SelectedWAVLogStart     DB      "dump: shared exporter entered", 13, 10
+SelectedWAVLogStartLen  EQU     $ - SelectedWAVLogStart
+SelectedWAVLogWrite     DB      "dump: entering raw writer", 13, 10
+SelectedWAVLogWriteLen  EQU     $ - SelectedWAVLogWrite
+SelectedWAVLogSuccess   DB      "dump: raw writer success", 13, 10
+SelectedWAVLogSuccessLen EQU    $ - SelectedWAVLogSuccess
+SelectedWAVLogError     DB      "dump: raw writer ERROR", 13, 10
+SelectedWAVLogErrorLen  EQU     $ - SelectedWAVLogError
 DumpResumeMode          DW      0       ; play state to restore after the dump
 DumpResumeRow           DW      0
 DumpResumePattern       DW      0
 DumpResumeOrder         DW      0
+DumpResumeRows          DW      0
 DumpSafeCopy            DB      0       ; 1 = route sample reads through the interlock
+DumpOnlySample          DW      0       ; 0 = all samples, otherwise one 1-based slot
+DumpDirectWrite         DB      0       ; selected export: keep interrupts on for DOS write
 DUMPCHUNK               EQU     512     ; bytes copied per interrupts-off window.
                                         ; Small on purpose: this is how long the mixer
                                         ; is kept waiting, and Cli windows in this
@@ -1046,6 +1079,14 @@ LSWindowKeys            Label
                         DW      11Ch            ; bulk-load all samples from
                         DW      LSWindow_ShiftEnter ; module into consecutive slots
 
+                        DB      6               ; MIDI Note Off releases preview
+                        DW      08000h
+                        DW      LSWindow_MIDINoteOff
+
+                        DB      6               ; MIDI Note On previews sample
+                        DW      09000h
+                        DW      LSWindow_MIDINote
+
 LSViewWindowKeys        Label
                         DB      0
                         DW      139h
@@ -1094,6 +1135,10 @@ LSViewWindowKeys        Label
                         DB      0               ; Scroll Lock = load sample, make
                         DW      146h            ; + select instrument, jump to the
                         DW      LSViewWindow_ScrollLock ; Pattern Editor to jam
+
+                        DB      0               ; Caps Lock mirrors Scroll Lock
+                        DW      13Ah            ; after Caps opened Sample Load
+                        DW      LSViewWindow_CapsLock
 
                         DB      0FFh
 
@@ -1431,6 +1476,46 @@ D_InitDisk13:
                 Xor     AL, AL                          ; nonzero -> OFF
 D_InitDiskF8On:
                 Call    MIDI_SetF8StopEnable            ; AL = enable (0/1)
+
+                ; Fork: restore MIDI Sync (F8 Clock) from block +4. The byte
+                ; is FORCE-OFF, so old configs with zero padding remain ON.
+                Call    PE_GetForkExtConfigOffset       ; DS:DX -> block
+                Push    BX
+                Mov     BX, DX
+                Mov     AL, [BX+4]
+                Pop     BX
+                Cmp     AL, 0
+                Mov     AL, 1
+                JE      D_InitDiskSyncOn
+                Xor     AL, AL
+D_InitDiskSyncOn:
+                Call    MIDI_SetSyncEnable
+
+                ; Restore MIDI Transport (FA/FB/FC) from block +5.
+                Call    PE_GetForkExtConfigOffset
+                Push    BX
+                Mov     BX, DX
+                Mov     AL, [BX+5]
+                Pop     BX
+                Cmp     AL, 0
+                Mov     AL, 1
+                JE      D_InitDiskTransportOn
+                Xor     AL, AL
+D_InitDiskTransportOn:
+                Call    MIDI_SetTransportEnable
+
+                ; Restore Multitimbral MIDI-In from block +6.
+                Call    PE_GetForkExtConfigOffset
+                Push    BX
+                Mov     BX, DX
+                Mov     AL, [BX+6]
+                Pop     BX
+                Cmp     AL, 0
+                Mov     AL, 1
+                JE      D_InitDiskMultiOn
+                Xor     AL, AL
+D_InitDiskMultiOn:
+                Call    Music_SetMIDIMultiEnable
 
 D_InitDisk2:                                    ; Load font data.. and set it.
                 Push    CS
@@ -3521,6 +3606,8 @@ D_SaveSampleDataConvert4:
                 Jmp     D_SaveSampleDataConvert7
 
 D_SaveSampleDataConvert6:
+                Cmp     Byte Ptr CS:[DumpDirectWrite], 0
+                JNE     D_SaveSampleDataConvert_NoCLI
                 ClI
 
                 Call    ConvertWriteData
@@ -3528,6 +3615,12 @@ D_SaveSampleDataConvert6:
                 Call    ConvertWriteData
 
                 StI
+                Jmp     D_SaveSampleDataConvert7
+
+D_SaveSampleDataConvert_NoCLI:
+                Call    ConvertWriteData
+                Call    D_SaveBlock
+                Call    ConvertWriteData
 
 D_SaveSampleDataConvert7:
 
@@ -3537,9 +3630,12 @@ D_SaveSampleDataConvert7:
                 JC      D_SaveSampleDataConvert2
 
                 Add     CH, 2
+                Cmp     EDI, 32768
+                JBE     D_SaveSampleDataConvertDone
                 Sub     EDI, 32768
-                JA      D_SaveSampleDataConvert3
+                Jmp     D_SaveSampleDataConvert3
 
+D_SaveSampleDataConvertDone:
                 DB      85h             ; ClC
 D_SaveSampleDataConvert2:
                 StC
@@ -4223,9 +4319,12 @@ D_SaveSampleData6:
                 JC      D_SaveSampleData2
 
                 Add     CH, 2
+                Cmp     EDI, 32768
+                JBE     D_SaveSampleDataDone
                 Sub     EDI, 32768
-                JA      D_SaveSampleData3
+                Jmp     D_SaveSampleData3
 
+D_SaveSampleDataDone:
                 DB      85h
 D_SaveSampleData2:
                 StC
@@ -6374,8 +6473,14 @@ D_PostLoadSampleWindow2:
                 Call    D_DebugMark
                 Pop     AX
 
+                ; FEATURE-CARD >> features/loader-keyjazz-hang.feature
+                ; Loader preview follows the same playback channel as F3/F4
+                ; sample-list keyjazz, not hardcoded host channel 0.
                 Mov     AH, 100
-                Xor     CX, CX
+                Push    AX
+                Call    I_GetPlayChannel
+                Mov     CX, AX
+                Pop     AX
                 Call    Music_PlaySample
 
                 Push    AX
@@ -6383,6 +6488,54 @@ D_PostLoadSampleWindow2:
                 Mov     AH, 'C'                 ; after Music_PlaySample
                 Call    D_DebugMark
                 Pop     AX
+
+                Jmp     D_PostLoadSampleWindow4
+
+LSWindow_MIDINoteOff:
+                ; FEATURE-CARD >> features/loader-keyjazz-hang.feature
+                ; MIDI note-off/velocity-zero releases only the loader preview.
+                Mov     AX, 99
+                Call    Music_SilenceSampleVoices
+                Jmp     D_PostLoadSampleWindow4
+
+LSWindow_MIDINote:
+                ; FEATURE-CARD >> features/loader-keyjazz-hang.feature
+                ; MIDI note-on enters the same loader preview path as PC keyjazz.
+                Call    PE_TranslateMIDI
+                JC      D_PostLoadSampleWindow4 ; If note > B-9... don't play!
+                JZ      LSWindow_MIDINoteOff    ; Velocity zero = note off.
+
+                Xor     AX, AX
+                Mov     AL, DL
+                Push    AX
+
+                Mov     AX, 96
+                Mul     CurrentSample
+                Mov     SI, AX
+
+                Mov     DisableStereoMenu, 1
+
+                Call    MIDI_SetLoaderSuppress
+
+                Push    DS
+                Mov     DS, DiskDataArea
+                Mov     AX, 99
+                Call    LoadSample
+
+                PushF
+                Mov     CS:DisableStereoMenu, 0
+                PopF
+                Pop     DS
+
+                Pop     AX
+                JC      D_PostLoadSampleWindow4
+
+                Mov     AH, 100
+                Push    AX
+                Call    I_GetPlayChannel
+                Mov     CX, AX
+                Pop     AX
+                Call    Music_PlaySample
 
                 Jmp     D_PostLoadSampleWindow4
 
@@ -6964,6 +7117,15 @@ Proc            D_SaveDirectoryConfiguration Far
                 Mov     BL, AL
                 Xor     BL, 1                           ; force-off = NOT enable
                 Mov     [SI+3], BL
+                Call    MIDI_SyncEnabled              ; AL = enable (0/1)
+                Xor     AL, 1                           ; force-off = NOT enable
+                Mov     [SI+4], AL
+                Call    MIDI_TransportEnabled
+                Xor     AL, 1
+                Mov     [SI+5], AL
+                Call    Music_GetMIDIMultiEnable
+                Xor     AL, 1
+                Mov     [SI+6], AL
                 Pop     SI
                 Pop     BX
                 Pop     AX
@@ -8029,6 +8191,17 @@ EndP            LSWindow_Enter
 ; cursor keys, so the loader's core jamming tool is unaffected.
 ;-----------------------------------------------------------------------------
 Proc            LSViewWindow_ScrollLock Far
+                ; A real Scroll Lock load must always return with Follow on.
+                Call    PE_ClearCapsRoundTrip
+                Jmp     LSViewWindow_LoadAndReturn
+EndP            LSViewWindow_ScrollLock
+
+Proc            LSViewWindow_CapsLock Far
+                ; Caps Lock is the reversible editor <-> loader gesture.
+                Jmp     LSViewWindow_LoadAndReturn
+EndP            LSViewWindow_CapsLock
+
+Proc            LSViewWindow_LoadAndReturn Far
                 Assume  DS:Disk
 
                 Cmp     NumSamples, 0           ; nothing highlighted -> bail
@@ -8036,14 +8209,28 @@ Proc            LSViewWindow_ScrollLock Far
 
                                                 ; Force Instrument mode ON so the
                                                 ; instrument we make actually plays
-                                                ; when jamming. Bit 2 of
-                                                ; [songseg:2Ch] -- the same flag
-                                                ; Shift-F4 / F_SetControlInstrument
-                                                ; set. Idempotent if already on.
+                                                ; when jamming. If we are crossing
+                                                ; from Samples Mode, first backfill
+                                                ; instruments for already-loaded
+                                                ; samples so the existing song
+                                                ; material is not orphaned.
+                Call    Music_GetInstrumentMode ; AH bit 2 set if already on.
+                Push    AX
                 Call    Music_GetSongSegment
                 Mov     DS, AX
                         Assume DS:Nothing
                 Or      Byte Ptr [DS:2Ch], 4
+                Pop     AX
+
+                Test    AH, AH
+                JNZ     LSVSL_ModeReady
+
+                Push    CS
+                Pop     DS
+                        Assume DS:Disk
+                Call    LSVSL_BackfillInstruments
+
+LSVSL_ModeReady:
 
                                                 ; DS:SI -> the highlighted sample's
                                                 ; header (same setup as Enter).
@@ -8062,17 +8249,22 @@ Proc            LSViewWindow_ScrollLock Far
                 Mov     AX, 99                  ; release the keyjazz preview slot
                 Call    Music_ReleaseSample     ; (self-silences, song plays on)
 
-                                                ; Load the sample into the current
-                                                ; destination slot (0-based).
-                Call    PE_GetLastInstrument     ; BX = slot
+                                                ; Allocate the first sample slot
+                                                ; whose matching instrument slot
+                                                ; is also empty. This keeps
+                                                ; sample N paired with instrument
+                                                ; N and never reuses a pair.
+                Call    Music_FindFreeMatchingSlot
+                JC      LSVSL_NoMatchingSlot
+                Push    BX
                 Mov     AX, BX
                 Call    LoadSample              ; DS:SI = header, AX = slot
+                Pop     BX
 
                                                 ; Create + select the instrument
                                                 ; for that sample (proven WAV-import
                                                 ; block). AX = instrument number.
-                Call    PE_GetLastInstrument     ; BX = 0-based sample number
-                Call    Music_AssignSampleToInstrument ; AX = inst num, CF on fail
+                Call    Music_AssignSampleToInstrumentExact ; AX = inst num, CF on fail
                 JC      LSVSL_Go                ; assign failed -> jam on the sample
 
                 Push    AX
@@ -8081,11 +8273,16 @@ Proc            LSViewWindow_ScrollLock Far
                 Call    PE_SetLastInstrument    ; cursor follows it (AL = inst num)
 
 LSVSL_Go:
-                                                ; Arm the round-trip: the next
-                                                ; Scroll Lock pressed in the editor
-                                                ; comes BACK here on a free slot.
-                Call    PE_ArmScrollLockRoundTrip
+                                                ; Caps Lock is the reversible
+                                                ; browse gesture: return to the
+                                                ; editor without changing Follow.
+                Call    PE_CapsReturnPending
+                Test    AX, AX
+                JZ      LSVSL_ScrollLockReturn
+                Call    PE_ClearCapsRoundTrip
+                Jmp     Glbl_F2
 
+LSVSL_ScrollLockReturn:
                                                 ; Into the Pattern Editor + Follow
                                                 ; Mode, ready to jam. Tail-jump:
                                                 ; PE_ScrollLockFollow ends in
@@ -8099,10 +8296,66 @@ LSVSL_Go:
                 Jmp     PE_ScrollLockFollow
 
 LSVSL_Nothing:
+                Call    PE_ClearCapsRoundTrip
                 Mov     AX, 1
                 Ret
 
-EndP            LSViewWindow_ScrollLock
+LSVSL_NoMatchingSlot:
+                Call    PE_ClearCapsRoundTrip
+                Mov     AX, 1
+                Ret
+
+EndP            LSViewWindow_LoadAndReturn
+                Assume  DS:Nothing
+
+;-----------------------------------------------------------------------------
+; LSVSL_BackfillInstruments -- Near helper for loader Scroll Lock.
+; Called only when the gesture flips a Samples Mode song into Instrument Mode.
+; For every loaded sample slot, create/fill the matching instrument slot using
+; the same Music_AssignSampleToInstrument helper as the new sample path.
+;-----------------------------------------------------------------------------
+
+Proc            LSVSL_BackfillInstruments Near
+
+                Push    AX
+                Push    BX
+                Push    CX
+                Push    DX
+                Push    DS
+                Push    SI
+
+                ; FEATURE-CARD >> features/loader-scrolllock-load-and-jam.feature
+                ; Samples Mode -> Instrument Mode backfill for pre-existing samples.
+                Call    Music_GetSongSegment
+                Mov     DS, AX
+                        Assume DS:Nothing
+
+                Xor     DX, DX                  ; zero-based sample slot
+
+LSVSL_Backfill1:
+                Mov     BX, DX
+                Add     BX, BX
+                Mov     SI, [DS:BX+64912]       ; SI points to sample header
+                Test    Byte Ptr [DS:SI+12h], 1 ; sample exists?
+                JZ      LSVSL_Backfill2
+
+                Mov     BX, DX
+                Call    Music_AssignSampleToInstrumentExact
+
+LSVSL_Backfill2:
+                Inc     DX
+                Cmp     DX, 99
+                JBE     LSVSL_Backfill1
+
+                Pop     SI
+                Pop     DS
+                Pop     DX
+                Pop     CX
+                Pop     BX
+                Pop     AX
+                Ret
+
+EndP            LSVSL_BackfillInstruments
                 Assume  DS:Nothing
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
@@ -9133,6 +9386,8 @@ EndP            D_SaveSample
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
 Proc            D_SaveRawSample Far
                 Assume DS:Disk
 
@@ -9262,6 +9517,66 @@ EndP            D_SaveRawSampleInternal
 EndP            D_SaveRawSample
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+; AL = 1 start, 2 raw writer entry, 3 success, 4 error. Appends a short
+; phase marker to SMPLOG.TXT in the active export directory.
+Proc            D_SelectedWAVLog Near
+
+                PushAD
+                Push    DS
+                Push    ES
+                Push    AX
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset SelectedWAVLogStart
+                Mov     CX, SelectedWAVLogStartLen
+                Pop     AX
+                Cmp     AL, 1
+                JE      D_SelectedWAVLog_HaveText
+                Mov     SI, Offset SelectedWAVLogWrite
+                Mov     CX, SelectedWAVLogWriteLen
+                Cmp     AL, 2
+                JE      D_SelectedWAVLog_HaveText
+                Mov     SI, Offset SelectedWAVLogSuccess
+                Mov     CX, SelectedWAVLogSuccessLen
+                Cmp     AL, 3
+                JE      D_SelectedWAVLog_HaveText
+                Mov     SI, Offset SelectedWAVLogError
+                Mov     CX, SelectedWAVLogErrorLen
+
+D_SelectedWAVLog_HaveText:
+                Mov     DX, Offset SelectedWAVLogName
+                Mov     AX, 3D02h
+                Int     21h
+                JNC     D_SelectedWAVLog_Open
+                Mov     AH, 3Ch
+                Xor     CX, CX
+                Int     21h
+                JC      D_SelectedWAVLog_Done
+
+D_SelectedWAVLog_Open:
+                Mov     BX, AX
+                Push    CX
+                Mov     AX, 4202h
+                Xor     CX, CX
+                Xor     DX, DX
+                Int     21h
+                Pop     CX
+                Mov     DX, SI
+                Mov     AH, 40h
+                Int     21h
+                Mov     AH, 3Eh
+                Int     21h
+
+D_SelectedWAVLog_Done:
+                Pop     ES
+                Pop     DS
+                PopAD
+                Ret
+
+EndP            D_SelectedWAVLog
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 ; Dump EVERY loaded sample to the render directory as its own WAV -- the Quicksave
 ; folder when one is configured, so the files land where the Mac reads them.
 ; Ported from the schismtracker fork's Ctrl-Shift-Right (song_samples_to_quicksave_files).
@@ -9276,6 +9591,11 @@ EndP            D_SaveRawSample
 ; a 26-character sample name and the slot is what makes them unambiguous.
 ;
 ; features/dump-all-samples-wav.feature
+
+Proc            D_SetDumpOnlySample Far
+                Mov     CS:[DumpOnlySample], AX
+                Ret
+EndP            D_SetDumpOnlySample
 
 Proc            D_DumpAllSamplesWAV Far
 
@@ -9318,8 +9638,12 @@ Proc            D_DumpAllSamplesWAV Far
                 Push    CS
                 Pop     DS
                         Assume DS:Disk
+                Cmp     Word Ptr CS:[DumpOnlySample], 0
+                JNE     D_DumpAll_KeepSelectedMsg
                 Mov     SI, Offset DumpStartMsg
                 Call    SetInfoLine
+
+D_DumpAll_KeepSelectedMsg:
 
                 Push    AX
                 Mov     AL, 1
@@ -9357,11 +9681,26 @@ Proc            D_DumpAllSamplesWAV Far
                                                 ; export a few samples is not a trade
                                                 ; worth making.
                 Mov     Byte Ptr CS:[DumpSafeCopy], 1
+                Mov     Byte Ptr CS:[DumpDirectWrite], 0
 
                 Mov     CS:[DumpSampleCount], 0
+                Call    D_DumpBuildRunPrefix
+                Call    Music_GetNumberOfSamples ; AX = highest occupied slot
+                Mov     CS:[DumpLastSample], AX
                 Mov     BX, 1
 
+                ; No occupied slots: finish before entering the 1..99 scan.
+                Test    AX, AX
+                JZ      D_DumpAll_Finished
+
+                Cmp     Word Ptr CS:[DumpOnlySample], 0
+                JE      D_DumpAll_Loop
+                Mov     BX, CS:[DumpOnlySample]
+                Mov     CS:[DumpLastSample], BX
+
 D_DumpAll_Loop:
+                Cmp     BX, CS:[DumpLastSample]
+                JA      D_DumpAll_Finished
                 Push    BX
 
                 Call    Music_GetSongSegment
@@ -9374,16 +9713,11 @@ D_DumpAll_Loop:
                 Test    Byte Ptr [SI+12h], 1    ; does the sample exist?
                 JZ      D_DumpAll_Next
 
-                                                ; TEMPORARY probe. The dump is
-                                                ; byte-exact in DOSBox for this very
-                                                ; module, but writes IT's CODE segment
-                                                ; on Esa's real DOS box -- so log where
-                                                ; Music_GetSampleLocation is being sent:
-                                                ; [SI+48h] memory type (1=conventional,
-                                                ; 2=EMS, 0=none), [SI+49h] EMS page,
-                                                ; [SI+4Ah] segment-or-handle.
-                                                ; cite: features/debug-logging-channels.feature
-                Call    D_DumpProbe
+                Cmp     Word Ptr CS:[DumpOnlySample], 0
+                JE      D_DumpAll_LogHeaderDone
+                Mov     AL, 1
+                Call    D_SelectedWAVLog
+D_DumpAll_LogHeaderDone:
 
                                                 ; Copy the header so the filename can
                                                 ; be replaced without editing the
@@ -9405,13 +9739,55 @@ D_DumpAll_Loop:
                 Pop     DS
                 Mov     SI, Offset DumpSampleName
                 Mov     DI, Offset DumpHeaderCopy+4
-                Mov     CX, 10
+                Mov     CX, 13
                 Rep     MovsB
 
-                                                ; DS:SI = the patched copy, in CS
+                ; Keep the blocking shared exporter observable without doing
+                ; any diagnostic file I/O on the network destination.
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset DumpWritingMsg
+                Mov     DI, Offset DumpWritingMsg+8
+                Push    BX
+                Mov     BX, Offset DumpSampleName
+                Mov     CX, 13
+D_DumpAll_CopyProgressName:
+                Mov     AL, [CS:BX]
+                Mov     [CS:DI], AL
+                Inc     BX
+                Inc     DI
+                Loop    D_DumpAll_CopyProgressName
+                Call    SetInfoLine
+                Push    AX
+                Mov     AL, 1
+                Call    S_SetDirectMode
+                Call    UpdateInfoLine
+                Xor     AL, AL
+                Call    S_SetDirectMode
+                Pop     AX
+                Pop     BX
+
+                Cmp     Word Ptr CS:[DumpOnlySample], 0
+                JE      D_DumpAll_KeepSampleRate
+                Mov     DWord Ptr ES:[DumpHeaderCopy+3Ch], 44100
+D_DumpAll_KeepSampleRate:
+
+                ; DS:SI = the patched copy, in CS
                 Mov     SI, Offset DumpHeaderCopy
 
+D_DumpAll_RawWrite:
+                ; The exporter loop is 1-based; the mixer table is 0-based.
+                ; Silence only this slot's preview voice before remapping its
+                ; EMS pages. Music_SilenceSampleVoices preserves DS:SI and BX.
+                Push    AX
+                Mov     AX, BX
+                Dec     AX
+                Call    Music_SilenceSampleVoices
+                Pop     AX
                 Call    D_SaveRawSampleInternal
+                PushF
+D_DumpAll_RawResult:
+                PopF
                 JC      D_DumpAll_Next          ; per-sample failure: it has already
                                                 ; put a message up; don't count it
 
@@ -9419,10 +9795,12 @@ D_DumpAll_Loop:
 
 D_DumpAll_Next:
                 Pop     BX
+                Cmp     Word Ptr CS:[DumpOnlySample], 0
+                JNE     D_DumpAll_Finished
                 Inc     BX
-                Cmp     BX, 100
-                JB      D_DumpAll_Loop
+                Jmp     D_DumpAll_Loop
 
+D_DumpAll_Finished:
                 Push    CS
                 Pop     DS
                         Assume DS:Disk
@@ -9430,17 +9808,55 @@ D_DumpAll_Next:
                 Test    AX, AX
                 JZ      D_DumpAll_None
 
+                Cmp     AX, 1
+                JNE     D_DumpAll_ManyDone
+
+                ; Make the one-sample result explicit: original IT filename
+                ; followed by the generated WAV filename.
+                Push    CS
+                Pop     ES
+                Mov     SI, Offset DumpHeaderCopy+4
+                Mov     DI, Offset DumpOneSampleMsg+7
+                Mov     CX, 13
+                Rep     MovsB
+                Mov     SI, Offset DumpSampleName
+                Mov     DI, Offset DumpOneSampleMsg+24
+                Mov     CX, 13
+                Rep     MovsB
+                Mov     SI, Offset DumpOneSampleMsg
+                Mov     BX, 90
+                Call    SetInfoLine2
+                Jmp     D_DumpAll_DoneMessage
+
+D_DumpAll_ManyDone:
                 Mov     SI, Offset DumpAllSamplesMsg
                 Call    SetInfoLine
+
+D_DumpAll_DoneMessage:
+                Push    AX
+                Mov     AL, 1
+                Call    S_SetDirectMode
+                Call    UpdateInfoLine
+                Xor     AL, AL
+                Call    S_SetDirectMode
+                Pop     AX
                 Jmp     D_DumpAll_End
 
 D_DumpAll_None:
                 Mov     SI, Offset DumpNoSamplesMsg
                 Call    SetInfoLine
+                Push    AX
+                Mov     AL, 1
+                Call    S_SetDirectMode
+                Call    UpdateInfoLine
+                Xor     AL, AL
+                Call    S_SetDirectMode
+                Pop     AX
                 Jmp     D_DumpAll_End
 
 D_DumpAll_End:
                 Mov     Byte Ptr CS:[DumpSafeCopy], 0
+                Mov     Byte Ptr CS:[DumpDirectWrite], 0
                 Pop     ES
                 Pop     DS
                 PopAD
@@ -9451,7 +9867,54 @@ D_DumpAll_End:
 EndP            D_DumpAllSamplesWAV
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
-; BX = slot 1..99 -> patch the two digits of CS:DumpSampleName ("SMPnn.WAV").
+; BX = slot 1..99 -> patch the final two digits of the per-run filename.
+
+Proc            D_DumpBuildRunPrefix Near
+                Push    AX
+                Push    CX
+                Push    DX
+                Push    DI
+                Mov     AH, 2Ch
+                Int     21h                     ; CH=hour, CL=minute, DH=second
+                Mov     DI, Offset DumpSampleName
+                Mov     AL, CH
+                Call    D_DumpStore2Dec
+                Mov     AL, CL
+                Call    D_DumpStore2Dec
+                Mov     AL, DH
+                Call    D_DumpStore2Dec
+                Mov     Byte Ptr [CS:DumpSampleName+8], '.'
+                Mov     Byte Ptr [CS:DumpSampleName+9], 'W'
+                Mov     Byte Ptr [CS:DumpSampleName+10], 'A'
+                Mov     Byte Ptr [CS:DumpSampleName+11], 'V'
+                Mov     Byte Ptr [CS:DumpSampleName+12], 0
+                Pop     DI
+                Pop     DX
+                Pop     CX
+                Pop     AX
+                Ret
+EndP            D_DumpBuildRunPrefix
+
+Proc            D_DumpStore2Dec Near
+                Push    AX
+                Push    BX
+                Push    DX
+                Xor     AH, AH
+                Xor     DX, DX
+                Mov     BX, 10
+                Div     BX
+                Add     AL, '0'
+                Mov     [CS:DI], AL
+                Add     DL, '0'
+                Mov     [CS:DI+1], DL
+                Add     DI, 2
+                Pop     DX
+                Pop     BX
+                Pop     AX
+                Ret
+EndP            D_DumpStore2Dec
+
+; BX = slot 1..99 -> patch the final two digits.
 
 DumpProbeName   DB      "SMPLOG.TXT", 0
 DumpProbeBuf    DB      "nn t=TT pg=PP seg=SSSS flg=FF", 13, 10
@@ -9558,8 +10021,8 @@ Proc            D_DumpBuildName Near
                 Div     BX                      ; AL = tens, DL = units
                 Add     AL, '0'
                 Add     DL, '0'
-                Mov     CS:[DumpSampleName+3], AL
-                Mov     CS:[DumpSampleName+4], DL
+                Mov     CS:[DumpSampleName+6], AL
+                Mov     CS:[DumpSampleName+7], DL
 
                 Pop     DX
                 Pop     BX

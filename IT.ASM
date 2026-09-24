@@ -89,6 +89,7 @@ EndS
                 Extrn   Music_SetSoundCardDriver:Far
                 Extrn   Music_Stop:Far
                 Extrn   Music_AutoDetectSoundCard:Far
+                Extrn   Music_ResetMIDIInput:Far
 
                 Extrn   F_SetTimestampSongName:Far
 
@@ -1056,6 +1057,7 @@ SkipMMTSR:
                 Trace   "Initialising Soundcard"
 
                 Call    Music_AutoDetectSoundCard
+                Call    Music_ResetMIDIInput
 
                 Call    F_SetTimestampSongName  ; blank boot song -> creation timestamp name
 

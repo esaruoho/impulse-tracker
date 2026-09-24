@@ -36,6 +36,7 @@
 #
 # WATCH: Music_CreateMIDIInInstruments Music_ExpandMIDIInTo96 Music_ResetMIDIInTo16 MCMI_BuildSlot Music_GetMIDIMultiBanks Music_GetMIDIMultiEnable Music_SetMIDIMultiEnable MIDIMultiEnable MIDIMultiBanks Glbl_Shift_F4 Glbl_MIDIMulti_Toggle Glbl_MIDIMulti_ToggleGuarded MIDIMulti_Route MMR_FindInst MIDIMultiToggleButton O1_ConfirmCreateMIDIIn InstrumentMIDIInChannel
 # RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
+#   2026-09-24  direct-commit  touched: Music_GetMIDIMultiEnable Music_SetMIDIMultiEnable MIDIMultiEnable
 #   2026-08-14  direct-commit  touched: Music_CreateMIDIInInstruments Music_GetMIDIMultiEnable Music_SetMIDIMultiEnable MIDIMultiEnable Glbl_MIDIMulti_Toggle Glbl_MIDIMulti_ToggleGuarded O1_ConfirmCreateMIDIIn
 #   2026-06-04  direct-commit  touched: Music_CreateMIDIInInstruments MIDIMultiEnable Glbl_Shift_F4 MIDIMulti_Route MMR_FindInst O1_ConfirmCreateMIDIIn
 #   2026-06-03  direct-commit  touched: Glbl_Shift_F4

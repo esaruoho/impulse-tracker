@@ -70,6 +70,7 @@ EndS
                 Extrn   Music_ArmRenderNoImport:Far
                 Extrn   Music_StartMultiWAV:Far
                 Extrn   Music_ClearRenderNoImport:Far
+                Extrn   D_DumpAllSamplesWAV:Far
                 Extrn   Music_GetMuteChannelTable:Far
                 Extrn   Music_FindFreePattern:Far
                 Extrn   PE_AppendCloneLog:Far
@@ -174,7 +175,9 @@ ENDIF
                 Global  PE_F7:Far
 
                 Global  PE_ScrollLockFollow:Far ; Scroll Lock from F3/F4 lists
-                Global  PE_ArmScrollLockRoundTrip:Far ; loader arms the round-trip
+                Global  PE_CapsReturnPending:Far ; Caps Lock loader round trip
+                Global  PE_ClearCapsRoundTrip:Far
+                Global  PE_GetCapsTargetSlot:Far
 
                 Global  PE_GetPatternConfigOffset:Far
                 Global  PE_GetForkExtConfigOffset:Far
@@ -296,12 +299,20 @@ PE_CloneWipeMode        DB      0       ; latched wipe mode for the body;
 ;          the live Keyboard-segment MIDIStopOnF8Enable; synced at load (D_Init-
 ;          Disk) and save (D_SaveDirectoryConfiguration) in IT_DISK.ASM.
 ;          FEATURE-CARD >> features/midi-out-stop-on-f8.feature (persistence)
-;   +4..+15  reserved for future fork extensions
+;   +4 (B) MIDISyncPersistOff       "MIDI Sync (F8 Clock)" force-off byte, in
+;          the same encoding as +3. Old configs read as ON by default.
+;          FEATURE-CARD >> features/midi-realtime-sync.feature (persistence)
+;   +5 (B) MIDITransportPersistOff  "MIDI Transport" force-off byte, same encoding.
+;   +6 (B) MIDIMultiPersistOff      "Multitimbral MIDI-In" force-off byte, same encoding.
+;   +7..+15  reserved for future fork extensions
 PE_ForkExtConfig        Label
 DefaultNewPatternLength DW      64
 ClonePatternMuteWipe    DB      1
 MIDIStopOnF8PersistOff  DB      0
-PE_ForkExtConfigPad     DB      12 Dup (0)
+MIDISyncPersistOff      DB      0
+MIDITransportPersistOff DB      0
+MIDIMultiPersistOff     DB      0
+PE_ForkExtConfigPad     DB      9 Dup (0)
 PE_FORKEXTCONFIG_SIZE   EQU     16
 CloneOnMsg              DB      "Clone respects channel mutes: ON", 0
 CloneOffMsg             DB      "Clone respects channel mutes: OFF", 0
@@ -766,11 +777,19 @@ ENDIF
 
                         DB      4               ; Shift-Scroll Lock
                         DW      146h            ; force-open Sample Load
-                        DW      Offset PE_ScrollLockLoadSample
+                        DW      Offset PE_ScrollLockDispatch
 
                         DB      0
                         DW      146h            ; Scroll Lock
-                        DW      Offset PEFunction_ToggleTrace
+                        DW      Offset PE_ScrollLockDispatch
+
+                        DB      0               ; Caps Lock: fallback Sample Load
+                        DW      13Ah            ; real F3 loader path
+                        DW      Offset PE_CapsLoadSample
+
+                        DB      0               ; Pause/Break
+                        DW      73C6h           ; same raw word used globally
+                        DW      Offset PE_ScrollLockLoadSample
 
                         DB      2               ; Alt Scroll Lock
                         DW      146h
@@ -789,8 +808,16 @@ ENDIF
                         DW      Offset PEFunction_SemiUp
 
                         DB      1
+                        DW      1010h           ; Shift-Alt 'Q' = octave up
+                        DW      Offset PEFunction_IncreaseOctave
+
+                        DB      1
                         DW      1E00h           ; Alt 'A'
                         DW      Offset PEFunction_SemiDown
+
+                        DB      1
+                        DW      1E1Eh           ; Shift-Alt 'A' = octave down
+                        DW      Offset PEFunction_DecreaseOctave
 
                         DB      1
                         DW      2D00h           ; Alt 'X'
@@ -2373,12 +2400,20 @@ EndP            PE_OrderList_LeftDispatch
 ; FEATURE-CARD >> features/wav-render-quicksave.feature (Shift-Right at order-list right edge = render to Quicksave)
 ;-------------------------------------------------------------------------------
 Proc            PE_OrderList_RightDispatch Far
-                                                ; Marker debris removed
-                                                ; same as the Left
-                                                ; dispatcher above.
+                Mov     BX, 01Dh               ; Ctrl+Shift+Right exports selected sample
+                Call    K_IsKeyDown
+                JNE     PE_OrdR_DumpSample
+                Mov     BX, 09Dh
+                Call    K_IsKeyDown
+                JNE     PE_OrdR_DumpSample
                 Cmp     CS:[OrderCursor], 2
                 JE      PE_OrdR_AtEdge
                 Jmp     PE_PostOrderList9       ; normal cursor wrap
+
+PE_OrdR_DumpSample:
+                Call    D_DumpAllSamplesWAV
+                Mov     AX, 1
+                Ret
 
 PE_OrdR_AtEdge:
                 Jmp     PE_OrderList_RenderDispatch
@@ -13734,31 +13769,59 @@ EndP            PEFunction_ToggleTrace
 ;   save the dispatcher's DS first and restore it before tail-jumping into
 ;   Glbl_F2, so Glbl_F2 runs with exactly the DS a real F2 press would give it.
 ; FEATURE-CARD >> features/scrolllock-follow-from-lists.feature
-; Fork: the loader Scroll Lock (LSViewWindow_ScrollLock) ARMS this before it
-; enters the editor. When set, the NEXT Scroll Lock pressed IN the editor is a
-; round-trip back to the sample loader (on a free slot) instead of a Follow-mode
-; toggle. Consumed (cleared) by that round-trip. Ctrl-F always toggles Follow.
+; Shift-Scroll Lock from the Pattern Editor always reopens the sample loader.
+; This stays separate from PE_ScrollLockFollow so plain Scroll Lock keeps its
+; existing Follow toggle behavior.
 ; FEATURE-CARD >> features/loader-scrolllock-load-and-jam.feature
-ScrollLockRoundTrip     DB      0
+Proc            PE_ScrollLockDispatch Far
 
-;-----------------------------------------------------------------------------
-; PE_ArmScrollLockRoundTrip -- called from the loader (IT_DISK) to arm the
-; loader<->editor Scroll Lock ping-pong. Same-segment CS-relative flag write.
-;-----------------------------------------------------------------------------
-Proc            PE_ArmScrollLockRoundTrip Far
-                Mov     Byte Ptr CS:ScrollLockRoundTrip, 1
-                Ret
-EndP            PE_ArmScrollLockRoundTrip
+                ; Some keyboards/BIOSes do not reliably preserve Shift in the
+                ; Scroll Lock key word. Check live shift state here so the
+                ; gesture works even if CX was normalized to plain Scroll Lock.
+                Mov     BX, 02Ah                ; Left Shift scancode
+                Call    K_IsKeyDown
+                JNE     PE_ScrollLockLoadSample
+                Mov     BX, 036h                ; Right Shift scancode
+                Call    K_IsKeyDown
+                JNE     PE_ScrollLockLoadSample
+
+                Jmp     PE_ScrollLockFollow
+
+EndP            PE_ScrollLockDispatch
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-; Shift-Scroll Lock from the Pattern Editor always reopens the sample loader.
-; This stays separate from PE_ScrollLockFollow so plain Scroll Lock keeps its
-; existing Follow toggle and loader round-trip behavior.
-; FEATURE-CARD >> features/loader-scrolllock-load-and-jam.feature
 Proc            PE_ScrollLockLoadSample Far
                 Jmp     Glbl_LoadSample
 EndP            PE_ScrollLockLoadSample
+
+; Caps Lock opens Sample Load as a reversible browse gesture. The loader uses
+; this latch to return to the Pattern Editor without changing Follow Mode.
+PE_CapsRoundTrip       DB      0
+PE_CapsTargetSlot      DW      0
+
+Proc            PE_CapsLoadSample Far
+                Call    PE_GetLastInstrument
+                Mov     CS:PE_CapsTargetSlot, BX
+                Mov     CS:PE_CapsRoundTrip, 1
+                Jmp     Glbl_LoadSample
+EndP            PE_CapsLoadSample
+
+Proc            PE_GetCapsTargetSlot Far
+                Mov     BX, CS:PE_CapsTargetSlot
+                Ret
+EndP            PE_GetCapsTargetSlot
+
+Proc            PE_CapsReturnPending Far
+                Xor     AX, AX
+                Mov     AL, CS:PE_CapsRoundTrip
+                Ret
+EndP            PE_CapsReturnPending
+
+Proc            PE_ClearCapsRoundTrip Far
+                Mov     CS:PE_CapsRoundTrip, 0
+                Ret
+EndP            PE_ClearCapsRoundTrip
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
@@ -13825,33 +13888,6 @@ PE_SLF_NoRetarget:
                                                 ; key dispatcher (same as F2)
 
 PE_SLF_InEditor:
-                ; Fork round-trip: if the loader armed us (we got here via loader
-                ; Scroll Lock -> jam), this Scroll Lock goes BACK to the sample
-                ; loader on the next free slot, so you can grab the next sound and
-                ; build a kit. If NOT armed, fall through to the normal Follow
-                ; toggle (Ctrl-F always toggles regardless). CS-relative flag.
-                Cmp     Byte Ptr CS:ScrollLockRoundTrip, 0
-                JE      PE_SLF_Toggle
-                Mov     Byte Ptr CS:ScrollLockRoundTrip, 0   ; consume it
-
-                ; next free slot = max(highest sample, highest instrument) + 1,
-                ; capped at 99 (same rule as the WAV auto-import). Sets it as the
-                ; loader's destination so the next load lands on an empty slot.
-                Call    Music_GetNumberOfSamples        ; AX = highest sample
-                Mov     BX, AX
-                Call    Music_GetNumberOfInstruments    ; AX = highest instrument
-                Cmp     AX, BX
-                JAE     PE_SLF_HaveMax
-                Mov     AX, BX
-PE_SLF_HaveMax:
-                Cmp     AX, 99
-                JAE     PE_SLF_ReopenLoader             ; full -> keep current slot
-                Inc     AX
-                Call    PE_SetLastInstrument            ; AL = next free slot (1..99)
-PE_SLF_ReopenLoader:
-                Jmp     Glbl_LoadSample                 ; back to loader (AX=5, DX=list)
-
-PE_SLF_Toggle:
                 ; --- Already in the editor: toggle Follow Mode (mirrors
                 ; PEFunction_ToggleTrace) with DS save/restore so it is safe on
                 ; the GlobalKeyList path where DS is the dispatcher's, not ours.

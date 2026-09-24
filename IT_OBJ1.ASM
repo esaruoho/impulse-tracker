@@ -3149,6 +3149,10 @@ GlobalKeyChain:
                         DW      13Dh
                         DD      DWord Ptr Glbl_F3
 
+                        DB      6               ; Shift-F3: direct Sample Load
+                        DW      13Dh
+                        DD      DWord Ptr Glbl_LoadSample
+
                         DB      3               ; Ctrl...
                         DW      13Dh            ; F3
                         DD      DWord Ptr Glbl_Ctrl_F3

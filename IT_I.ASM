@@ -96,6 +96,9 @@ EndS
                 Extrn   Music_SoundCardLoadAllSamples:Far
                 Extrn   Music_SoundCardLoadSample:Far   ; reload ONE slot (no Music_Stop)
                 Extrn   Music_GetNumChannels:Far
+                Extrn   D_DumpAllSamplesWAV:Far
+                Extrn   D_SetDumpOnlySample:Far
+                Extrn   K_IsKeyDown:Far
 
                 Extrn   Music_RegetLoopInformation:Far
 
@@ -138,6 +141,7 @@ EndS
                 Global  I_InstrumentListNoteOff:Far
                 Global  I_IncreasePlayChannel:Far
                 Global  I_DecreasePlayChannel:Far
+                Global  I_GetPlayChannel:Far
                 Global  I_ToggleMultiChannel:Far
 
                 Global  I_ScaleInstrumentVolumes:Far
@@ -281,7 +285,7 @@ Interpolate             DB      0                       ; For resizing routines
 Quality                 DB      0
 MultiChannel            DB      0
 
-PlayChannel             DW      0
+PlayChannel             DW      63      ; Default preview channel = displayed 64.
 SampleAmplification     DW      0               ; Percentage
 
 MIDITable               DB      128 Dup (0)     ; Contains channel of each note
@@ -434,6 +438,14 @@ SampleListKeys          Label
                         DB      0
                         DW      1CDh
                         DW      Offset I_SampleRight
+
+                        DB      3               ; Ctrl-Right; selected sample
+                        DW      1CDh
+                        DW      Offset I_SaveSelectedSampleWAV
+
+                        DB      4               ; Shift-Right; handler requires Ctrl too
+                        DW      1CDh
+                        DW      Offset I_SaveSelectedSampleWAV
 
                         DB      0
                         DW      1C7h
@@ -1418,6 +1430,57 @@ I_SampleRight1:
                 Ret
 
 EndP            I_SampleRight
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
+Proc            I_SaveSelectedSampleWAV Far
+
+                Push    BX
+                Mov     BX, 01Dh               ; Left Ctrl
+                Call    K_IsKeyDown
+                JNE     I_SaveSelectedSampleWAV_Ctrl
+                Mov     BX, 09Dh               ; Right Ctrl
+                Call    K_IsKeyDown
+                JE      I_SaveSelectedSampleWAV3
+
+I_SaveSelectedSampleWAV_Ctrl:
+                Mov     BX, 02Ah               ; Left Shift
+                Call    K_IsKeyDown
+                JNE     I_SaveSelectedSampleWAV2
+                Mov     BX, 036h               ; Right Shift
+                Call    K_IsKeyDown
+                JE      I_SaveSelectedSampleWAV1
+
+I_SaveSelectedSampleWAV2:
+                ; Shift+Ctrl+Right: export all samples.
+                Pop     BX
+                Xor     AX, AX
+                Call    D_SetDumpOnlySample
+                Call    D_DumpAllSamplesWAV
+                Jmp     I_SaveSelectedSampleWAV3
+
+I_SaveSelectedSampleWAV1:
+                ; Ctrl+Right: export the selected 1-based sample slot.
+                Pop     BX
+                Push    DS
+                Mov     AX, Pattern
+                Mov     DS, AX
+                        Assume DS:Pattern
+                Mov     AL, LastInstrument
+                Xor     AH, AH
+                Pop     DS
+                        Assume DS:Nothing
+                Call    D_SetDumpOnlySample
+                Call    D_DumpAllSamplesWAV
+                Xor     AX, AX
+                Call    D_SetDumpOnlySample
+                Jmp     I_SaveSelectedSampleWAV3
+
+I_SaveSelectedSampleWAV3:
+                Mov     AX, 1
+                Ret
+
+EndP            I_SaveSelectedSampleWAV
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
@@ -8920,6 +8983,23 @@ Proc            I_PlaySample Far
                 Ret
 
 EndP            I_PlaySample
+                Assume DS:Nothing
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
+Proc            I_GetPlayChannel Far
+
+                ; FEATURE-CARD >> features/loader-keyjazz-hang.feature
+                ; Disk-segment loader preview queries, rather than duplicates,
+                ; the F3/F4 sample-list playback channel.
+                Push    CS
+                Pop     DS
+                        Assume DS:Inst
+
+                Mov     AX, PlayChannel
+                Ret
+
+EndP            I_GetPlayChannel
                 Assume DS:Nothing
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½

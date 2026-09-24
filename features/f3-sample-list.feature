@@ -38,6 +38,7 @@
 #
 # WATCH: Glbl_F3 Glbl_Ctrl_F3 LoadSample Music_ReleaseSample MIDISyncLoaderSuppress MIDI_SetLoaderSuppress MIDI_ClearLoaderSuppress Music_SilenceSampleVoices D_PreLoadSampleWindow LSWindow_ShiftEnter
 # RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
+#   2026-09-24  direct-commit  touched: LoadSample MIDI_SetLoaderSuppress Music_SilenceSampleVoices
 #   2026-09-22  direct-commit  touched: LoadSample
 #   2026-09-22  direct-commit  touched: LoadSample
 #   2026-09-22  direct-commit  touched: LoadSample Music_ReleaseSample

@@ -45,6 +45,10 @@ include switch.inc
                 Global  Glbl_MIDIStopF8_Toggle:Far
                 Global  MIDI_F8StopEnabled:Far
                 Global  MIDI_SetF8StopEnable:Far
+                Global  MIDI_SyncEnabled:Far
+                Global  MIDI_SetSyncEnable:Far
+                Global  MIDI_TransportEnabled:Far
+                Global  MIDI_SetTransportEnable:Far
 
                 Global  K_DrawTables:Far
                 Global  K_InitKeyBoard:Far
@@ -67,7 +71,7 @@ include switch.inc
 
                 Global  CountryTable:Byte
 
-                Public  MIDIBufferEmpty, MIDISend, K_ShowMIDIInput
+                Public  MIDIBufferEmpty, MIDISend, MIDI_ResetInputState, K_ShowMIDIInput
                 Public  MIDI_SetLoaderSuppress, MIDI_ClearLoaderSuppress
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
@@ -147,6 +151,8 @@ MIDIMon_F8Count         DW      0       ; count of F8 Clock received
 MIDIMessage             DB      "MIDI Input: ", 0FDh, "X ", 0FDh, "X ", 0FDh, "X   ", 0
 MIDIMonCntMsg           DB      "Counters  FA:", 0FDh, "D  FB:", 0FDh, "D  FC:", 0FDh, "D  F8:", 0FDh, "D       ", 0
 MIDIMonRTMsg            DB      "Last RT byte: ", 0FDh, "X  tick=", 0FDh, "D       ", 0
+MIDILiveOnMsg           DB      "ON ", 0
+MIDILiveOffMsg          DB      "OFF", 0
 MIDISyncOnMsg           DB      "MIDI Sync (F8 Clock): ON", 0
 MIDISyncOffMsg          DB      "MIDI Sync (F8 Clock): OFF", 0
 MIDIMultiPanelOnMsg     DB      "Multitimbral MIDI-In: ON", 0
@@ -1875,6 +1881,25 @@ Proc            K_ShowMIDIInput Far
 
                 Add     SP, 4
 
+                ; FEATURE-CARD >> features/midi-realtime-sync.feature
+                ; Live states for the four Shift-F1 toggle buttons.
+                Cmp     Byte Ptr [MIDISyncEnable], 0
+                Mov     DI, (34+42*80)*2
+                Call    K_ShowMIDIToggleState
+
+                Cmp     Byte Ptr [MIDITransportEnable], 0
+                Mov     DI, (72+42*80)*2
+                Call    K_ShowMIDIToggleState
+
+                Call    Music_GetMIDIMultiEnable
+                Test    AL, AL
+                Mov     DI, (34+46*80)*2
+                Call    K_ShowMIDIToggleState
+
+                Cmp     Byte Ptr [MIDIStopOnF8Enable], 0
+                Mov     DI, (72+46*80)*2
+                Call    K_ShowMIDIToggleState
+
                 Xor     AX, AX
                 Ret
 
@@ -1883,23 +1908,42 @@ EndP            K_ShowMIDIInput
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
+Proc            K_ShowMIDIToggleState Near
+
+                ; FEATURE-CARD >> features/midi-realtime-sync.feature
+                Mov     SI, Offset MIDILiveOnMsg
+                JNZ     K_ShowMIDIToggleState1
+
+                Mov     SI, Offset MIDILiveOffMsg
+
+K_ShowMIDIToggleState1:
+                Mov     AH, 20h
+                Call    S_DrawString
+                Ret
+
+EndP            K_ShowMIDIToggleState
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
 Proc            Glbl_Alt_F12 Far
 
                 Push    CS
                 Pop     DS
-                        Assume DS:Keyboard
+                Assume DS:Keyboard
 
                 Xor     Byte Ptr [MIDISyncEnable], 1
                 JZ      Glbl_Alt_F12_Off
 
                 Mov     SI, Offset MIDISyncOnMsg
                 Call    SetInfoLine
+                Call    D_SaveDirectoryConfiguration
                 Mov     AX, 1
                 Ret
 
 Glbl_Alt_F12_Off:
                 Mov     SI, Offset MIDISyncOffMsg
                 Call    SetInfoLine
+                Call    D_SaveDirectoryConfiguration
                 Mov     AX, 1
                 Ret
 
@@ -1912,19 +1956,21 @@ Proc            Glbl_MIDITransport_Toggle Far
 
                 Push    CS
                 Pop     DS
-                        Assume DS:Keyboard
+                Assume DS:Keyboard
 
                 Xor     Byte Ptr [MIDITransportEnable], 1
                 JZ      Glbl_MIDITransport_Toggle_Off
 
                 Mov     SI, Offset MIDITransportOnMsg
                 Call    SetInfoLine
+                Call    D_SaveDirectoryConfiguration
                 Mov     AX, 1
                 Ret
 
 Glbl_MIDITransport_Toggle_Off:
                 Mov     SI, Offset MIDITransportOffMsg
                 Call    SetInfoLine
+                Call    D_SaveDirectoryConfiguration
                 Mov     AX, 1
                 Ret
 
@@ -1945,11 +1991,13 @@ Proc            Glbl_MIDIMulti_Toggle Far
                 JZ      Glbl_MIDIMulti_Toggle_Off
                 Mov     SI, Offset MIDIMultiPanelOnMsg
                 Call    SetInfoLine
+                Call    D_SaveDirectoryConfiguration
                 Mov     AX, 1
                 Ret
 Glbl_MIDIMulti_Toggle_Off:
                 Mov     SI, Offset MIDIMultiPanelOffMsg
                 Call    SetInfoLine
+                Call    D_SaveDirectoryConfiguration
                 Mov     AX, 1
                 Ret
 EndP            Glbl_MIDIMulti_Toggle
@@ -2037,6 +2085,59 @@ Proc            MIDI_SetF8StopEnable Far
                 Ret
 
 EndP            MIDI_SetF8StopEnable
+                Assume DS:Nothing
+
+; --- Fork: persisted MIDI Sync (F8 Clock) accessors -------------------------
+Proc            MIDI_SyncEnabled Far
+                Push    DS
+                Push    CS
+                Pop     DS
+                        Assume DS:Keyboard
+                Mov     AL, [MIDISyncEnable]
+                Pop     DS
+                        Assume DS:Nothing
+                And     AL, 1
+                Ret
+EndP            MIDI_SyncEnabled
+                Assume DS:Nothing
+
+Proc            MIDI_SetSyncEnable Far
+                Push    DS
+                And     AL, 1
+                Push    CS
+                Pop     DS
+                        Assume DS:Keyboard
+                Mov     [MIDISyncEnable], AL
+                Pop     DS
+                        Assume DS:Nothing
+                Ret
+EndP            MIDI_SetSyncEnable
+                Assume DS:Nothing
+
+Proc            MIDI_TransportEnabled Far
+                Push    DS
+                Push    CS
+                Pop     DS
+                        Assume DS:Keyboard
+                Mov     AL, [MIDITransportEnable]
+                Pop     DS
+                        Assume DS:Nothing
+                And     AL, 1
+                Ret
+EndP            MIDI_TransportEnabled
+                Assume DS:Nothing
+
+Proc            MIDI_SetTransportEnable Far
+                Push    DS
+                And     AL, 1
+                Push    CS
+                Pop     DS
+                        Assume DS:Keyboard
+                Mov     [MIDITransportEnable], AL
+                Pop     DS
+                        Assume DS:Nothing
+                Ret
+EndP            MIDI_SetTransportEnable
                 Assume DS:Nothing
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
@@ -2150,6 +2251,29 @@ Proc            MIDIBufferEmpty Far     ; Returns carry set if input OK.
                 Ret
 
 EndP            MIDIBufferEmpty
+
+;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+
+; Clear a possibly partial MIDI message when IT starts or the driver is
+; re-armed. A stale status/data byte pair otherwise remains invisible until
+; enough new bytes arrive to complete the old message.
+Proc            MIDI_ResetInputState Far
+
+                Push    DS
+                Push    CS
+                Pop     DS
+                        Assume DS:Keyboard
+                Mov     Byte Ptr [MIDIStatusByte], 0
+                Mov     Byte Ptr [MIDIDataByte1], 0
+                Mov     Byte Ptr [MIDIDataByte2], 0
+                Mov     Byte Ptr [MIDIDataInput], 0
+                Mov     Byte Ptr [MIDIClockCount], 0
+                Mov     Word Ptr [MIDIClockLastTick], 0
+                Pop     DS
+                        Assume DS:Nothing
+                Ret
+
+EndP            MIDI_ResetInputState
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 

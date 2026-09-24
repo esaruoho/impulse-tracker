@@ -382,6 +382,7 @@ Proc            UnInitSound Far
 
                 Mov     DX, CS:BasePort
                 Call    ResetUART
+                StI
 
                 Xor     AX, AX
                 Mov     ES, AX

@@ -18,6 +18,9 @@
 #
 # Source files linked back to this card:
 #   IT_DISK.ASM   LoadSample -- loader preview uses zero-based slot 99
+#                 D_PostLoadSampleWindow -- PC/MIDI keyjazz preview dispatch
+#   IT_I.ASM      PlayChannel default + I_GetPlayChannel -- loader preview shares
+#                 F3/F4 play channel, defaulting to displayed channel 64
 #   IT_MUSIC.ASM  Music_SilenceSampleVoices (175) -- silence one slot's voices, keep song
 #                 Music_ReleaseSample -- silences zero-based release slot before free
 #   IT_K.ASM      MIDISyncLoaderSuppress (127); MIDI_SetLoaderSuppress (~2257) /
@@ -33,8 +36,9 @@
 #   Feature delivery : a44c41b, ec91331, 64fa1ce  (direct to esaruoho/main, no PR)
 #   Triad: this .feature <-> loader-keyjazz-hang.session.md <-> those commits
 #
-# WATCH: LoadSample Music_ReleaseSample Music_SilenceSampleVoices MIDISyncLoaderSuppress MIDI_SetLoaderSuppress MIDI_ClearLoaderSuppress
+# WATCH: LoadSample D_PostLoadSampleWindow LSWindow_MIDINote LSWindow_MIDINoteOff I_GetPlayChannel Music_ReleaseSample Music_SilenceSampleVoices MIDISyncLoaderSuppress MIDI_SetLoaderSuppress MIDI_ClearLoaderSuppress
 # RESULT-LOG >> (auto-maintained by .githooks/pre-commit / post-merge)
+#   2026-09-24  direct-commit  touched: LoadSample D_PostLoadSampleWindow LSWindow_MIDINote LSWindow_MIDINoteOff I_GetPlayChannel Music_SilenceSampleVoices MIDI_SetLoaderSuppress
 #   2026-09-22  direct-commit  touched: LoadSample
 #   2026-09-22  direct-commit  touched: LoadSample
 #   2026-09-22  direct-commit  touched: LoadSample Music_ReleaseSample
@@ -94,3 +98,26 @@ Feature: F3/F4 loader keyjazz keeps the song playing
     Given an external MIDI clock/sync is driving playback during a load
     When a sample reload is in progress (MIDISyncLoaderSuppress set)
     Then the MIDI-sync mixer path is suppressed until the load completes (no hang)
+
+  @shipped @build-verified @runtime-untested @hw-untested
+  Scenario: Loader preview defaults away from pattern channel 01
+    # cite: IT_DISK.ASM D_PostLoadSampleWindow calls I_GetPlayChannel before
+    #       Music_PlaySample, instead of hardcoding host channel 0.
+    # cite: IT_I.ASM PlayChannel defaults to 63 (displayed channel 64);
+    #       I_GetPlayChannel returns the same value used by F3/F4 sample-list
+    #       keyjazz.
+    Given the pattern is playing on channel 01
+    When the user keyjazz-previews a sample in the loader browser
+    Then the preview is played on displayed channel 64 by default
+    And it does not overwrite the pattern event currently sounding on channel 01
+
+  @shipped @build-verified @runtime-untested @hw-untested
+  Scenario: MIDI notes can keyjazz the sample loader preview
+    # cite: IT_DISK.ASM LSWindowKeys maps MIDI Note On/Off to LSWindow_MIDINote
+    #       and LSWindow_MIDINoteOff via M_FunctionDivider MIDI compare code 6.
+    # cite: IT_DISK.ASM LSWindow_MIDINote uses PE_TranslateMIDI, loads preview
+    #       slot 99, then plays it through Music_PlaySample on I_GetPlayChannel.
+    Given the user is in the sample-loader file browser
+    When an external MIDI note-on arrives
+    Then the highlighted sample is loaded into preview slot 99 and auditioned
+    And MIDI note-off or velocity-zero silences only that preview slot
