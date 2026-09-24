@@ -18,9 +18,12 @@
 # Report-card legend: @shipped @build-verified @hw-verified @hw-untested
 #
 # Source files linked back to this card:
-#   IT_DISK.ASM  - D_DumpAllSamplesWAV (loop), D_DumpBuildName (SMPnn.WAV)
+#   IT_DISK.ASM  - D_DumpAllSamplesWAV (the single export implementation),
+#                  D_DumpBuildName (SMPnn.WAV)
 #   IT_DISK.ASM  - D_SaveRawSampleInternal (split out; DS:SI=header, BX=slot)
 #   IT_DISPL.ASM - DisplayListKeys: DB 3 / DW 1CDh -> D_DumpAllSamplesWAV
+#   IT_I.ASM     - SampleListKeys Shift-Right dispatches the shared all-samples export
+#   IT_PE.ASM    - PE_OrderList_RightDispatch handles Ctrl-Shift-Right
 #
 # WATCH: D_DumpAllSamplesWAV D_DumpBuildName D_SaveRawSampleInternal
 #        D_SaveRawSample D_SaveSampleData D_SaveSampleDataConvert
@@ -42,6 +45,16 @@ Feature: Dumping every sample in the song to WAV in one keystroke
     Given a song with samples loaded
     When the user presses Ctrl-Shift-Right on the F5 Info Page
     Then each non-empty sample is written as SMPnn.WAV in the Quicksave folder
+    And the info line reports how many were written
+
+  @shipped @build-verified @runtime-untested
+  Scenario: Ctrl-Shift-Right from Sample List or Order List uses the shared exporter
+    # cite: IT_I.ASM I_SaveSelectedSampleWAV and IT_PE.ASM
+    #       PE_OrderList_RightDispatch call D_DumpAllSamplesWAV directly;
+    #       this is the same implementation used by the F5 Info Page.
+    Given the Sample List or Order List is open
+    When I press Ctrl-Shift-Right
+    Then every non-empty sample is written as SMPnn.WAV in the Quicksave folder
     And the info line reports how many were written
 
   @shipped @build-verified @hw-untested

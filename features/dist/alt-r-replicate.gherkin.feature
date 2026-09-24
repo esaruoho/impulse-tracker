@@ -9,6 +9,38 @@ Feature: Alt-R replicate at cursor
   without copy/paste — while Shift-Alt-R does the same across the WHOLE pattern
   (all channels).
 
+  @shipped @build-verified @hw-untested
+  Scenario: Ctrl-Down and Ctrl-Shift-Down do the same thing as Alt-R
+    # cite: IT_PE.ASM PEFunctions -- DB 3 / DW 1D0h -> PEFunction_AltR_Dispatch
+    # cite: features/KEYMAPS.generated.md, the PEFunctions table
+    # Added 2026-08-14 at Esa's request, to match the binding schismtracker uses
+    # (page_patedit.c SCHISM_KEYSYM_DOWN in pattern_editor_handle_ctrl_key). Alt-R
+    # and Shift-Alt-R are unchanged and remain the primary keys.
+    #
+    # It points at the SAME dispatcher, not a copy, so the track-vs-pattern rule
+    # cannot drift between the two gestures.
+    #
+    # ROW ORDER MATTERS, and getting it wrong would have shipped a half-working
+    # feature: code 4 gates on Test CH,6 and rejects nothing else, so the existing
+    # code-4 Down row ALSO matches Ctrl-Shift-Down, and M_FunctionDivider takes the
+    # first match. The Ctrl row therefore has to sit ABOVE it -- otherwise plain
+    # Ctrl-Down replicates and Ctrl-Shift-Down just moves the cursor down.
+    Given the user is in the pattern editor
+    When they press Ctrl-Down
+    Then the rows above the cursor are replicated down this track
+    When they press Ctrl-Shift-Down
+    Then they are replicated across the whole pattern
+
+  @design-note
+  Scenario: What Ctrl-Down displaced, and why that is free
+    # Ctrl-Down was next-instrument (PEFunction_IncreaseInstrument). Nothing is
+    # lost: that function is still bound to '>' and to "'" in the same table, and
+    # Ctrl-Up remains previous-instrument. This is the same trade schismtracker
+    # made -- it kept prev/next instrument on '<' '>' ';' "'" and gave Ctrl-Down to
+    # replicate -- so the two forks now agree on both the gesture and its cost.
+    Given next-instrument has three other bindings
+    Then handing Ctrl-Down to replicate costs nothing
+
   @shipped @build-verified @hw-verified
   Scenario: Alt-R and Shift-Alt-R are disambiguated by live shift state
     # cite: IT_PE.ASM PEFunction_AltR_Dispatch — both keys map to 1300h
@@ -37,14 +69,15 @@ Feature: Alt-R replicate at cursor
     Then the source chunk is row 0 itself (length 1)
     And rows 1..MaxRow are filled with copies of row 0
 
-  @shipped @build-verified @hw-untested
+  @shipped @build-verified @hw-verified
   Scenario: No-op at the pattern edges
     # cite: IT_PE.ASM PEFunction_ReplicateAtCursor guards (8310-8312)
     Given the cursor is past MaxRow, or the destination start is past MaxRow
       (e.g. a 1-row pattern)
     Then Replicate does nothing (clean no-op)
 
-  @shipped @build-verified @runtime-untested @hw-untested
+  @shipped @build-verified @runtime-verified @hw-verified
+  # RUNTIME-VERIFIED 2026-06-04 (Esa): "alt-r and shift-alt-r work beautifully".
   Scenario: Shift-Alt-R replicates the whole PATTERN at cursor
     # Changed 2026-06-04 per Esa's hardware feedback: Shift-Alt-R was the stock
     # ClearViews ("does nothing" to him); he wanted it to replicate the current
@@ -62,3 +95,29 @@ Feature: Alt-R replicate at cursor
     Then Shift+Alt+R reaches the dispatcher (cond-11 keymap entry) and is routed here
     And if R > 0, rows 0..R-1 (ALL channels) tile down to fill rows R..MaxRow
     And if R == 0, row 0 (all channels) tiles down the whole pattern
+
+  @shipped @build-verified @runtime-untested @hw-verified
+  Scenario: Both replicate ops are undoable and show a correct label in the undo list
+    # Added 2026-06-04 per Esa ("Shift-Alt-R should create an undo step"). Both ops
+    # already snapshotted via PE_AddToUndoBuffer, so the data was always recoverable;
+    # the defect was that BOTH used undo tag 23 while the UndoBufferTypes offset table
+    # only labelled tags 0..22 -- so PEFunction_DrawUndo indexed past the table end and
+    # drew a garbage label for any replicate step in the Ctrl-Backspace undo list.
+    # FIX (3a3b7ff): UndoBufferType23/24 strings, extend UndoBufferTypes, move
+    # Shift-Alt-R to tag 24. RENAMED per Esa 2026-06-05 to the action-named labels
+    # he wanted: UndoBufferType23 = "Replicate Track Above (Alt-R)",
+    # UndoBufferType24 = "Replicate Pattern Above (Sh-Alt-R)" (plain inline-key
+    # style, like the pre-existing Type24 form -- no 0FFh alignment guesswork).
+    # NOTE: the undo key is Ctrl-Backspace (IT.TXT:1054), NOT Alt-Z -- Alt-Z is
+    # "Cut current block" (IT.TXT:1152).
+    # cite: IT_PE.ASM PEFunction_ReplicateAtCursor (DI=23) + PEFunction_ReplicatePatternAtCursor
+    #       (DI=24); UndoBufferTypes table + UndoBufferType23/24 strings ; commit 3a3b7ff
+    # cite: IT_PE.ASM PEFunction_DrawUndo (~13845) indexes UndoBufferTypes by tag low byte
+    Given the user has performed an Alt-R or Shift-Alt-R replicate
+    When they open the undo list with Ctrl-Backspace
+    Then the step is named "Replicate Track Above (Alt-R)" (Alt-R) or
+      "Replicate Pattern Above (Sh-Alt-R)" (Shift-Alt-R), not blank/garbage
+    And selecting it reverts the pattern to its pre-replicate state
+    # @runtime-untested: assembles + links clean (IT.EXE 477096 bytes). Flip to
+    # @runtime-verified after a live DOSBox-X test: replicate, Ctrl-Backspace, confirm
+    # the label reads "Undo replicate track/pattern" and the revert restores the data.

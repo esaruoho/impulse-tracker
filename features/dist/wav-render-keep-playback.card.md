@@ -4,9 +4,9 @@
 
 **Intent:** As someone rendering a pattern to WAV while a tune plays, I want the render to barely interrupt playback and the song to resume, So that bouncing a pattern doesn't kill my groove for seconds at a time.
 
-**Grades:** @build-verified × 4 · @runtime-untested × 4 · @shipped × 4
+**Grades:** @build-verified × 6 · @hw-verified × 2 · @runtime-untested × 4 · @runtime-verified × 2 · @shipped × 6
 
-**Scenarios: 5**
+**Scenarios: 7**
 
 
 ---
@@ -50,7 +50,34 @@
 <sub>cite: IT_MUSIC.ASM render enter snapshots WAV_ResumeArmed + CurrentOrder/Row · IT_K.ASM MIDISendRTClock calls Music_ResumeAfterRender</sub>
 
 
-## 4. No resume if nothing was playing
+## 4. Standalone Ctrl-O resumes on its own, with no external clock
+
+`@shipped @build-verified @runtime-verified @hw-verified`
+
+
+- Given a song was playing and the user presses Ctrl-O (single-pattern render)
+- And there is NO external MIDI clock feeding IT
+- When the render finishes and the live driver is back
+- Then playback resumes on its own from where it was
+- And a whole-song render or a multi-WAV sweep does NOT auto-resume this way
+
+<sub>cite: IT_MUSIC.ASM WAV_LeaveMode latches WAV_DoResumeOnLeave (only when</sub>
+
+
+## 5. Resume matches the play mode that was active at render enter
+
+`@shipped @build-verified @runtime-verified @hw-verified`
+
+
+- Given the user was on pattern 022 row 32 in single-pattern play (PlayMode 1)
+- When Ctrl-O renders and finishes
+- Then playback resumes as pattern 022 from row 32 via Music_PlayPattern
+- But if a SONG was playing (PlayMode 2) it resumes the saved order/row via Music_PlayPartSong
+
+<sub>cite: IT_MUSIC.ASM enter snapshots WAV_ResumePlayMode + CurrentPattern +</sub>
+
+
+## 6. No resume if nothing was playing
 
 `@shipped @build-verified @runtime-untested @hw-untested`
 
@@ -62,7 +89,7 @@
 <sub>cite: WAV_ResumeArmed is only set when PlayMode != 0 at render enter</sub>
 
 
-## 5. True simultaneous live-audio + render is NOT done
+## 7. True simultaneous live-audio + render is NOT done
 
 `@known-limit`
 

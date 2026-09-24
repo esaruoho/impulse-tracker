@@ -14,7 +14,7 @@
 
 ## 1. The old behaviour -- a second gesture tore the driver down mid-playback
 
-`@shipped @build-verified`
+`@shipped @build-verified @hw-untested`
 
 
 - Given a single-pattern WAV render is playing (WAV_RenderMode = 1)
@@ -27,7 +27,7 @@
 
 ## 2. Right starts the render, Shift-Right during it halts and finalizes
 
-`@shipped @build-verified @runtime-verified`
+`@shipped @build-verified @runtime-verified @hw-untested`
 
 
 - Given the F11 Order List is open with the cursor on the right-most order char
@@ -43,7 +43,7 @@
 
 ## 3. WAV_FinalizeRequest tells the genuine finalize apart from a re-press
 
-`@shipped @build-verified`
+`@shipped @build-verified @hw-untested`
 
 
 - Given a render is in flight (WAV_RenderMode = 1)
@@ -57,7 +57,7 @@
 
 ## 4. The genuine auto-finalize is unchanged -- still leaves + imports
 
-`@shipped @build-verified`
+`@shipped @build-verified @hw-untested`
 
 
 - Given a render whose pattern playback has ended naturally (PlayMode = 0)
@@ -70,7 +70,7 @@
 
 ## 5. Early-stop reuses the existing safe finalize, not a new teardown
 
-`@shipped @build-verified @runtime-verified`
+`@shipped @build-verified @runtime-verified @hw-untested`
 
 
 - Given the user re-pressed a render gesture mid-render
@@ -84,7 +84,7 @@
 
 ## 6. All render entry points share the one central guard
 
-`@shipped @build-verified`
+`@shipped @build-verified @hw-untested`
 
 
 - Given any of the WAV-render gestures
@@ -96,7 +96,7 @@
 
 ## 7. Multi-WAV sweep finalize and chaining are untouched
 
-`@shipped @build-verified`
+`@shipped @build-verified @hw-untested`
 
 
 - Given a multi-channel WAV sweep is running

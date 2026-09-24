@@ -1,0 +1,75 @@
+# Pure Gherkin test extracted from features/f3-sample-list.feature
+# (report-card banner stripped; inline # cite: traceability kept)
+# Regenerate: python3 features/print-card.py features/f3-sample-list.feature
+
+Feature: User Presses F3 (Sample List)
+  As someone working with raw samples,
+  I want F3 to open the sample list and Ctrl-F3 to reach the disk library,
+  And I want previewing a sample in the loader to NOT kill the playing song,
+  So that sample work never silences the tune I'm building it for.
+
+  @stock @build-verified
+  Scenario: F3 opens the sample list
+    # cite: IT_OBJ1.ASM:3142 GlobalKeyList F3 (scancode 13Dh) -> Glbl_F3
+    # cite: IT_G.ASM:303 Glbl_F3 sets CurrentMode=3, returns O1_SampleList
+    # cite: IT_G.ASM:305 Glbl_InstrumentToSample translates an F4-cursor to F3
+    # cite: IT_I.ASM I_DrawWaveForm + I_DrawSampleList draw the screen
+    Given the user is on any screen
+    When the user presses F3
+    Then CurrentMode becomes 3 and the sample list (O1_SampleList) opens
+    And if the user was on the instrument list, the cursor maps to the same slot
+
+  @stock @build-verified
+  Scenario: Ctrl-F3 opens the disk Sample Library from anywhere
+    # cite: IT_OBJ1.ASM:3146 GlobalKeyList Ctrl-F3 -> Glbl_Ctrl_F3
+    # cite: IT_G.ASM:680 Glbl_Ctrl_F3 calls D_InitLoadSamples, CurrentMode=13,
+    #       returns O1_ViewSampleLibrary
+    # cite: IT.TXT:1815 "The Sample library is accesible from all screens ... Ctrl-F3"
+    Given the user is on any screen
+    When the user presses Ctrl-F3
+    Then CurrentMode becomes 13 and the disk-based sample library browser opens
+
+  # --- The fork's loader keyjazz hang fix ------------------------------------
+
+  @shipped @build-verified @hw-untested
+  Scenario: Previewing a sample in the loader does not stop the song
+    # cite: IT_DISK.ASM:6108 D_PreLoadSampleWindow calls MIDI_SetLoaderSuppress
+    #       before LoadSample, :6157 clears it after Music_PlayNote
+    # cite: IT_MUSIC.ASM:9230 Music_SilenceSampleVoices stops only slaves whose
+    #       slot ([SI+36h]) matches the slot being (re)loaded (writes 200h)
+    # cite: commits a44c41b, 64fa1ce
+    Given a song is playing
+    When the user keyjazz-previews a sample in the loader (LoadSample zero-based slot 99)
+    Then only the voices reading sample slot 99 are silenced (200h sentinel)
+    And the rest of the song keeps playing
+
+  @shipped @build-verified @runtime-untested @hw-untested
+  Scenario: Loader keyjazz redraws the selected sample waveform
+    # cite: IT_DISK.ASM LoadSample loads zero-based preview slot 99, then calls
+    #       D_DrawWaveForm again after PE_RestoreCurrentPattern so the browser
+    #       waveform uses freshly generated loader glyphs.
+    Given the user has pressed Enter from F3 into the loader sample area
+    When the user selects a sample and presses a note key
+    Then the loader waveform viewer redraws the selected sample's waveform
+    And it does not render stale pattern/numeric glyphs in the waveform area
+
+  @shipped @build-verified @hw-untested
+  Scenario: MIDI transport bytes can't restart the song mid-load
+    # cite: IT_K.ASM:114 MIDISyncLoaderSuppress; :1991 FA guard, :2014 FC guard
+    #       MIDISend skips Music_KBPlaySong / Music_Stop while the flag is set;
+    #       RT clock counters still tick, only start/stop/continue are gated
+    # cite: commit 64fa1ce
+    Given the loader suppress flag is set (a sample load is in flight)
+    When a MIDI Start (FA) or Stop (FC) byte arrives
+    Then MIDISend skips the playback restart while slot 99 is mid-write
+    And once the load finishes the flag is cleared and sync resumes normally
+
+  @shipped @build-verified @hw-untested
+  Scenario: Shift-Enter bulk sample load is guarded the same way
+    # cite: IT_DISK.ASM:7859 LSWindow_ShiftEnter sets suppress at loop start,
+    #       :7922 clears it at loop end
+    # cite: commit 64fa1ce
+    Given the user triggers a bulk sample load in the library
+    When many slots are written in a loop
+    Then MIDI transport is suppressed for the whole loop, not per file
+    And the song (if playing) survives the bulk load

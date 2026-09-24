@@ -11,7 +11,7 @@ Feature: Sample Amplify keeps the song playing
 
   # --- The user-visible behaviour --------------------------------------------
 
-  @shipped @build-verified @runtime-verified
+  @shipped @build-verified @runtime-verified @hw-verified
   Scenario: Amplifying a sample mid-playback does not stop the song
     # cite: IT_I.ASM I_AmplifySample apply path (~3997): Music_Stop replaced by
     #       Music_SilenceSampleVoices (AL = sample slot, 1..99)
@@ -22,7 +22,7 @@ Feature: Sample Amplify keeps the song playing
     Then the sample is amplified (scaled in place, clipped)
     And the song keeps playing -- only voices using THIS sample fall silent
 
-  @shipped @build-verified @runtime-verified
+  @shipped @build-verified @runtime-verified @hw-verified
   Scenario: Alt-M Maximize/Normalize during playback keeps playing through OK/Process
     # The user-journey form (Esa's wantlist phrasing). "Amplify" IS IT's
     # Maximize/Normalize: the peak-scan pre-fills the no-clip slider value (see
@@ -39,7 +39,7 @@ Feature: Sample Amplify keeps the song playing
     Then the sample is scaled by that amount
     And the playback does not stop
 
-  @bug @runtime-verified
+  @bug @runtime-verified @hw-verified
   Scenario: REGRESSION (reported 2026-06-03) - Alt-M still stopped F6 playback
     # Reported by Esa: "playback on (F6), i hit alt-M on a sample, and the
     # playback stopped." The e5e5c38 fix swapped the ENTRY Music_Stop for
@@ -81,7 +81,7 @@ Feature: Sample Amplify keeps the song playing
 
   # --- Why it is safe --------------------------------------------------------
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: Only the amplified sample's voices are silenced, not all channels
     # cite: IT_MUSIC.ASM Music_SilenceSampleVoices (9284): walks the slave table,
     #       sets [SI]=200h ONLY where [SI+36h]==AL; every other voice untouched
@@ -90,7 +90,7 @@ Feature: Sample Amplify keeps the song playing
     Then the mixer marks only that sample's slave voices voice-off (200h)
     And channels playing other samples are unaffected
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: The mixer never reads the sample while it is being rewritten
     # cite: the silence happens BEFORE the in-place scaling loop; a voice marked
     #       200h is skipped by the mixer (Test [SI],1), so no half-scaled PCM is
@@ -101,7 +101,7 @@ Feature: Sample Amplify keeps the song playing
 
   # --- Boundary --------------------------------------------------------------
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: AX (the sample number) survives the silence call
     # cite: Music_SilenceSampleVoices is wrapped PushA..PopA, so AX is intact for
     #       the Music_GetSampleLocation call immediately after -- the reason this

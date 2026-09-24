@@ -12,7 +12,7 @@ Feature: F4 instrument-list play dots in multitimbral Sample mode
 
   # --- The bug -------------------------------------------------------------
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Stock IT hid the F4 dots whenever instrument mode was off
     # cite: IT_I.ASM I_ShowInstrumentPlay opened with Music_GetInstrumentMode /
     #       JZ end -- bailed entirely when not in instrument mode
@@ -24,7 +24,7 @@ Feature: F4 instrument-list play dots in multitimbral Sample mode
 
   # --- The fix -------------------------------------------------------------
 
-  @shipped @build-verified @runtime-untested
+  @shipped @build-verified @runtime-untested @hw-untested
   Scenario: With the router on, F4 shows play dots even in Sample mode
     # cite: IT_I.ASM I_ShowInstrumentPlay (478b638): if Music_GetInstrumentMode
     #       is 0, fall through to Music_GetMIDIMultiEnable; proceed if set
@@ -34,7 +34,7 @@ Feature: F4 instrument-list play dots in multitimbral Sample mode
     Then the instrument-list play dots are drawn (the gate no longer bails)
     And they track the matched instrument via the slave field [SI+33h]
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: Normal Sample mode (router off) is unchanged
     # cite: the new branch only proceeds when Music_GetMIDIMultiEnable is set;
     #       otherwise the original JZ-to-end behaviour stands
@@ -52,7 +52,7 @@ Feature: F4 instrument-list play dots in multitimbral Sample mode
 
   # --- Why it is keyed correctly -------------------------------------------
 
-  @shipped @build-verified
+  @shipped @build-verified @hw-untested
   Scenario: The dot row is the routed instrument, not a sentinel
     # cite: MIDIMulti_Route -> Music_PlayNote with MMR_Inst (1..99); the slave
     #       allocator copies host [DI+3..4] into [SI+32h] so [SI+33h]=instrument

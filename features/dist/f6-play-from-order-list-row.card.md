@@ -14,7 +14,7 @@
 
 ## 1. F6 loops the pattern at the selected order row
 
-`@shipped @build-verified @runtime-untested`
+`@shipped @build-verified @runtime-untested @hw-untested`
 
 
 - Given the user is in the Order List (F11, CurrentMode==11)
@@ -28,7 +28,7 @@
 
 ## 2. F6 outside the Order List keeps its stock "play current pattern"
 
-`@shipped @build-verified`
+`@shipped @build-verified @hw-untested`
 
 
 - Given the user is on any screen other than the Order List
@@ -40,7 +40,7 @@
 
 ## 3. A skip/end marker order slot is a no-op
 
-`@shipped @build-verified`
+`@shipped @build-verified @hw-untested`
 
 
 - Given the selected order row holds a "++" (254) or end (255) marker
@@ -52,7 +52,7 @@
 
 ## 4. F7 plays from the SELECTED order at the current edit row
 
-`@shipped @build-verified @runtime-untested`
+`@shipped @build-verified @runtime-untested @hw-untested`
 
 
 - Given the edit cursor is on row R (e.g. 048, set in some pattern)

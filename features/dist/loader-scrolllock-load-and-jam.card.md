@@ -4,9 +4,9 @@
 
 **Intent:** As someone auditioning samples in the loader, I want one key that loads the highlighted sample, makes it an instrument, and puts me in the Pattern Editor, So that I can go from "found a sound" to "jamming with it" without a detour.
 
-**Grades:** @build-verified × 6 · @runtime-untested × 6 · @shipped × 6
+**Grades:** @build-verified × 13 · @runtime-untested × 13 · @shipped × 13
 
-**Scenarios: 6**
+**Scenarios: 13**
 
 
 ---
@@ -27,48 +27,33 @@
 <sub>cite: IT_DISK.ASM LSViewWindow_ScrollLock ; commit 8f6a5cd</sub>
 
 
-## 2. It is a new key and does not disturb the loader's core tools
+## 2. Loader jump keys do not disturb the loader's core tools
 
 `@shipped @build-verified @runtime-untested @hw-untested`
 
 
 - Given the loader keyjazz, Enter, and cursor keys work as before
-- When the Scroll Lock entry is added to LSViewWindowKeys
+- When the Scroll Lock and Caps Lock entries are added to LSViewWindowKeys
 - Then keyjazz, Enter (LSViewWindow_Enter) and Up/Down are byte-for-byte unchanged
-- And only the previously-unbound Scroll Lock gains behaviour in this window
+- And only the jump-to-editor loader shortcuts gain behaviour in this window
 
-<sub>cite: IT_DISK.ASM LSViewWindowKeys 146h entry (added before the 0FFh terminator) ; commit 8f6a5cd</sub>
-
-
-## 3. Scroll Lock in the editor round-trips back to the loader on a free slot
-
-`@shipped @build-verified @runtime-untested @hw-untested`
+<sub>cite: IT_DISK.ASM LSViewWindowKeys 146h/13Ah entries (added before the 0FFh terminator)</sub>
 
 
-- Given I entered the Pattern Editor via loader Scroll Lock (round-trip armed)
-- And I have jammed some notes
-- When I press Scroll Lock again in the editor
-- Then the armed flag is consumed
-- And the loader destination is advanced to the next free slot (max(samples,instruments)+1)
-- And the sample loader reopens, ready to grab the next sound onto a fresh slot
-
-<sub>cite: IT_PE.ASM PE_ScrollLockFollow PE_SLF_InEditor (armed -> Glbl_LoadSample) ; commit 3944a9c · IT_DISK.ASM LSViewWindow_ScrollLock Call PE_ArmScrollLockRoundTrip ; commit 3944a9c</sub>
-
-
-## 4. Scroll Lock in the editor without the round-trip armed still toggles Follow
+## 3. Scroll Lock in the editor toggles Follow
 
 `@shipped @build-verified @runtime-untested @hw-untested`
 
 
-- Given I am in the Pattern Editor but did NOT arrive via loader Scroll Lock
+- Given I am in the Pattern Editor
 - When I press Scroll Lock
 - Then Follow Mode toggles exactly as before (no round-trip)
 - And Ctrl-F toggles Follow Mode regardless of how I got here
 
-<sub>cite: IT_PE.ASM PE_ScrollLockFollow PE_SLF_InEditor JE PE_SLF_Toggle ; commit 3944a9c</sub>
+<sub>cite: IT_PE.ASM PE_ScrollLockDispatch falls through to PE_ScrollLockFollow</sub>
 
 
-## 5. Shift-Scroll Lock in the editor always reopens Sample Load
+## 4. Shift-Scroll Lock in the editor always reopens Sample Load
 
 `@shipped @build-verified @runtime-untested @hw-untested`
 
@@ -76,12 +61,106 @@
 - Given I am in the Pattern Editor
 - When I press Shift-Scroll Lock
 - Then the Sample Load view opens
-- And plain Scroll Lock keeps its existing Follow or round-trip behavior
+- And plain Scroll Lock keeps its existing Follow-toggle behavior
 
-<sub>cite: IT_PE.ASM pattern-editor keylist DB 4 / DW 146h -> PE_ScrollLockLoadSample · IT_PE.ASM PE_ScrollLockLoadSample tail-jumps to Glbl_LoadSample</sub>
+<sub>cite: IT_PE.ASM pattern-editor Scroll Lock rows -> PE_ScrollLockDispatch, · IT_PE.ASM PE_ScrollLockLoadSample tail-jumps to Glbl_LoadSample.</sub>
 
 
-## 6. If the instrument assign fails, it still drops me in to jam on the sample
+## 5. Shift-F3 opens Sample Load directly
+
+`@shipped @build-verified @runtime-untested @hw-untested`
+
+
+- Given I am on a screen that chains to GlobalKeyList
+- When I press Shift-F3
+- Then the Sample Load view opens directly
+- And it does not merely stop at the Sample List
+
+<sub>cite: IT_OBJ1.ASM GlobalKeyList Shift-F3 row -> Glbl_LoadSample.</sub>
+
+
+## 6. Pattern Editor fallback keys open Sample Load directly
+
+`@shipped @build-verified @runtime-untested @hw-untested`
+
+
+- Given I am in the Pattern Editor
+- When I press Caps Lock or Pause/Break
+- Then the Sample Load view opens directly
+
+<sub>cite: IT_PE.ASM pattern-editor keylist Caps Lock / Pause rows</sub>
+
+
+## 7. Caps Lock in Sample Load loads and jams
+
+`@shipped @build-verified @runtime-untested @hw-untested`
+
+
+- Given I opened Sample Load from the Pattern Editor with Caps Lock
+- And a sample is highlighted in Sample Load
+- When I press Caps Lock again
+- Then the highlighted sample is loaded
+- And the instrument binding path runs
+- And the Pattern Editor opens without changing Follow Mode
+
+<sub>cite: IT_PE.ASM PE_CapsLoadSample sets PE_CapsRoundTrip and latches the</sub>
+
+
+## 8. Caps Lock loading keeps its destination while playback advances
+
+`@shipped @build-verified @runtime-untested @hw-untested`
+
+
+- Given playback is advancing the song order
+- When I use Caps Lock to open Sample Load and Caps Lock to load a sample
+- Then the sample is loaded into the destination slot captured on entry
+- And its instrument binding uses that same destination slot
+
+<sub>cite: IT_PE.ASM PE_CapsLoadSample captures PE_GetLastInstrument before</sub>
+
+
+## 9. Loader instrument creation never falls back to another number
+
+`@shipped @build-verified @runtime-untested @hw-untested`
+
+
+- Given sample N is being loaded
+- And instrument N is occupied by a different sample
+- When the loader creates the instrument binding
+- Then it does not overwrite instrument N
+- And it does not bind sample N to an unrelated first-free instrument
+
+<sub>cite: IT_MUSIC.ASM Music_AssignSampleToInstrumentExact refuses the</sub>
+
+
+## 10. Loader allocates the first unused matching sample/instrument pair
+
+`@shipped @build-verified @runtime-untested @hw-untested`
+
+
+- Given samples and instruments 1 through 15 are already in use as matching pairs
+- When I load another sample with Caps Lock or Scroll Lock
+- Then it is loaded into sample 16
+- And instrument 16 is created and selected
+- And instrument 16 triggers sample 16
+
+<sub>cite: IT_MUSIC.ASM Music_FindFreeMatchingSlot scans sample and instrument</sub>
+
+
+## 11. Sample Loader Scroll Lock returns with Follow Mode on
+
+`@shipped @build-verified @runtime-untested @hw-untested`
+
+
+- Given I am in Sample Load without a Caps Lock round-trip latch
+- And a sample is highlighted in Sample Load
+- When I press Scroll Lock
+- Then the Pattern Editor opens with Follow Mode on
+
+<sub>cite: IT_DISK.ASM LSViewWindow_ScrollLock clears any Caps round-trip</sub>
+
+
+## 12. If the instrument assign fails, it still drops me in to jam on the sample
 
 `@shipped @build-verified @runtime-untested @hw-untested`
 
@@ -92,4 +171,19 @@
 - And still jumps to the Pattern Editor with Follow Mode on
 
 <sub>cite: IT_DISK.ASM LSViewWindow_ScrollLock JC LSVSL_Go on Music_AssignSampleToInstrument ; commit 8f6a5cd</sub>
+
+
+## 13. Samples Mode songs get instrument backfill before Scroll Lock jams
+
+`@shipped @build-verified @runtime-untested @hw-untested`
+
+
+- Given a song is in Samples Mode
+- And sample 1 is already loaded and used by a pattern hihat
+- When I press Scroll Lock in the sample loader to load another sample
+- Then Instrument mode is enabled
+- And the pre-existing loaded samples receive matching instruments
+- And the newly loaded sample still receives and selects its own instrument
+
+<sub>cite: IT_DISK.ASM LSViewWindow_ScrollLock checks Music_GetInstrumentMode · IT_DISK.ASM LSVSL_BackfillInstruments scans loaded sample headers</sub>
 

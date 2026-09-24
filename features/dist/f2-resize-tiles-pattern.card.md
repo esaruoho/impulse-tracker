@@ -4,7 +4,7 @@
 
 **Intent:** As someone lengthening a pattern from the F2 config screen, I want the existing rows duplicated to fill the new length, So that growing 64 -> 128 (or 192) gives me repeats of my material to edit, not a block of empty rows I have to re-enter.
 
-**Grades:** @build-verified × 6 · @runtime-verified × 3 · @shipped × 6
+**Grades:** @build-verified × 6 · @hw-verified × 3 · @runtime-verified × 3 · @shipped × 6
 
 **Scenarios: 6**
 
@@ -14,7 +14,7 @@
 
 ## 1. 64 -> 128 duplicates the 64 rows once
 
-`@shipped @build-verified @runtime-verified`
+`@shipped @build-verified @runtime-verified @hw-verified`
 
 
 - Given a pattern of 64 rows
@@ -27,7 +27,7 @@
 
 ## 2. 64 -> 192 duplicates the 64 rows twice
 
-`@shipped @build-verified @runtime-verified`
+`@shipped @build-verified @runtime-verified @hw-verified`
 
 
 - Given a pattern of 64 rows
@@ -40,7 +40,7 @@
 
 ## 3. Non-multiple lengths get a partial final copy ("until the end")
 
-`@shipped @build-verified @runtime-verified`
+`@shipped @build-verified @runtime-verified @hw-verified`
 
 
 - Given a pattern of 64 rows
@@ -52,7 +52,7 @@
 
 ## 4. Shrinking the pattern does not tile
 
-`@shipped @build-verified`
+`@shipped @build-verified @hw-untested`
 
 
 - Given a pattern of 128 rows
@@ -64,7 +64,7 @@
 
 ## 5. Scope is the F2 config path only
 
-`@shipped @build-verified`
+`@shipped @build-verified @hw-untested`
 
 
 - Given the Ctrl-F2 bulk length editor or the F11 Alt-E extend
@@ -76,7 +76,7 @@
 
 ## 6. The tiled buffer persists via the working-copy model
 
-`@shipped @build-verified`
+`@shipped @build-verified @hw-untested`
 
 
 - Given the rows were tiled in the editor buffer

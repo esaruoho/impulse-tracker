@@ -79,3 +79,20 @@ unverified commit hash for the F4→F3 work, flagged it `?`, then verified it
 - Resume: `claude --resume bfba3a95-7804-448c-b2be-5748a8bae097`
 - Carding session timestamp: 2026-06-03 11:31 EEST (run `date` to confirm)
 - Build-history window (from git, authoritative): 2026-04-23 → 2026-05-18
+
+## Restart-recovery continuation (2026-09-23)
+
+The user reported that after quitting and restarting IT, MIDI input can
+occasionally stop being heard until the computer is rebooted, including the
+Renoise-starts-IT-via-MIDI workflow. The source showed two restart-sensitive
+states: the host parser retained partial status/data bytes, and the selected
+driver was initialized but not explicitly re-armed after sound-card detection.
+
+The fix adds `MIDI_ResetInputState` in `IT_K.ASM`, called by a new
+`Music_ResetMIDIInput` startup hook in `IT_MUSIC.ASM` immediately after
+`Music_AutoDetectSoundCard`. The hook invokes the existing driver
+`DriverReinitSound` contract, then clears the parser and clock accumulator.
+`SoundDrivers/MIDIDRV.ASM` also explicitly restores interrupts after UART reset
+during shutdown, including the reset-failure path. The card scenario is graded
+`@runtime-untested @hw-untested`: the build can prove assembly/link integrity,
+but only a real Renoise/MIDI-device restart cycle can prove the reported case.

@@ -1,0 +1,150 @@
+# Pure Gherkin test extracted from features/dump-all-samples-wav.feature
+# (report-card banner stripped; inline # cite: traceability kept)
+# Regenerate: python3 features/print-card.py features/dump-all-samples-wav.feature
+
+Feature: Dumping every sample in the song to WAV in one keystroke
+  As someone moving a module's sounds to another machine,
+  I want one key to write every loaded sample out as its own WAV,
+  So that the whole sample set lands in the Quicksave folder the Mac reads,
+  without saving them one at a time.
+
+  @shipped @build-verified @hw-untested
+  Scenario: Ctrl-Shift-Right, or D, writes every loaded sample
+    # cite: IT_DISK.ASM D_DumpAllSamplesWAV -- slots 1..99, Test [SI+12h],1 to skip
+    #       empty ones, D_GotoRenderDirectory first so files land in Quicksave
+    # cite: IT_DISPL.ASM Display_RenderQuicksave -- K_IsKeyDown(01Dh) picks the dump
+    #       over the pattern render; DisplayListKeys also has DB 5 / DW 'D'
+    Given a song with samples loaded
+    When the user presses Ctrl-Shift-Right on the F5 Info Page
+    Then each non-empty sample is written as SMPnn.WAV in the Quicksave folder
+    And the info line reports how many were written
+
+  @shipped @build-verified @runtime-untested
+  Scenario: Ctrl-Shift-Right from Sample List or Order List uses the shared exporter
+    # cite: IT_I.ASM I_SaveSelectedSampleWAV and IT_PE.ASM
+    #       PE_OrderList_RightDispatch call D_DumpAllSamplesWAV directly;
+    #       this is the same implementation used by the F5 Info Page.
+    Given the Sample List or Order List is open
+    When I press Ctrl-Shift-Right
+    Then every non-empty sample is written as SMPnn.WAV in the Quicksave folder
+    And the info line reports how many were written
+
+  @shipped @build-verified @hw-untested
+  Scenario: 8-bit samples are converted, not dumped raw
+    # IT stores 8-bit sample data SIGNED (ITTECH.TXT: "IT 2.02 and above use signed
+    # samples") while WAV 8-bit PCM is UNSIGNED. IT's own writer already handles
+    # this: it calls D_SaveSampleDataConvert for 8-bit and D_SaveSampleData for
+    # 16-bit. Reusing that path is the whole reason this card writes no new WAV
+    # emitter -- a fresh one would have dumped 8-bit raw and been quietly wrong.
+    Given a song containing 8-bit samples
+    When they are dumped
+    Then their data is converted to unsigned, so they do not play back inverted
+
+  @shipped @build-verified @hw-untested
+  Scenario: The song's own sample filenames are left alone
+    # cite: D_SaveRawSampleInternal takes the filename from [SI+4] of the header it
+    #       is given, so the dump hands it an 80-byte COPY in DiskDataArea with
+    #       SMPnn.WAV spliced in. The song's record is untouched.
+    Given a sample whose stored filename is something else
+    When the dump runs
+    Then the file on disk is SMPnn.WAV and the song's own filename field is unchanged
+
+  @shipped @build-verified @hw-untested
+  Scenario: A bad Quicksave path aborts before writing anything
+    # cite: D_GotoRenderDirectory returns CF=1 on a configured-but-invalid path
+    Given the Quicksave folder in F12 points somewhere that does not exist
+    When the user presses Ctrl-Shift-Right
+    Then nothing is written and the info line says the folder is invalid
+
+  @shipped @build-verified @hw-verified
+  Scenario: Dumping while the song plays keeps playing, and the files are correct
+    # cite: IT_DISK.ASM D_SaveBlockEMSSafe -- per 512-byte chunk: Cli,
+    #       E_SaveEMSPageFrame, map, copy to DumpChunkBuf, E_RestoreEMSPageFrame,
+    #       Sti, and only THEN D_SaveBlock. The mapping is never wrong while an
+    #       interrupt can fire, and the disk write happens with interrupts enabled.
+    # cite: both writers route through it while DumpSafeCopy is set --
+    #       D_SaveSampleData (16-bit) and D_SaveSampleDataConvert (8-bit)
+    # HW-verified 2026-08-14: 12 files off 05_LRPAN.IT dumped during playback. All
+    # structurally valid, all real audio (roughness 0.3-11%, worst eighth <= 19.7%,
+    # so no mid-file glitch), 8-bit files centred 127-132 as unsigned PCM should be.
+    # Playback was not interrupted and there was no noise.
+    Given the song is playing
+    When the user dumps the samples
+    Then playback continues, unbroken and quiet
+    And every file is correct
+
+  @corrected
+  Scenario: Dumping during playback made the mixer scream
+    # Esa, 2026-08-14: "DURING PLAYBACK, shift-ctrl-rightarrow resulted in actual
+    # bursts of white noise" -- reported alongside the botched WAVs, and a SEPARATE
+    # cause from the DiskDataArea header-copy bug that was fixed first.
+    #
+    # Reading a sample means mapping its pages into the EMS PAGE FRAME
+    # (Music_GetSampleLocation -> E_MapEMSMemory, IT_MUSIC.ASM), once per sample and
+    # again for every 32K block. The mixer is mapping ITS pages into that same shared
+    # frame to play. Whoever maps last wins, so:
+    #   - the mixer read whatever page the dump had just mapped -> white noise
+    #   - the dump read pages the mixer had remapped under it -> garbage in the WAVs
+    # One shared window, two readers, no interlock. Both symptoms, one cause.
+    #
+    # The dump now stops playback before its first mapping and restores it afterwards
+    # (order + row for song mode; pattern + rows + row for a pattern loop, with the
+    # row count read from the pattern header -- getting THAT wrong is what made
+    # renders write no file at all: features/wav-render-quicksave.feature).
+    #
+    # Worth remembering for anything else that walks sample memory in bulk: the EMS
+    # page frame is shared with the live mixer.
+    Given two readers share one EMS page frame with no interlock
+    Then the bulk reader has to interlock with the realtime one
+
+  @corrected
+  Scenario: The 8-bit writer was mutating the song's own sample memory
+    # The second half of the noise, and the reason the first fix only fixed half the
+    # files: 16-bit samples go through D_SaveSampleData, 8-bit through
+    # D_SaveSampleDataConvert -- and only the former had been interlocked. Dumping
+    # during playback produced perfect 16-bit files and ~77%-roughness garbage for
+    # every 8-bit one, which is what pointed at the split.
+    #
+    # Worse, that 8-bit path did this:
+    #     ClI / ConvertWriteData / D_SaveBlock / ConvertWriteData / StI
+    # where ConvertWriteData is "Xor Byte Ptr [SI], 80h" -- it flips the sign bit IN
+    # PLACE in the live sample memory to make WAV's unsigned 8-bit, writes, then
+    # flips it back. So while the song played the mixer read those bytes mid-flip and
+    # played 8-bit samples with a +128 DC offset. That is the burst of noise, and for
+    # 8-bit it was never EMS contention at all. It also held Cli across an Int 21h
+    # write: the documented hang hazard, and pointless, since DOS re-enables
+    # interrupts itself.
+    #
+    # The dump now copies out, converts ITS OWN buffer, and writes that. The song's
+    # sample memory is never modified. The single-sample save from F3 keeps the
+    # original in-place path -- one short write, and not what was breaking.
+    Given a converter that edits the data in place to save it
+    Then anything else reading that data at the time hears the conversion
+
+  @corrected
+  Scenario: Ctrl-Shift-Right cannot be a keymap row -- it is a live modifier test
+    # Two wrong turns before this landed:
+    #
+    # 1. A code-3 row on the Right arrow. Code 3 gates on Test CH,18h (Ctrl) ONLY --
+    #    it does not reject "no Shift" -- so the row also matched plain Ctrl-Right,
+    #    which is pattern navigation. The design note claimed "nothing else on this
+    #    screen wanted Ctrl-Right", which was simply false.
+    # 2. Retreating to the letter 'D' only. That works, but it abandoned the gesture
+    #    that was actually asked for.
+    #
+    # The dispatcher has no Ctrl+Shift code at all. What it does have: the existing
+    # code-4 Shift-Right row gates on Test CH,6 and rejects nothing else, so
+    # Ctrl-Shift-Right ALREADY matches it. So the discrimination belongs in the
+    # handler, as a live K_IsKeyDown(01Dh) test -- the same post-dispatch modifier
+    # test the F11 order-list edge uses at IT_PE.ASM:2308. 'D' is kept as well.
+    Given Ctrl-Left and Ctrl-Right move between patterns
+    Then Ctrl+Shift is discriminated inside the handler, not by a keymap row
+
+  @todo
+  Scenario: Names carry the sample name, not just the slot
+    # 8.3 filenames have no room for a 26-character sample name, so this writes
+    # SMPnn.WAV. schismtracker writes <song>-smpNNN-<name>.wav because it has long
+    # filenames. Sanitising a sample name into 8.3 without collisions is a
+    # separate job.
+    Given DOS 8.3 filenames
+    Then the slot number is what identifies the file, for now

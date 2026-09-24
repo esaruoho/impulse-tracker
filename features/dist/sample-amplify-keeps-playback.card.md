@@ -4,7 +4,7 @@
 
 **Intent:** As a musician tweaking a sample's level while a tune is running, I want pressing Alt-M (Amplify / normalize) and confirming it to scale the sample WITHOUT stopping playback, So that I can hear the change in context and keep my flow, instead of the whole song cutting out every time I amplify a sample.
 
-**Grades:** @build-verified × 8 · @runtime-verified × 3 · @shipped × 5 · @stock × 3
+**Grades:** @build-verified × 8 · @hw-verified × 3 · @runtime-verified × 3 · @shipped × 5 · @stock × 3
 
 **Scenarios: 9**
 
@@ -14,7 +14,7 @@
 
 ## 1. Amplifying a sample mid-playback does not stop the song
 
-`@shipped @build-verified @runtime-verified`
+`@shipped @build-verified @runtime-verified @hw-verified`
 
 
 - Given a song is playing
@@ -28,7 +28,7 @@
 
 ## 2. Alt-M Maximize/Normalize during playback keeps playing through OK/Process
 
-`@shipped @build-verified @runtime-verified`
+`@shipped @build-verified @runtime-verified @hw-verified`
 
 
 - Given the user is playing a pattern or a song
@@ -42,7 +42,7 @@
 
 ## 3. REGRESSION (reported 2026-06-03) - Alt-M still stopped F6 playback
 
-`@bug @runtime-verified`
+`@bug @runtime-verified @hw-verified`
 
 
 - Given a song is playing (F6) on the Sample List
@@ -80,7 +80,7 @@
 
 ## 6. Only the amplified sample's voices are silenced, not all channels
 
-`@shipped @build-verified`
+`@shipped @build-verified @hw-untested`
 
 
 - Given several channels are sounding different samples
@@ -93,7 +93,7 @@
 
 ## 7. The mixer never reads the sample while it is being rewritten
 
-`@shipped @build-verified`
+`@shipped @build-verified @hw-untested`
 
 
 - Given the amplify apply loop rewrites the sample's PCM in place
@@ -105,7 +105,7 @@
 
 ## 8. AX (the sample number) survives the silence call
 
-`@shipped @build-verified`
+`@shipped @build-verified @hw-untested`
 
 
 - Given the apply path needs the sample number after silencing

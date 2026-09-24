@@ -38,6 +38,7 @@
 #
 # Source files back-linked to this card (grep "features/midi-realtime-sync"):
 #   IT_K.ASM      - greppable marker at MIDISend RT dispatch
+#                   K_ShowMIDIInput live Shift-F1 ON/OFF state labels
 #   IT_MUSIC.ASM  - greppable marker at Music_SetTempoFromClocks
 #   SoundDrivers/ - NOT individually marked (16 encoding-locked files); the
 #                   CheckMIDI passthrough is traced by commit 4ebf849 + 78fb72d
@@ -125,6 +126,40 @@ Feature: External MIDI Real-Time Sync
     Then they are counted in the monitor but never alter IT's tempo
     And the Transport gate is unaffected (the two switches are independent)
 
+  @shipped @build-verified @runtime-untested @hw-untested
+  Scenario: MIDI Sync (F8 Clock) OFF persists across restart
+    # cite: IT_K.ASM MIDI_SyncEnabled / MIDI_SetSyncEnable; IT_DISK.ASM
+    #       D_SaveDirectoryConfiguration +4 write and D_InitDisk +4 restore.
+    Given the user turns MIDI Sync (F8 Clock) OFF on the Shift-F1 screen
+    When IT exits and starts again
+    Then MIDI Sync (F8 Clock) remains OFF
+    And the setting is still visible as OFF on the Shift-F1 MIDI screen
+
+  @shipped @build-verified @runtime-untested @hw-untested
+  Scenario: All Shift-F1 MIDI toggles save immediately
+    # cite: IT_K.ASM Glbl_Alt_F12, Glbl_MIDITransport_Toggle,
+    #       Glbl_MIDIMulti_Toggle, and Glbl_MIDIStopF8_Toggle call
+    #       D_SaveDirectoryConfiguration immediately after changing state;
+    #       IT_DISK.ASM persists the four force-off bytes at +3..+6.
+    Given the Shift-F1 MIDI screen is open
+    When I change any of the four MIDI toggle settings
+      Then IT.CFG is updated immediately
+      And the changed setting survives exiting and restarting IT
+
+  @shipped @build-verified @runtime-untested @hw-untested
+  Scenario: MIDI input is re-armed after restarting IT
+    # cite: IT.ASM startup calls Music_ResetMIDIInput immediately after
+    #       Music_AutoDetectSoundCard; IT_MUSIC.ASM Music_ResetMIDIInput calls
+    #       DriverReinitSound and MIDI_ResetInputState; IT_K.ASM clears the
+    #       running-status parser and F8 clock state.
+    # cite: SoundDrivers/MIDIDRV.ASM ReInitSound resets the MPU UART and
+    #       UnInitSound restores interrupts after ResetUART.
+    Given IT has been quit and its MIDI-capable sound driver is selected again
+    When IT starts and finishes sound-card detection
+    Then the driver UART is explicitly reinitialized
+    And any partial MIDI message from the prior process is discarded
+    And MIDI input is ready for a new Renoise transport or note message
+
   @shipped @build-verified @hw-untested
   Scenario: Loader keyjazz suppresses transport re-entry
     # cite: IT_K.ASM MIDISyncLoaderSuppress (default 0); gate at ~1991 and ~2014
@@ -154,3 +189,14 @@ Feature: External MIDI Real-Time Sync
     Given the Shift-F1 MIDI screen is open
     Then it shows running counts of FA Start, FC Stop, FB Continue, F8 Clock
     And the last Real-Time byte received and the DOS tick at receipt
+
+  @shipped @build-verified @runtime-untested @hw-untested
+  Scenario: The Shift-F1 toggle buttons show their live ON/OFF state
+    # cite: IT_K.ASM K_ShowMIDIInput draws ON/OFF text for MIDISyncEnable,
+    #       MIDITransportEnable, Music_GetMIDIMultiEnable, and
+    #       MIDIStopOnF8Enable inside the four Shift-F1 toggle buttons.
+    Given the Shift-F1 MIDI screen is open
+    Then MIDI Sync (F8 Clock) visibly says ON or OFF
+    And MIDI Transport (FA/FB/FC) visibly says ON or OFF
+    And Toggle Multitimbral MIDI-In visibly says ON or OFF
+    And Send MIDI Stop (FC) on F8 visibly says ON or OFF

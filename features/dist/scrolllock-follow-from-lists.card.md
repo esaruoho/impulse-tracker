@@ -4,7 +4,7 @@
 
 **Intent:** As someone auditioning samples/instruments against a playing song, I want Scroll Lock on the list screens to drop me into the Pattern Editor with Pattern Follow Mode already on, So that one key takes me from "browsing a slot" to "watching the cursor follow playback" without a separate F2 then Scroll Lock.
 
-**Grades:** @build-verified × 8 · @runtime-untested × 4 · @runtime-verified × 1 · @shipped × 7 · @stock × 1 · @todo × 1
+**Grades:** @build-verified × 8 · @hw-verified × 4 · @runtime-untested × 1 · @runtime-verified × 4 · @shipped × 7 · @stock × 1 · @todo × 1
 
 **Scenarios: 9**
 
@@ -26,7 +26,7 @@
 
 ## 2. Scroll Lock in the Sample List opens the Pattern Editor with Follow Mode on
 
-`@shipped @build-verified @runtime-untested`
+`@shipped @build-verified @runtime-verified @hw-verified`
 
 
 - Given the user is on the Sample List (CurrentMode 3)
@@ -40,7 +40,7 @@
 
 ## 3. Scroll Lock in the Instrument List does the same
 
-`@shipped @build-verified @runtime-untested`
+`@shipped @build-verified @runtime-verified @hw-verified`
 
 
 - Given the user is on the Instrument List (CurrentMode 4)
@@ -52,7 +52,7 @@
 
 ## 4. Ctrl-F in the Sample List (F3) or Instrument List (F4)
 
-`@shipped @build-verified @runtime-verified`
+`@shipped @build-verified @runtime-verified @hw-verified`
 
 
 - Given the user is on the Sample List (F3) or Instrument List (F4)
@@ -62,7 +62,7 @@
 
 ## 5. Ctrl-F INSIDE the Pattern Editor (F2) toggles Follow Mode, not the config dialog
 
-`@bug @shipped @build-verified @runtime-untested`
+`@bug @shipped @build-verified @runtime-untested @hw-untested`
 
 
 - Given the user is in the Pattern Editor (CurrentMode==2) with Follow Mode ON
@@ -75,7 +75,7 @@
 
 ## 6. Ctrl-F on the Order List (F11) or Song Variables (F12) enters the editor
 
-`@shipped @build-verified @runtime-untested`
+`@shipped @build-verified @runtime-verified @hw-verified`
 
 
 - Given the user is on the Order List (F11) or Song Variables (F12)
@@ -85,7 +85,7 @@
 
 ## 7. Follow Mode is forced ON, never toggled off, from the lists
 
-`@shipped @build-verified`
+`@shipped @build-verified @hw-untested`
 
 
 - Given Pattern Follow Mode is already ON
@@ -97,7 +97,7 @@
 
 ## 8. The handler hands Glbl_F2 the dispatcher's own DS (no segment damage)
 
-`@shipped @build-verified`
+`@shipped @build-verified @hw-untested`
 
 
 - Given Scroll Lock is pressed on a list screen

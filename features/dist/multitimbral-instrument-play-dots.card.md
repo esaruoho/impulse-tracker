@@ -14,7 +14,7 @@
 
 ## 1. Stock IT hid the F4 dots whenever instrument mode was off
 
-`@shipped @build-verified @runtime-untested`
+`@shipped @build-verified @runtime-untested @hw-untested`
 
 
 - Given the song is in Sample mode (instrument mode off)
@@ -27,7 +27,7 @@
 
 ## 2. With the router on, F4 shows play dots even in Sample mode
 
-`@shipped @build-verified @runtime-untested`
+`@shipped @build-verified @runtime-untested @hw-untested`
 
 
 - Given the song is in Sample mode
@@ -41,7 +41,7 @@
 
 ## 3. Normal Sample mode (router off) is unchanged
 
-`@shipped @build-verified`
+`@shipped @build-verified @hw-untested`
 
 
 - Given the song is in Sample mode and the multitimbral router is OFF
@@ -65,7 +65,7 @@
 
 ## 5. The dot row is the routed instrument, not a sentinel
 
-`@shipped @build-verified`
+`@shipped @build-verified @hw-untested`
 
 
 - Given a routed note for instrument N is sounding

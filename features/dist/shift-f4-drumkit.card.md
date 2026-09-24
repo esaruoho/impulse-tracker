@@ -4,7 +4,7 @@
 
 **Intent:** As a musician setting up a multitimbral MIDI rig, I want Shift-F4 to also create one drumkit instrument that maps every sample to a key on MIDI channel 10, So that, in the same gesture that builds my 16 single-sample parts, I get a ready-to-play kit where each key fires a different sample.
 
-**Grades:** @build-verified × 5 · @runtime-untested × 5 · @shipped × 5
+**Grades:** @build-verified × 5 · @hw-verified × 1 · @runtime-untested × 4 · @runtime-verified × 1 · @shipped × 5
 
 **Scenarios: 5**
 
@@ -14,7 +14,7 @@
 
 ## 1. Shift-F4 Create builds the drumkit (01) + the 16 parts (02-17)
 
-`@shipped @build-verified @runtime-untested @hw-untested`
+`@shipped @build-verified @runtime-verified @hw-verified`
 
 
 - Given the user has samples loaded
