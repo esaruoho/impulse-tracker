@@ -28,7 +28,7 @@
 | headless-screenshot | 9 | ✓ | — | ✓ | @build-verified @corrected @design-note @dosbox-verified @hw-verified @shipped @todo |
 | invert-channel-mutes | 4 | ✓ | — | ✗ | @build-verified @design-note @hw-untested @shipped @todo |
 | loader-keyjazz-hang | 7 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped @stock |
-| loader-scrolllock-load-and-jam | 13 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped |
+| loader-scrolllock-load-and-jam | 14 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped |
 | midi-in-multitimbral | 12 | ✓ | — | ✗ | @build-verified @design-note @hw-untested @shipped @stock @todo |
 | midi-out-stop-on-f8 | 8 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped |
 | midi-realtime-sync | 15 | ✓ | ✗ | ✗ | @build-verified @hw-untested @runtime-untested @shipped @todo |

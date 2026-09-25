@@ -55,19 +55,29 @@ Feature: Scroll Lock in the loader loads the sample and drops me into the editor
 
   @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Pattern Editor fallback keys open Sample Load directly
-    # cite: IT_PE.ASM pattern-editor keylist Caps Lock / Pause rows
-    #       -> PE_ScrollLockLoadSample -> Glbl_LoadSample.
+    # cite: IT_PE.ASM pattern-editor keylist Caps Lock row -> PE_CapsLoadSample
+    #       and Pause row -> PE_ScrollLockLoadSample -> Glbl_LoadSample.
     Given I am in the Pattern Editor
     When I press Caps Lock or Pause/Break
     Then the Sample Load view opens directly
 
   @shipped @build-verified @runtime-untested @hw-untested
-  Scenario: Caps Lock in Sample Load loads and jams
+  Scenario: Caps Lock from any global screen opens Sample Load directly
+    # cite: IT_OBJ1.ASM GlobalKeyList Caps Lock row (13Ah) -> PE_CapsLoadSample.
+    # cite: IT_PE.ASM PE_CapsLoadSample captures PE_GetLastInstrument, arms the
+    #       round-trip latch, and tail-jumps to Glbl_LoadSample.
+    Given I am on F3, F4, F11, F12, Load Song, or another screen that chains to GlobalKeyList
+    When I press Caps Lock
+    Then the Sample Load view opens directly
+    And the Caps round-trip latch is armed so the loader Caps key returns to the editor
+
+  @shipped @build-verified @runtime-untested @hw-untested
+  Scenario: Caps Lock in Sample Load loads and returns
     # cite: IT_PE.ASM PE_CapsLoadSample sets PE_CapsRoundTrip and latches the
     #       destination slot; IT_DISK.ASM LSViewWindow_CapsLock preserves it and
     #       LSViewWindow_LoadAndReturn consumes it, returning through Glbl_F2
     #       without changing TracePlayback.
-    Given I opened Sample Load from the Pattern Editor with Caps Lock
+    Given I opened Sample Load with Caps Lock
     And a sample is highlighted in Sample Load
     When I press Caps Lock again
     Then the highlighted sample is loaded

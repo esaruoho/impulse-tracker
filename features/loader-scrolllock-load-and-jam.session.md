@@ -88,3 +88,24 @@ when unarmed.
 The new scenario is recorded in `features/loader-scrolllock-load-and-jam.feature`.
 Runtime verification remains pending until the rebuilt `IT.EXE` is driven with the
 actual Shift-Scroll Lock gesture.
+
+## 2026-09-25 addendum -- Caps Lock opens Sample Load from global screens
+
+Esa reported that the existing Caps Lock round-trip was good when driven as
+F2 -> Caps Lock -> F3/Sample Load -> Caps Lock -> F2, but asked for the first
+Caps Lock press to work from anywhere useful: F3, F4, F11, Load Song, and other
+screens that chain through the global dispatcher.
+
+The fix is deliberately tiny:
+- `IT_PE.ASM` now exports `PE_CapsLoadSample` as a far global handler.
+- `IT_OBJ1.ASM` imports it and adds a plain `13Ah` Caps Lock row to `GlobalKeyList`.
+- Sample Load keeps its local `13Ah` row to `LSViewWindow_CapsLock`, so the second
+  Caps Lock inside the loader still loads the highlighted sample and consumes the
+  round-trip latch through `LSViewWindow_LoadAndReturn`.
+
+Build verification: `./safe-build.sh` via DOSBox-X. `IT_OBJ1.asm` and `IT_PE.asm`
+both assembled with `Error messages: None` and `Warning messages: None`; `IT.EXE`
+linked at 485408 bytes. Runtime/hardware verification is still owed on the DOS PC:
+press Caps Lock from F3, F4, F11, F12, and Load Song; each should open Sample Load,
+and pressing Caps Lock on a highlighted sample should load it and return to F2
+without changing Follow Mode.

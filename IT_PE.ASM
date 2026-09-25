@@ -175,6 +175,7 @@ ENDIF
                 Global  PE_F7:Far
 
                 Global  PE_ScrollLockFollow:Far ; Scroll Lock from F3/F4 lists
+                Global  PE_CapsLoadSample:Far ; Caps Lock anywhere -> Sample Load
                 Global  PE_CapsReturnPending:Far ; Caps Lock loader round trip
                 Global  PE_ClearCapsRoundTrip:Far
                 Global  PE_GetCapsTargetSlot:Far

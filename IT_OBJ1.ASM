@@ -194,6 +194,7 @@ ENDIF
                 Extrn   Glbl_LoadSample:Far
                 Extrn   Glbl_LoadInstrument:Far
                 Extrn   PE_ScrollLockFollow:Far ; Scroll Lock on F3/F4 -> F2+Follow
+                Extrn   PE_CapsLoadSample:Far ; Caps Lock anywhere -> Sample Load
                 Extrn   Music_InvertChannelMutes:Far ; Ctrl-F9 -> flip all mutes
                                                 ; FEATURE-CARD >> features/scrolllock-follow-from-lists.feature
                 Extrn   Glbl_LeftBrace:Far
@@ -3252,6 +3253,10 @@ OrderKeyValue           DW      157h
                         DB      0               ; Fork: Scroll Lock, same handler,
                         DW      146h            ;   also global -- it was bound only
                         DD      DWord Ptr PE_ScrollLockFollow ; on the F3/F4 lists.
+
+                        DB      0               ; Fork: Caps Lock opens Sample Load
+                        DW      13Ah            ;   from every global-list screen
+                        DD      DWord Ptr PE_CapsLoadSample ; and round-trips back.
 
                         DB      1               ; Fork: Shift-Alt-Y writes the text
                         DW      1515h           ;   screen to SCREEN.TXT, so a layout

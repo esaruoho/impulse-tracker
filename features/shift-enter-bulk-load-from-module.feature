@@ -53,6 +53,7 @@
 #
 # WATCH: LSWindow_ShiftEnter LoadMODSamplesInModule LSViewWindow_Enter2 LoadSample ExitLibraryDirectory SamplesInModule SampleCacheFileComplete
 # RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
+#   2026-09-25  direct-commit  touched: LoadSample
 #   2026-09-24  direct-commit  touched: LoadSample
 #   2026-09-22  direct-commit  touched: LoadSample
 #   2026-09-22  direct-commit  touched: LoadSample

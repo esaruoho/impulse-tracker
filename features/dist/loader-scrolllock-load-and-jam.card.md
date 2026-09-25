@@ -4,9 +4,9 @@
 
 **Intent:** As someone auditioning samples in the loader, I want one key that loads the highlighted sample, makes it an instrument, and puts me in the Pattern Editor, So that I can go from "found a sound" to "jamming with it" without a detour.
 
-**Grades:** @build-verified × 13 · @runtime-untested × 13 · @shipped × 13
+**Grades:** @build-verified × 14 · @runtime-untested × 14 · @shipped × 14
 
-**Scenarios: 13**
+**Scenarios: 14**
 
 
 ---
@@ -88,15 +88,28 @@
 - When I press Caps Lock or Pause/Break
 - Then the Sample Load view opens directly
 
-<sub>cite: IT_PE.ASM pattern-editor keylist Caps Lock / Pause rows</sub>
+<sub>cite: IT_PE.ASM pattern-editor keylist Caps Lock row -> PE_CapsLoadSample</sub>
 
 
-## 7. Caps Lock in Sample Load loads and jams
+## 7. Caps Lock from any global screen opens Sample Load directly
 
 `@shipped @build-verified @runtime-untested @hw-untested`
 
 
-- Given I opened Sample Load from the Pattern Editor with Caps Lock
+- Given I am on F3, F4, F11, F12, Load Song, or another screen that chains to GlobalKeyList
+- When I press Caps Lock
+- Then the Sample Load view opens directly
+- And the Caps round-trip latch is armed so the loader Caps key returns to the editor
+
+<sub>cite: IT_OBJ1.ASM GlobalKeyList Caps Lock row (13Ah) -> PE_CapsLoadSample. · IT_PE.ASM PE_CapsLoadSample captures PE_GetLastInstrument, arms the</sub>
+
+
+## 8. Caps Lock in Sample Load loads and returns
+
+`@shipped @build-verified @runtime-untested @hw-untested`
+
+
+- Given I opened Sample Load with Caps Lock
 - And a sample is highlighted in Sample Load
 - When I press Caps Lock again
 - Then the highlighted sample is loaded
@@ -106,7 +119,7 @@
 <sub>cite: IT_PE.ASM PE_CapsLoadSample sets PE_CapsRoundTrip and latches the</sub>
 
 
-## 8. Caps Lock loading keeps its destination while playback advances
+## 9. Caps Lock loading keeps its destination while playback advances
 
 `@shipped @build-verified @runtime-untested @hw-untested`
 
@@ -119,7 +132,7 @@
 <sub>cite: IT_PE.ASM PE_CapsLoadSample captures PE_GetLastInstrument before</sub>
 
 
-## 9. Loader instrument creation never falls back to another number
+## 10. Loader instrument creation never falls back to another number
 
 `@shipped @build-verified @runtime-untested @hw-untested`
 
@@ -133,7 +146,7 @@
 <sub>cite: IT_MUSIC.ASM Music_AssignSampleToInstrumentExact refuses the</sub>
 
 
-## 10. Loader allocates the first unused matching sample/instrument pair
+## 11. Loader allocates the first unused matching sample/instrument pair
 
 `@shipped @build-verified @runtime-untested @hw-untested`
 
@@ -147,7 +160,7 @@
 <sub>cite: IT_MUSIC.ASM Music_FindFreeMatchingSlot scans sample and instrument</sub>
 
 
-## 11. Sample Loader Scroll Lock returns with Follow Mode on
+## 12. Sample Loader Scroll Lock returns with Follow Mode on
 
 `@shipped @build-verified @runtime-untested @hw-untested`
 
@@ -160,7 +173,7 @@
 <sub>cite: IT_DISK.ASM LSViewWindow_ScrollLock clears any Caps round-trip</sub>
 
 
-## 12. If the instrument assign fails, it still drops me in to jam on the sample
+## 13. If the instrument assign fails, it still drops me in to jam on the sample
 
 `@shipped @build-verified @runtime-untested @hw-untested`
 
@@ -173,7 +186,7 @@
 <sub>cite: IT_DISK.ASM LSViewWindow_ScrollLock JC LSVSL_Go on Music_AssignSampleToInstrument ; commit 8f6a5cd</sub>
 
 
-## 13. Samples Mode songs get instrument backfill before Scroll Lock jams
+## 14. Samples Mode songs get instrument backfill before Scroll Lock jams
 
 `@shipped @build-verified @runtime-untested @hw-untested`
 

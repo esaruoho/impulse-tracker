@@ -173,9 +173,10 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **What it does:** As someone moving a module's sounds to another machine, I want one key to write every loaded sample out as its own WAV, So that the whole sample set lands in the Quicksave folder the Mac reads, without saving them one at a time.
 
-**Behaviour (9 scenarios):**
+**Behaviour (10 scenarios):**
 
 - Ctrl-Shift-Right, or D, writes every loaded sample — `@shipped @build-verified`
+- Ctrl-Shift-Right from Sample List or Order List uses the shared exporter — `@shipped @build-verified @runtime-untested`
 - 8-bit samples are converted, not dumped raw — `@shipped @build-verified`
 - The song's own sample filenames are left alone — `@shipped @build-verified`
 - A bad Quicksave path aborts before writing anything — `@shipped @build-verified`
@@ -185,9 +186,9 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - Ctrl-Shift-Right cannot be a keymap row -- it is a live modifier test
 - Names carry the sample name, not just the slot — `@todo`
 
-**How it does it:** **Key procs:** `D_DumpAllSamplesWAV`, `D_DumpBuildName`, `D_SaveRawSampleInternal` · **Source files:** `IT_DISK.ASM`, `IT_DISPL.ASM`
+**How it does it:** **Key procs:** `D_DumpAllSamplesWAV`, `D_DumpBuildName`, `D_SaveRawSampleInternal` · **Source files:** `IT_DISK.ASM`, `IT_DISPL.ASM`, `IT_I.ASM`, `IT_PE.ASM`
 
-**Grade:** @build-verified ×5 · @hw-verified ×1 · @shipped ×5 · @todo ×1
+**Grade:** @build-verified ×6 · @hw-verified ×1 · @runtime-untested ×1 · @shipped ×6 · @todo ×1
 
 
 <a id="f11-order-list"></a>
@@ -466,17 +467,19 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **What it does:** As someone auditioning samples against a playing song from the loader browser, I want previewing or loading a sample to NOT stop playback, So that I can hear a candidate sample in the mix without the song halting and without IT hanging on a half-loaded sample header.
 
-**Behaviour (5 scenarios):**
+**Behaviour (7 scenarios):**
 
 - (pre-fork) keyjazz / load in the browser used to kill the song — `@stock @build-verified`
 - Keyjazz preview in the browser silences only the preview voice — `@shipped @build-verified @runtime-untested`
 - Preview waveform redraw reads the freshly loaded preview slot — `@shipped @build-verified @runtime-untested`
 - Loading a sample silences only that slot, song continues — `@shipped @build-verified @runtime-untested`
 - The MIDI-sync mixer path is gated against a half-loaded header — `@shipped @build-verified @runtime-untested`
+- Loader preview defaults away from pattern channel 01 — `@shipped @build-verified @runtime-untested`
+- MIDI notes can keyjazz the sample loader preview — `@shipped @build-verified @runtime-untested`
 
-**How it does it:** **Key procs:** `LoadSample`, `Music_ReleaseSample`, `Music_SilenceSampleVoices`, `MIDISyncLoaderSuppress`, `MIDI_SetLoaderSuppress`, `MIDI_ClearLoaderSuppress` · **Source files:** `IT_DISK.ASM`, `IT_MUSIC.ASM`, `IT_K.ASM`
+**How it does it:** **Key procs:** `LoadSample`, `D_PostLoadSampleWindow`, `LSWindow_MIDINote`, `LSWindow_MIDINoteOff`, `I_GetPlayChannel`, `Music_ReleaseSample`, `Music_SilenceSampleVoices`, `MIDISyncLoaderSuppress`, `MIDI_SetLoaderSuppress`, `MIDI_ClearLoaderSuppress` · **Source files:** `IT_DISK.ASM`, `IT_MUSIC.ASM`, `IT_K.ASM`, `IT_I.ASM`
 
-**Grade:** @build-verified ×5 · @runtime-untested ×4 · @shipped ×4 · @stock ×1
+**Grade:** @build-verified ×7 · @runtime-untested ×6 · @shipped ×6 · @stock ×1
 
 **Commits:** `a44c41b` Music_SilenceSampleVoices (keep playback alive across reloads) · `ec91331` F3 loader keyjazz hang VRAM markers (triage) · `64fa1ce` F3 loader keyjazz hang fix via MIDISyncLoaderSuppress
 
@@ -488,18 +491,26 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **What it does:** As someone auditioning samples in the loader, I want one key that loads the highlighted sample, makes it an instrument, and puts me in the Pattern Editor, So that I can go from "found a sound" to "jamming with it" without a detour.
 
-**Behaviour (6 scenarios):**
+**Behaviour (14 scenarios):**
 
 - Scroll Lock loads the sample, makes an instrument, and enters the editor — `@shipped @build-verified @runtime-untested`
-- It is a new key and does not disturb the loader's core tools — `@shipped @build-verified @runtime-untested`
-- Scroll Lock in the editor round-trips back to the loader on a free slot — `@shipped @build-verified @runtime-untested`
-- Scroll Lock in the editor without the round-trip armed still toggles Follow — `@shipped @build-verified @runtime-untested`
+- Loader jump keys do not disturb the loader's core tools — `@shipped @build-verified @runtime-untested`
+- Scroll Lock in the editor toggles Follow — `@shipped @build-verified @runtime-untested`
 - Shift-Scroll Lock in the editor always reopens Sample Load — `@shipped @build-verified @runtime-untested`
+- Shift-F3 opens Sample Load directly — `@shipped @build-verified @runtime-untested`
+- Pattern Editor fallback keys open Sample Load directly — `@shipped @build-verified @runtime-untested`
+- Caps Lock from any global screen opens Sample Load directly — `@shipped @build-verified @runtime-untested`
+- Caps Lock in Sample Load loads and returns — `@shipped @build-verified @runtime-untested`
+- Caps Lock loading keeps its destination while playback advances — `@shipped @build-verified @runtime-untested`
+- Loader instrument creation never falls back to another number — `@shipped @build-verified @runtime-untested`
+- Loader allocates the first unused matching sample/instrument pair — `@shipped @build-verified @runtime-untested`
+- Sample Loader Scroll Lock returns with Follow Mode on — `@shipped @build-verified @runtime-untested`
 - If the instrument assign fails, it still drops me in to jam on the sample — `@shipped @build-verified @runtime-untested`
+- Samples Mode songs get instrument backfill before Scroll Lock jams — `@shipped @build-verified @runtime-untested`
 
-**How it does it:** **Key procs:** `LSViewWindow_ScrollLock`, `PE_ArmScrollLockRoundTrip`, `PE_ScrollLockLoadSample`, `PE_ScrollLockFollow` · **Source files:** `IT_DISK.ASM`, `IT_PE.ASM`
+**How it does it:** **Key procs:** `GlobalKeyList`, `LSViewWindow_ScrollLock`, `LSVSL_BackfillInstruments`, `PE_ScrollLockDispatch`, `PE_ScrollLockLoadSample`, `PE_CapsLoadSample`, `PE_ScrollLockFollow` · **Source files:** `IT_DISK.ASM`, `IT_PE.ASM`, `IT_OBJ1.ASM`, `IT_MUSIC.ASM`
 
-**Grade:** @build-verified ×6 · @runtime-untested ×6 · @shipped ×6
+**Grade:** @build-verified ×14 · @runtime-untested ×14 · @shipped ×14
 
 
 <a id="midi-in-multitimbral"></a>
@@ -563,7 +574,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **What it does:** As a musician slaving the DOS PC to an external sequencer or drum machine, I want MIDI System Real-Time messages to drive Impulse Tracker's transport and tempo, So that pressing play on the master device starts, stops, and clocks IT in time with the rest of the rig.
 
-**Behaviour (11 scenarios):**
+**Behaviour (15 scenarios):**
 
 - Real-Time bytes are dispatched without disturbing running status — `@shipped @build-verified`
 - 0xFA Start plays the song from the top — `@shipped @build-verified`
@@ -573,13 +584,17 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - 0xF8 Clock derives IT tempo from the master at 24 PPQ — `@shipped @build-verified`
 - MIDI Transport can be switched off, swallowing FA/FB/FC — `@shipped @build-verified`
 - MIDI Sync (clock) can be switched off independently, ignoring F8 — `@shipped @build-verified`
+- MIDI Sync (F8 Clock) OFF persists across restart — `@shipped @build-verified @runtime-untested`
+- All Shift-F1 MIDI toggles save immediately — `@shipped @build-verified @runtime-untested`
+- MIDI input is re-armed after restarting IT — `@shipped @build-verified @runtime-untested`
 - Loader keyjazz suppresses transport re-entry — `@shipped @build-verified`
 - Sound drivers pass F8-FF through to MIDISend — `@shipped @build-verified`
 - The MIDI Monitor shows live Real-Time byte counters — `@shipped @build-verified`
+- The Shift-F1 toggle buttons show their live ON/OFF state — `@shipped @build-verified @runtime-untested`
 
-**How it does it:** **Source files:** `IT_K.ASM`, `SoundDrivers/*.ASM`
+**How it does it:** **Source files:** `IT_K.ASM`, `IT_DISK.ASM`, `IT.ASM`, `SoundDrivers/MIDIDRV.ASM`, `SoundDrivers/*.ASM`
 
-**Grade:** @build-verified ×10 · @shipped ×10 · @todo ×1
+**Grade:** @build-verified ×14 · @runtime-untested ×4 · @shipped ×14 · @todo ×1
 
 **Commits:** `ec42bd1` 2026-04-23 FA/FB/FC start/continue/stop dispatch in MIDISend · `03b0a6d` 2026-05-01 F8 Clock 0xF8 external tempo sync (24 PPQ) · `0a82cb3` 2026-05-01 F8 Clock enable flag (default off) + delta sanity check · `ad5d840` 2026-05-04 MIDI Sync default ON + Alt-F12 toggle <- SUPERSEDED by 7163709 · `7163709` 2026-05-04 toggle moved from Alt-F12 to Shift-F1 MIDI screen button · `95f628a` 2026-05-04 MIDI Monitor: FA/FB/FC/F8 byte counters on Shift-F1 · `4ebf849` 2026-05-04 14 drivers (SB16/ES/AWE32/GOLD16) stop filtering F8-FF · `78fb72d` 2026-05-04 GUSMIXDR + IWDRV stop filtering F8-FF (the last 2) · `731e168` 2026-05-18 independent MIDI Transport (FA/FB/FC) gate
 
