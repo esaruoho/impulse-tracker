@@ -4,9 +4,9 @@
 
 **Intent:** As a musician rendering patterns to disk for use in another app, I want each single-pattern Quicksave render to come out as a real, time-stamped .WAV file (LL<HHMMSS>.WAV), So that the files sit time-sorted in the Quicksave folder and drag straight into another app, instead of clobbering each other or carrying a fake .000-style extension.
 
-**Grades:** @build-verified × 9 · @hw-verified × 3 · @runtime-untested × 3 · @runtime-verified × 3 · @shipped × 9
+**Grades:** @build-verified × 10 · @hw-verified × 3 · @runtime-untested × 4 · @runtime-verified × 3 · @shipped × 10
 
-**Scenarios: 11**
+**Scenarios: 12**
 
 
 ---
@@ -66,7 +66,21 @@
 <sub>cite: IT_MUSIC.ASM Music_ToggleWAVRender enter-mode gate (~5618): · WAV_BuildTimestampBasename (2827) reads INT 21h AH=2Ch (CH=hour, · WAV_Store2Dec (2804) turns each 0..99 field into two ASCII digits · commit 74c3fe8</sub>
 
 
-## 5. The prefix is a static "LL" (Lackluster), not derived from the song
+## 5. Auto-named WAV rendering preserves the song filename for later saves
+
+`@shipped @build-verified @runtime-untested @hw-untested`
+
+
+- Given the loaded song filename is AM_AM.IT
+- When I render a pattern with Shift-Right
+- Then the WAV file is named LL<HHMMSS>.WAV
+- And the loaded song filename remains AM_AM.IT
+- And a later song save targets AM_AM.IT
+
+<sub>cite: IT_MUSIC.ASM snapshots all 14 bytes of Disk FileName before writing</sub>
+
+
+## 6. The prefix is a static "LL" (Lackluster), not derived from the song
 
 `@shipped @build-verified @hw-untested`
 
@@ -79,7 +93,7 @@
 <sub>cite: WAV_BuildTimestampBasename writes literal 'L','L' at bytes 0..1 of</sub>
 
 
-## 6. The extension is a real .WAV, not the 3-digit pattern number
+## 7. The extension is a real .WAV, not the 3-digit pattern number
 
 `@shipped @build-verified @runtime-verified @hw-verified`
 
@@ -92,7 +106,7 @@
 <sub>cite: SoundDrivers/WAVDRV.ASM CopyFileName (593) copies the basename up · commit be595b2 ; mirrors the song-mode path that already wrote .WAV</sub>
 
 
-## 7. The auto-import opens the exact file WAVDRV wrote
+## 8. The auto-import opens the exact file WAVDRV wrote
 
 `@shipped @build-verified @runtime-untested @hw-untested`
 
@@ -105,7 +119,7 @@
 <sub>cite: IT_MUSIC.ASM two RenderedFilename builders -- enter-mode at</sub>
 
 
-## 8. Multi-WAV, full-song, and user-named renders keep <PFX><NNNN>
+## 9. Multi-WAV, full-song, and user-named renders keep <PFX><NNNN>
 
 `@shipped @build-verified @hw-untested`
 
@@ -119,7 +133,7 @@
 <sub>cite: IT_MUSIC.ASM enter-mode gate jumps to WAV_BuildCounterName (5651)</sub>
 
 
-## 9. The render plays the pattern's actual number of rows
+## 10. The render plays the pattern's actual number of rows
 
 `@shipped @build-verified @dosbox-verified @hw-untested`
 
@@ -131,7 +145,7 @@
 <sub>cite: IT_MUSIC.ASM Music_ToggleWAVRender -- Music_GetPattern, then LodsW twice: · IT_MUSIC.ASM Music_PlayPattern -- "AX = pattern, BX = number of rows,</sub>
 
 
-## 10. BX was never set, so renders intermittently wrote NO FILE AT ALL
+## 11. BX was never set, so renders intermittently wrote NO FILE AT ALL
 
 `@corrected`
 
@@ -140,7 +154,7 @@
 - Then a caller that ignores it can fail in a way that looks like anything else
 
 
-## 11. Two renders in the same second overwrite
+## 12. Two renders in the same second overwrite
 
 `@known-limit`
 

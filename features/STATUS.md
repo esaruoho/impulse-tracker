@@ -49,7 +49,7 @@
 | song-name-timestamp-default | 5 | ✓ | ~ partial | ✓ | @build-verified @hw-untested @hw-verified @runtime-untested @runtime-verified @shipped |
 | undo-messaging | 6 | ✓ | ~ partial | — | @bug @build-verified @howto @runtime-untested @runtime-verified @shipped @stock |
 | wav-render-keep-playback | 7 | ✓ | ~ partial | ✓ | @build-verified @hw-untested @hw-verified @known-limit @runtime-untested @runtime-verified @shipped |
-| wav-render-quicksave | 11 | ✓ | ~ partial | ✓ | @build-verified @corrected @dosbox-verified @hw-untested @hw-verified @known-limit @runtime-untested @runtime-verified @shipped |
+| wav-render-quicksave | 12 | ✓ | ~ partial | ✓ | @build-verified @corrected @dosbox-verified @hw-untested @hw-verified @known-limit @runtime-untested @runtime-verified @shipped |
 | wav-render-reentry-guard | 7 | ✓ | ✓ | ✗ | @build-verified @hw-untested @runtime-verified @shipped |
 
 ## Tally (computed)

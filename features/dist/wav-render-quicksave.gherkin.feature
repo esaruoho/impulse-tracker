@@ -61,6 +61,16 @@ Feature: WAV Quicksave render filename
     Then the file is named LL163422.WAV
     And HHMMSS is the 24-hour DOS clock (hour, minute, second), zero-padded
 
+  @shipped @build-verified @runtime-untested @hw-untested
+  Scenario: Auto-named WAV rendering preserves the song filename for later saves
+    # cite: IT_MUSIC.ASM snapshots all 14 bytes of Disk FileName before writing
+    #       the render basename, then restores them after WAVDRV is unloaded.
+    Given the loaded song filename is AM_AM.IT
+    When I render a pattern with Shift-Right
+    Then the WAV file is named LL<HHMMSS>.WAV
+    And the loaded song filename remains AM_AM.IT
+    And a later song save targets AM_AM.IT
+
   @shipped @build-verified @hw-untested
   Scenario: The prefix is a static "LL" (Lackluster), not derived from the song
     # cite: WAV_BuildTimestampBasename writes literal 'L','L' at bytes 0..1 of

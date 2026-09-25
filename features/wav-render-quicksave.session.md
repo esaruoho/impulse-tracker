@@ -1,5 +1,17 @@
 # SESSION / VIBE RECORD: WAV Quicksave render filename
 
+## 2026-09-25 addendum: preserve the song filename
+
+Esa reported that Shift-Right rendering changed the visible song filename to
+the generated `LL<HHMMSS>` basename, and a later song save used that name. The
+render path confirmed the cause: it copies `WAV_RenderBasename` into the shared
+Disk `FileName` buffer for WAVDRV, with no restoration.
+
+The renderer now snapshots all 14 bytes of the song filename before the
+automatic WAV basename copy and restores them after stopping and unloading
+WAVDRV. User-specified WAV filenames do not use this snapshot path. The fix is
+build-verified; runtime confirmation is pending.
+
 > The conversation that spawned `features/wav-render-quicksave.feature`.
 > Per the Report Card rule, the card is not complete without the session that
 > produced it. This file is the **vibe diff** unit: future versions of the

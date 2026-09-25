@@ -1026,12 +1026,13 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **What it does:** As a musician rendering patterns to disk for use in another app, I want each single-pattern Quicksave render to come out as a real, time-stamped .WAV file (LL<HHMMSS>.WAV), So that the files sit time-sorted in the Quicksave folder and drag straight into another app, instead of clobbering each other or carrying a fake .000-style extension.
 
-**Behaviour (11 scenarios):**
+**Behaviour (12 scenarios):**
 
 - Shift-Right at the order-list right edge renders to Quicksave only — `@shipped @build-verified @runtime-verified @hw-verified`
 - Plain Right at the same edge renders AND auto-imports — `@shipped @build-verified @runtime-untested`
 - Shift-Right writes stereo WAV data when Stereo playback is enabled — `@shipped @build-verified @runtime-untested`
 - A single-pattern Quicksave render is named by wall-clock time — `@shipped @build-verified @runtime-verified @hw-verified`
+- Auto-named WAV rendering preserves the song filename for later saves — `@shipped @build-verified @runtime-untested`
 - The prefix is a static "LL" (Lackluster), not derived from the song — `@shipped @build-verified`
 - The extension is a real .WAV, not the 3-digit pattern number — `@shipped @build-verified @runtime-verified @hw-verified`
 - The auto-import opens the exact file WAVDRV wrote — `@shipped @build-verified @runtime-untested`
@@ -1040,9 +1041,9 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - BX was never set, so renders intermittently wrote NO FILE AT ALL
 - Two renders in the same second overwrite
 
-**How it does it:** **Key procs:** `WAV_BuildTimestampBasename`, `WAV_Store2Dec`, `Music_ToggleWAVRender`, `Music_ImportRenderedPattern`, `PE_OrderList_RightDispatch`, `PE_OrderList_RenderDispatch`, `PE_OrderList_RenderQuicksave`, `PE_OrderList_GDispatch`, `CopyFileName`, `SetStereo` · **Source files:** `IT_PE.ASM`, `IT_MUSIC.ASM`, `SoundDrivers/WAVDRV.ASM`
+**How it does it:** **Key procs:** `WAV_BuildTimestampBasename`, `WAV_Store2Dec`, `WAV_SongFileNameSaved`, `WAV_SavedSongFileName`, `Music_ToggleWAVRender`, `Music_ImportRenderedPattern`, `PE_OrderList_RightDispatch`, `PE_OrderList_RenderDispatch`, `PE_OrderList_RenderQuicksave`, `PE_OrderList_GDispatch`, `CopyFileName`, `SetStereo` · **Source files:** `IT_PE.ASM`, `IT_MUSIC.ASM`, `SoundDrivers/WAVDRV.ASM`
 
-**Grade:** @build-verified ×9 · @hw-verified ×3 · @runtime-untested ×3 · @runtime-verified ×3 · @shipped ×9
+**Grade:** @build-verified ×10 · @hw-verified ×3 · @runtime-untested ×4 · @runtime-verified ×3 · @shipped ×10
 
 **Commits:** `be595b2` WAV render: .000 (3-digit pattern number) -> real .WAV extension · `74c3fe8` single-pattern Quicksave render named LL<HHMMSS>.WAV by the clock · `3fd46da` (generative-seed preamble)
 

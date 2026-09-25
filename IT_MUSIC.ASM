@@ -4855,6 +4855,8 @@ WAV_UserBase            DB      14 Dup (0)
                                         ; result into FileName so files
                                         ; come out NAME01.WAV..NAME64.WAV
                                         ; without overwriting each other.
+WAV_SongFileNameSaved   DB      0
+WAV_SavedSongFileName   DB      14 Dup (0)
 
 ; Multi-WAV state (Shift-Alt-M = current pattern split per channel)
 WAV_MultiMode           DB      0       ; 0=off, 1=running
@@ -6312,6 +6314,14 @@ WAV_BasenameReady:
                 Push    DS
                 Push    ES
                 Call    D_GetFileName           ; DS:SI = FileName buffer
+                Push    CS
+                Pop     ES
+                Mov     DI, Offset WAV_SavedSongFileName
+                Mov     CX, 14
+                ClD
+                Rep     MovsB
+                Mov     Byte Ptr [CS:WAV_SongFileNameSaved], 1
+                Call    D_GetFileName           ; DS:SI = FileName buffer
                 Push    DS
                 Pop     ES
                 Mov     DI, SI                  ; ES:DI = FileName dest
@@ -6734,6 +6744,28 @@ WAV_LeaveResumeDecided:
                 Mov     AL, 4
                 Mov     AH, '3'
                 Call    WAV_DebugMark
+
+                                                ; The WAV driver is finished with
+                                                ; FileName. Restore the song name
+                                                ; before returning to normal use.
+                Cmp     Byte Ptr [CS:WAV_SongFileNameSaved], 0
+                JE      WAV_LeaveFileNameRestored
+                Push    DS
+                Push    ES
+                Call    D_GetFileName           ; DS:SI = song FileName buffer
+                Push    DS
+                Pop     ES
+                Mov     DI, SI
+                Push    CS
+                Pop     DS
+                Mov     SI, Offset WAV_SavedSongFileName
+                Mov     CX, 14
+                ClD
+                Rep     MovsB
+                Pop     ES
+                Pop     DS
+                Mov     Byte Ptr [CS:WAV_SongFileNameSaved], 0
+WAV_LeaveFileNameRestored:
 
                 Mov     EAX, DWord Ptr [CS:WAV_SavedDriverName]
                 Mov     DWord Ptr [CS:DriverName], EAX
