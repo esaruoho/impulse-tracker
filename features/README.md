@@ -1041,7 +1041,7 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 - BX was never set, so renders intermittently wrote NO FILE AT ALL
 - Two renders in the same second overwrite
 
-**How it does it:** **Key procs:** `WAV_BuildTimestampBasename`, `WAV_Store2Dec`, `WAV_SongFileNameSaved`, `WAV_SavedSongFileName`, `Music_ToggleWAVRender`, `Music_ImportRenderedPattern`, `PE_OrderList_RightDispatch`, `PE_OrderList_RenderDispatch`, `PE_OrderList_RenderQuicksave`, `PE_OrderList_GDispatch`, `CopyFileName`, `SetStereo` · **Source files:** `IT_PE.ASM`, `IT_MUSIC.ASM`, `SoundDrivers/WAVDRV.ASM`
+**How it does it:** **Key procs:** `WAV_BuildTimestampBasename`, `WAV_Store2Dec`, `WAV_SongFileNameSaved`, `WAV_SavedSongFileName`, `Music_ToggleWAVRender`, `Music_ImportRenderedPattern`, `PE_OrderList_RightDispatch`, `PE_OrderList_RenderDispatch`, `PE_OrderList_RenderQuicksave`, `PE_OrderList_GDispatch`, `CopyFileName`, `SetStereo`, `STEREOENABLED` · **Source files:** `IT_PE.ASM`, `IT_MUSIC.ASM`, `SoundDrivers/WAVDRV.ASM`
 
 **Grade:** @build-verified ×10 · @hw-verified ×3 · @runtime-untested ×4 · @runtime-verified ×3 · @shipped ×10
 

@@ -64,8 +64,9 @@
 #                       3fd46da (generative-seed preamble)
 #   Triad: this .feature  <->  wav-render-quicksave.session.md  <->  those commits
 #
-# WATCH: WAV_BuildTimestampBasename WAV_Store2Dec WAV_SongFileNameSaved WAV_SavedSongFileName Music_ToggleWAVRender Music_ImportRenderedPattern PE_OrderList_RightDispatch PE_OrderList_RenderDispatch PE_OrderList_RenderQuicksave PE_OrderList_GDispatch CopyFileName SetStereo
+# WATCH: WAV_BuildTimestampBasename WAV_Store2Dec WAV_SongFileNameSaved WAV_SavedSongFileName Music_ToggleWAVRender Music_ImportRenderedPattern PE_OrderList_RightDispatch PE_OrderList_RenderDispatch PE_OrderList_RenderQuicksave PE_OrderList_GDispatch CopyFileName SetStereo STEREOENABLED
 # RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
+#   2026-09-25  direct-commit 0487475  touched: STEREOENABLED (WAVDRV stereo guards)
 #   2026-09-25  direct-commit  touched: WAV_SongFileNameSaved WAV_SavedSongFileName
 #   2026-08-14  direct-commit  touched: Music_ToggleWAVRender
 #   2026-08-14  direct-commit  touched: Music_ToggleWAVRender PE_OrderList_RightDispatch PE_OrderList_RenderDispatch PE_OrderList_RenderQuicksave PE_OrderList_GDispatch
