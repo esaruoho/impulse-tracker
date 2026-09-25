@@ -4,9 +4,9 @@
 
 **Intent:** As someone who wants a module's instruments fast, I want Shift-Enter on a module file in the Load Sample browser to load every sample in that module into consecutive slots, one per row, keeping each sample's original name and loop mode, So that I can lift a whole module's sample set in a single keystroke.
 
-**Grades:** @build-verified × 2 · @runtime-untested × 2 · @shipped × 2
+**Grades:** @build-verified × 3 · @runtime-untested × 3 · @shipped × 3
 
-**Scenarios: 4**
+**Scenarios: 5**
 
 
 ---
@@ -26,7 +26,19 @@
 <sub>cite: IT_DISK.ASM:988 LSWindowKeys cond 4 (Shift) / key 11Ch -> LSWindow_ShiftEnter · IT_DISK.ASM:7830 calls the per-format LoadSamplesInModuleTable loader · IT_DISK.ASM:7894 LSWS_Loop iterates cache entries 1..NumSamples-1, · IT_G.ASM:303 lands on the F3 Sample List afterwards (Jmp Glbl_F3)</sub>
 
 
-## 2. Loaded samples keep their original module names and loop modes
+## 2. Caps Lock on a module row performs the Shift-Enter bulk load
+
+`@shipped @build-verified @runtime-untested @hw-untested`
+
+
+- Given the Sample Load browser is showing a module row
+- When I press Caps Lock on that row
+- Then the module's samples are loaded into consecutive sample slots
+
+<sub>cite: IT_DISK.ASM LSWindowKeys maps scan word 13Ah to</sub>
+
+
+## 3. Loaded samples keep their original module names and loop modes
 
 `@shipped @build-verified @runtime-untested @hw-untested`
 
@@ -39,7 +51,7 @@
 <sub>cite: IT_D_RIS.INC:136 MOD loader copies the 22-char sample name into the · IT_DISK.ASM:7420 LoadSample copies the 48h-byte sample header (name,</sub>
 
 
-## 3. REGRESSION (reported 2026-06-03) - Shift-Enter on a .MOD hard-hangs IT
+## 4. REGRESSION (reported 2026-06-03) - Shift-Enter on a .MOD hard-hangs IT
 
 `@bug @fixed-pending-verify`
 
@@ -53,7 +65,7 @@
 <sub>cite: IT_DISK.ASM:7839 FORK FIX block (Xor DI,DI / Rep MovsB ExitLibraryDirectory</sub>
 
 
-## 4. REGRESSION (reported 2026-06-04) - after bulk-load the loader is parked
+## 5. REGRESSION (reported 2026-06-04) - after bulk-load the loader is parked
 
 `@bug @fixed-pending-verify`
 

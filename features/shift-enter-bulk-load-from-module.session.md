@@ -1,5 +1,13 @@
 # Session — shift-enter-bulk-load-from-module
 
+## 2026-09-25 addendum: Caps Lock alias
+
+Esa asked for Caps Lock on a module row to behave like Shift-Enter and load the
+module's work. `LSWindowKeys` now maps scan word `13Ah` directly to
+`LSWindow_ShiftEnter`; that existing handler bulk-loads the module's samples
+into consecutive slots. The new card scenario records the alias. Runtime remains
+untested until exercised in DOS.
+
 > The thinkspace leg of the `shift-enter-bulk-load-from-module` report-card
 > triad. Faithful, not flattering. The crash report, the root-cause trace, and
 > why the fix is shaped the way it is.

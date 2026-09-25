@@ -1079,6 +1079,10 @@ LSWindowKeys            Label
                         DW      11Ch            ; bulk-load all samples from
                         DW      LSWindow_ShiftEnter ; module into consecutive slots
 
+                        DB      0               ; Caps Lock: same bulk-load on module row
+                        DW      13Ah
+                        DW      LSWindow_ShiftEnter
+
                         DB      6               ; MIDI Note Off releases preview
                         DW      08000h
                         DW      LSWindow_MIDINoteOff

@@ -23,6 +23,14 @@ Feature: Shift-Enter Load from Sample List (bulk-load a module's samples)
     And each occupies its own row in the sample list
 
   @shipped @build-verified @runtime-untested @hw-untested
+  Scenario: Caps Lock on a module row performs the Shift-Enter bulk load
+    # cite: IT_DISK.ASM LSWindowKeys maps scan word 13Ah to
+    #       LSWindow_ShiftEnter; the handler bulk-loads module rows.
+    Given the Sample Load browser is showing a module row
+    When I press Caps Lock on that row
+    Then the module's samples are loaded into consecutive sample slots
+
+  @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Loaded samples keep their original module names and loop modes
     # cite: IT_D_RIS.INC:136 MOD loader copies the 22-char sample name into the
     #       cache entry; :131 sets loop flag (Or AL,16); :155/:161 loop begin/end

@@ -1,0 +1,17 @@
+#!/bin/bash
+set -euo pipefail
+
+mount_point="/Volumes/netdrive"
+share="smb://192.168.32.50/netdrive"
+
+if /sbin/mount | /usr/bin/grep -F " on ${mount_point} (smbfs," >/dev/null; then
+    printf '%s\n' "$mount_point"
+    exit 0
+fi
+
+if /sbin/mount | /usr/bin/grep -F " on /private/tmp/netdrive (smbfs," >/dev/null; then
+    /sbin/umount /tmp/netdrive
+fi
+
+/usr/bin/osascript -e "mount volume \"$share\" as user name \"esaruoho\" with password \"\""
+printf '%s\n' "$mount_point"
