@@ -41,13 +41,14 @@
 #   IT_MUSIC.ASM       - Music_ToggleWAVRender enter-mode naming gate;
 #                        WAV_BuildTimestampBasename / WAV_Store2Dec;
 #                        the two RenderedFilename builders; Music_Import...
-#   SoundDrivers/WAVDRV.ASM - CopyFileName (basename) + Poll9 (.WAV extension);
-#                        SetStereo + Poll10 (mono/stereo WAV header/output)
+#   SoundDrivers/WAVDRV.ASM - STEREOENABLED controls stereo state, mixing,
+#                        channel count, and WAV header; CopyFileName + Poll9.
 #
 # Commit log (the ingest trail):
 #   be595b2  WAV render: .000 (3-digit pattern number) -> real .WAV extension
 #   74c3fe8  single-pattern Quicksave render named LL<HHMMSS>.WAV by the clock
-#   pending  WAV render: Shift-Right honors Stereo playback mode in ITWAV.DRV
+#   WAVDRV stereo state/mixing/header now follow STEREOENABLED; runtime WAV
+#   channel-count confirmation remains pending.
 #
 # SESSION (the vibe record -- the conversation that spawned this card):
 #   features/wav-render-quicksave.session.md
@@ -58,7 +59,7 @@
 # RESULT (third leg of the triad: .feature spec + .session convo + what shipped):
 #   Feature delivery : be595b2 (.000 -> .WAV), 74c3fe8 (LL<HHMMSS>.WAV)
 #                      direct to esaruoho/main, no PR
-#                      pending (stereo WAV header/output follows Stereo flag)
+#                      plus WAVDRV stereo support from this direct commit.
 #   This card authored: 3d5882a (card + back-links), 47015b7 (session),
 #                       3fd46da (generative-seed preamble)
 #   Triad: this .feature  <->  wav-render-quicksave.session.md  <->  those commits
@@ -110,10 +111,8 @@ Feature: WAV Quicksave render filename
   Scenario: Shift-Right writes stereo WAV data when Stereo playback is enabled
     # cite: IT_MUSIC.ASM Music_AutoDetectSoundCard (~8063) calls
     #       Music_InitStereo after loading ITWAV.DRV for the render hot-swap
-    # cite: SoundDrivers/WAVDRV.ASM SetStereo (~1227) now copies AL into both
-    #       Stereo and StereoSet, so the first Poll(AX=1) sees the live mode
-    # cite: SoundDrivers/WAVDRV.ASM Poll10 (~873) writes WAVEChannels,
-    #       WAVEBytesPerSample, and WAVEBytesPerSecond from Stereo
+    # cite: SoundDrivers/WAVDRV.ASM compiles SetStereo, stereo mixing, and the
+    #       Poll10 stereo header fields under STEREOENABLED, not REGISTERED
     Given Stereo playback is enabled in the song flags
     And the F11 Order List cursor is on the right-most order-column character
     When the user presses Shift-Right

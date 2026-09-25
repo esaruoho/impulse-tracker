@@ -22,6 +22,7 @@ include vtable.inc
 
 include reqproc.inc
 
+; FEATURE-CARD >> features/wav-render-quicksave.feature (stereo WAV output)
 STEREOENABLED   EQU     1
 MIXRESOLUTION   EQU     32
 
@@ -57,7 +58,7 @@ WAVEBits        DW      16
 WAVEHeader3     DB      "data"
 WAVEDataSize    DD      0
 
-IF REGISTERED
+IF STEREOENABLED
   Stereo          DB      0
   StereoSet       DB      0
 ENDIF
@@ -751,7 +752,7 @@ PCF_Close:
                 Ret
 
 Poll7:
-IF REGISTERED
+IF STEREOENABLED
                 Mov     AL, CS:StereoSet
                 Mov     CS:Stereo, AL
 ENDIF
@@ -870,7 +871,7 @@ Poll10:
                 Mov     WAVEDataSize, EDX
                 Mov     DX, MixSpeed
 
-IF REGISTERED
+IF STEREOENABLED
                 Mov     CL, Stereo
                 Inc     CX
                 ShL     EDX, CL
@@ -881,7 +882,7 @@ ELSE
 ENDIF
                 Mov     WAVEBytesPerSecond, EDX
 
-IF   REGISTERED
+IF STEREOENABLED
                 Mov     DX, 1
                 ShL     DX, CL
                 Mov     WAVEBytesPerSample, DX
@@ -955,7 +956,7 @@ IF DITHEROUTPUT
                 Xor     DI, DI
                 Mov     CX, CS:RealBytesToMix
 
- IF REGISTERED
+ IF STEREOENABLED
 
                 Cmp     CS:Stereo, 0
                 JE      PollNoStereo
@@ -1083,7 +1084,7 @@ ELSE    ; No dither
                 Mov     CX, CS:RealBytesToMix
                 Mov     BX, 8
 
- IF REGISTERED
+ IF STEREOENABLED
                 Cmp     CS:Stereo, 0
                 JE      PollNoStereo
 
@@ -1226,7 +1227,7 @@ EndP            SetMixVolume
 
 Proc            SetStereo Far
 
-IF REGISTERED
+IF STEREOENABLED
                   Mov     CS:Stereo, AL
                   Mov     CS:StereoSet, AL
 

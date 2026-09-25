@@ -51,7 +51,7 @@
 - Then ITWAV.DRV writes a 2-channel 16-bit WAV file
 - And mono mode still writes a 1-channel 16-bit WAV file
 
-<sub>cite: IT_MUSIC.ASM Music_AutoDetectSoundCard (~8063) calls · SoundDrivers/WAVDRV.ASM SetStereo (~1227) now copies AL into both · SoundDrivers/WAVDRV.ASM Poll10 (~873) writes WAVEChannels,</sub>
+<sub>cite: IT_MUSIC.ASM Music_AutoDetectSoundCard (~8063) calls · SoundDrivers/WAVDRV.ASM compiles SetStereo, stereo mixing, and the</sub>
 
 
 ## 4. A single-pattern Quicksave render is named by wall-clock time

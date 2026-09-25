@@ -12,6 +12,17 @@ automatic WAV basename copy and restores them after stopping and unloading
 WAVDRV. User-specified WAV filenames do not use this snapshot path. The fix is
 build-verified; runtime confirmation is pending.
 
+## 2026-09-25 addendum: Shift-Right WAV was mono
+
+Esa reported that Shift-Right still wrote mono WAVs. The render dispatcher does
+call `Music_InitStereo`, but `MWAV.BAT` builds `WAVDRV.ASM`, where the stereo
+state, mixer, and WAV header code were all gated by `IF REGISTERED`. That build
+does not define `REGISTERED`, despite declaring `STEREOENABLED EQU 1`, so
+`ITWAV.DRV` was compiled mono-only. Those stereo-specific guards now use
+`STEREOENABLED`, allowing the render driver's existing `SetStereo` callback and
+stereo mixer/header path to run. Build is verified; runtime output still needs
+confirmation on DOS.
+
 > The conversation that spawned `features/wav-render-quicksave.feature`.
 > Per the Report Card rule, the card is not complete without the session that
 > produced it. This file is the **vibe diff** unit: future versions of the
