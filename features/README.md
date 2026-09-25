@@ -875,13 +875,13 @@ Each card is a triad: the `.feature` spec, a `.session.md` (the conversation tha
 
 **Behaviour (5 scenarios):**
 
-- Shift-Enter on a module bulk-loads its samples into consecutive slots — `@shipped @build-verified @runtime-untested`
+- Shift-Enter on a module bulk-loads into empty slots from the cursor — `@shipped @build-verified @runtime-untested`
 - Caps Lock on a module row performs the Shift-Enter bulk load — `@shipped @build-verified @runtime-untested`
 - Loaded samples keep their original module names and loop modes — `@shipped @build-verified @runtime-untested`
 - REGRESSION (reported 2026-06-03) - Shift-Enter on a .MOD hard-hangs IT
 - REGRESSION (reported 2026-06-04) - after bulk-load the loader is parked
 
-**How it does it:** **Key procs:** `LSWindowKeys`, `LSWindow_ShiftEnter`, `LoadMODSamplesInModule`, `LSViewWindow_Enter2`, `LoadSample`, `ExitLibraryDirectory`, `SamplesInModule`, `SampleCacheFileComplete` · **Source files:** `IT_DISK.ASM`
+**How it does it:** **Key procs:** `LSWindowKeys`, `LSWindow_ShiftEnter`, `Music_FindFreeSampleSlotFrom`, `Music_FindFreeMatchingSlotFrom`, `LoadMODSamplesInModule`, `LSViewWindow_Enter2`, `LoadSample`, `ExitLibraryDirectory`, `SamplesInModule`, `SampleCacheFileComplete` · **Source files:** `IT_DISK.ASM`
 
 **Grade:** @build-verified ×3 · @runtime-untested ×3 · @shipped ×3
 

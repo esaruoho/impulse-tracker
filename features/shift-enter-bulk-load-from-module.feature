@@ -6,9 +6,8 @@
 # Durable understanding-store for "what happens when the user presses Shift-Enter
 # on a module file (.MOD/.IT/.S3M/.XM/.MTM/.669/.PTM/.FAR) in the sample-loader
 # browser reached from F3 Sample List -> Enter (Load Sample), using Shift-Enter
-# or Caps Lock. Every sample in the
-# module is loaded into consecutive sample slots, one per row, keeping the module
-# samples' original names and loop modes.
+# or Caps Lock. Every sample is loaded starting at the current slot, skipping
+# occupied destinations and keeping the module samples' original names and loops.
 #
 # Report-card legend (tags):
 #   @stock            - upstream Impulse Tracker behaviour
@@ -21,21 +20,22 @@
 #   @fixed-pending-verify - a fix is committed + build-verified but not yet runtime-confirmed
 #
 # WHAT THIS CARD SPAWNS (generative seed)
-#   Codespace : LSWindowKeys and LSWindow_ShiftEnter in IT_DISK.ASM; the shared per-format
-#               LoadSamplesInModuleTable loaders in IT_D_RIS.INC; LoadSample.
+#   Codespace : LSWindowKeys and LSWindow_ShiftEnter in IT_DISK.ASM;
+#               forward free-slot allocators in IT_MUSIC.ASM; module loaders.
 #   Thinkspace: the .session.md (the crash report, the root-cause trace, why the
 #               fix mirrors the stock module-browse finalisation).
 #   Areaspace : OWNS Shift-Enter (cond 4 / key 11Ch) and Caps Lock (cond 0 /
 #               key 13Ah) bindings in LSWindowKeys on the sample-loader browser.
-#               MUST NOT change plain Enter
-#               (LSWindow_Enter / LSViewWindow_Enter2) or the shared module
-#               loaders (they serve the stock browse path too).
+#               MUST NOT change plain Enter (LSWindow_Enter / LSViewWindow_Enter2),
+#               shared module loaders, or overwrite occupied destinations.
 #
 # Source files linked back to this card:
 #   IT_DISK.ASM      - LSWindow_ShiftEnter (7764); LSWindowKeys Shift-Enter and
 #                      Caps Lock entries (~1077-1087); the FORK FIX finalisation block
 #                      (7839); the bulk loop LSWS_Loop (7894); LoadSample (7322);
 #                      stock reference path LSViewWindow_Enter2 (7574-7642).
+#   IT_MUSIC.ASM     - Music_FindFreeSampleSlotFrom and
+#                      Music_FindFreeMatchingSlotFrom search empty destinations.
 #   IT_D_RIS.INC     - LoadMODSamplesInModule (62) + sibling per-format loaders;
 #                      cache-entry contract documented at the top (1-15).
 #   IT_G.ASM         - Glbl_F3 (303): where the handler lands after a bulk load.
@@ -53,8 +53,9 @@
 #                      3.01 linked; IT.EXE 476375 -> 476535 bytes (+160).
 #   Triad: this .feature <-> shift-enter-bulk-load-from-module.session.md <-> commit
 #
-# WATCH: LSWindowKeys LSWindow_ShiftEnter LoadMODSamplesInModule LSViewWindow_Enter2 LoadSample ExitLibraryDirectory SamplesInModule SampleCacheFileComplete
+# WATCH: LSWindowKeys LSWindow_ShiftEnter Music_FindFreeSampleSlotFrom Music_FindFreeMatchingSlotFrom LoadMODSamplesInModule LSViewWindow_Enter2 LoadSample ExitLibraryDirectory SamplesInModule SampleCacheFileComplete
 # RESULT-LOG >> (auto-maintained by .githooks/post-merge — newest line appended below)
+#   2026-09-25  direct-commit  touched: Music_FindFreeSampleSlotFrom Music_FindFreeMatchingSlotFrom LoadSample
 #   2026-09-25  direct-commit  touched: LSWindow_ShiftEnter
 #   2026-09-25  direct-commit  touched: LoadSample
 #   2026-09-24  direct-commit  touched: LoadSample
@@ -81,7 +82,7 @@ Feature: Shift-Enter Load from Sample List (bulk-load a module's samples)
   So that I can lift a whole module's sample set in a single keystroke.
 
   @shipped @build-verified @runtime-untested @hw-untested
-  Scenario: Shift-Enter on a module bulk-loads its samples into consecutive slots
+  Scenario: Shift-Enter on a module bulk-loads into empty slots from the cursor
     # cite: IT_DISK.ASM:988 LSWindowKeys cond 4 (Shift) / key 11Ch -> LSWindow_ShiftEnter
     # cite: IT_DISK.ASM:7830 calls the per-format LoadSamplesInModuleTable loader
     # cite: IT_DISK.ASM:7894 LSWS_Loop iterates cache entries 1..NumSamples-1,
@@ -90,7 +91,8 @@ Feature: Shift-Enter Load from Sample List (bulk-load a module's samples)
     Given the user is in the Sample List and has opened the Load Sample browser
     And the cursor is on a module file row (type byte [cache+88] >= 20h)
     When they press Shift-Enter on it
-    Then every sample in the module is loaded into consecutive sample slots
+    Then each sample is loaded into an empty slot at or after the current slot
+    And every previously occupied sample and instrument remains unchanged
     And each occupies its own row in the sample list
 
   @shipped @build-verified @runtime-untested @hw-untested
@@ -99,7 +101,8 @@ Feature: Shift-Enter Load from Sample List (bulk-load a module's samples)
     #       LSWindow_ShiftEnter; the handler bulk-loads module rows.
     Given the Sample Load browser is showing a module row
     When I press Caps Lock on that row
-    Then the module's samples are loaded into consecutive sample slots
+    Then the module's samples are loaded into empty slots from the current slot
+    And occupied samples and instruments remain unchanged
 
   @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Loaded samples keep their original module names and loop modes

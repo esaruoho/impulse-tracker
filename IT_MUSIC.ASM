@@ -188,6 +188,8 @@ include network.inc
         Global  Music_AssignSampleToInstrument:Far
         Global  Music_AssignSampleToInstrumentExact:Far
         Global  Music_FindFreeMatchingSlot:Far
+        Global  Music_FindFreeSampleSlotFrom:Far
+        Global  Music_FindFreeMatchingSlotFrom:Far
         Global  Music_KBPlaySong:Far
         Global  Music_IncreaseVolume:Far
         Global  Music_DecreaseVolume:Far
@@ -11276,42 +11278,86 @@ Proc            Music_AssignSampleToInstrumentExact Far
 EndP            Music_AssignSampleToInstrumentExact
                 Assume DS:Nothing
 
-; Return BX = first zero-based song slot whose sample and matching instrument
-; slots are both empty. Existing sample/instrument pairs are never reused.
-Proc            Music_FindFreeMatchingSlot Far
+; FEATURE-CARD >> features/shift-enter-bulk-load-from-module.feature
+; Return BX = first zero-based song slot at or after input BX whose sample and
+; matching instrument slots are both empty. Existing pairs are never reused.
+Proc            Music_FindFreeMatchingSlotFrom Far
                 Push    CX DX DS SI ES DI
                 Push    CS
                 Pop     DS
                         Assume DS:Music
                 Mov     ES, SongDataArea
-                Xor     BX, BX
+                Cmp     BX, 99
+                JAE     Music_FindFreeMatchingSlotFrom_NotFound
 
-Music_FindFreeMatchingSlot1:
+Music_FindFreeMatchingSlotFrom_Loop:
                 Mov     DI, BX
                 Add     DI, DI
-                Mov     SI, [ES:DI+64912]       ; sample pointer, slot 0-based
-                Test    Byte Ptr [ES:SI+12h], 1  ; sample exists?
-                JNZ     Music_FindFreeMatchingSlot2
+                Mov     SI, [ES:DI+64912]
+                Test    Byte Ptr [ES:SI+12h], 1
+                JNZ     Music_FindFreeMatchingSlotFrom_Next
 
                 Mov     AX, 554
                 Mul     BX
                 Mov     DI, AX
-                Add     DI, 512                 ; matching instrument slot
+                Add     DI, 512
                 Mov     SI, Offset InstrumentHeader
                 Mov     CX, 554
-                RepE    CmpsB                   ; empty instrument template?
-                JE      Music_FindFreeMatchingSlotEnd
+                RepE    CmpsB
+                JE      Music_FindFreeMatchingSlotFrom_Found
 
-Music_FindFreeMatchingSlot2:
+Music_FindFreeMatchingSlotFrom_Next:
                 Inc     BX
-                Cmp     BX, 99                  ; slot 99 is preview-reserved
-                JB      Music_FindFreeMatchingSlot1
+                Cmp     BX, 99
+                JB      Music_FindFreeMatchingSlotFrom_Loop
+Music_FindFreeMatchingSlotFrom_NotFound:
                 StC
+                Jmp     Music_FindFreeMatchingSlotFrom_Done
+Music_FindFreeMatchingSlotFrom_Found:
+                ClC
 
-Music_FindFreeMatchingSlotEnd:
+Music_FindFreeMatchingSlotFrom_Done:
                 Pop     DI ES SI DS DX CX
                 Ret
+EndP            Music_FindFreeMatchingSlotFrom
+                Assume DS:Nothing
+
+; Return BX = first zero-based song slot whose sample and matching instrument
+; slots are both empty.
+Proc            Music_FindFreeMatchingSlot Far
+                Xor     BX, BX
+                Jmp     Music_FindFreeMatchingSlotFrom
 EndP            Music_FindFreeMatchingSlot
+                Assume DS:Nothing
+
+; Return BX = first zero-based empty sample slot at or after input BX.
+Proc            Music_FindFreeSampleSlotFrom Far
+                Push    CX DX DS SI ES DI
+                Push    CS
+                Pop     DS
+                        Assume DS:Music
+                Mov     ES, SongDataArea
+                Cmp     BX, 99
+                JAE     Music_FindFreeSampleSlotFrom_NotFound
+
+Music_FindFreeSampleSlotFrom_Loop:
+                Mov     DI, BX
+                Add     DI, DI
+                Mov     SI, [ES:DI+64912]
+                Test    Byte Ptr [ES:SI+12h], 1
+                JZ      Music_FindFreeSampleSlotFrom_Found
+                Inc     BX
+                Cmp     BX, 99
+                JB      Music_FindFreeSampleSlotFrom_Loop
+Music_FindFreeSampleSlotFrom_NotFound:
+                StC
+                Jmp     Music_FindFreeSampleSlotFrom_Done
+Music_FindFreeSampleSlotFrom_Found:
+                ClC
+Music_FindFreeSampleSlotFrom_Done:
+                Pop     DI ES SI DS DX CX
+                Ret
+EndP            Music_FindFreeSampleSlotFrom
                 Assume DS:Nothing
 
 ;ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½

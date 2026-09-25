@@ -3,10 +3,16 @@
 ## 2026-09-25 addendum: Caps Lock alias
 
 Esa asked for Caps Lock on a module row to behave like Shift-Enter and load the
-module's work. `LSWindowKeys` now maps scan word `13Ah` directly to
-`LSWindow_ShiftEnter`; that existing handler bulk-loads the module's samples
-into consecutive slots. The new card scenario records the alias. Runtime remains
-untested until exercised in DOS.
+module's work. `LSWindowKeys` maps scan word `13Ah` to `LSWindow_ShiftEnter`.
+Esa then reported that selecting instrument 17 and bulk-loading another module
+overwrote the existing samples. The original handler began at the selected slot
+and incremented without checking occupancy.
+
+The handler now searches forward from the selected slot for each destination.
+Samples Mode skips occupied sample slots. Instrument Mode skips occupied sample
+or matching instrument slots and uses exact instrument assignment, preventing
+fallback onto an unrelated instrument. Loading stops when no free slot remains.
+Runtime remains untested until exercised in DOS.
 
 > The thinkspace leg of the `shift-enter-bulk-load-from-module` report-card
 > triad. Faithful, not flattering. The crash report, the root-cause trace, and

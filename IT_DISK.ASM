@@ -85,6 +85,8 @@ EndS
                 Extrn   Music_AssignSampleToInstrument:Far
                 Extrn   Music_AssignSampleToInstrumentExact:Far
                 Extrn   Music_FindFreeMatchingSlot:Far
+                Extrn   Music_FindFreeSampleSlotFrom:Far
+                Extrn   Music_FindFreeMatchingSlotFrom:Far
                 Extrn   Music_SoundCardLoadSample:Far
                 Extrn   Music_SoundCardLoadAllSamples:Far
                 Extrn   Music_GetPitchTable:Far
@@ -8366,10 +8368,9 @@ EndP            LSVSL_BackfillInstruments
 ; LSWindow_ShiftEnter -- Shift-Enter handler in outer sample-loader browser.
 ;
 ; If the cursor sits on a module file row (entry type byte at [cache+88] >=
-; 20h), bulk-load every sample in that module into consecutive sample slots
-; starting at the user's current F3/F4 cursor (PE_GetLastInstrument). In
-; instrument mode, each newly loaded sample is auto-assigned to an instrument
-; via Music_AssignSampleToInstrument.
+; 20h), bulk-load every sample in that module starting at the user's current
+; F3/F4 cursor. Occupied slots are skipped; instrument mode requires the
+; matching instrument slot to be empty too.
 ;
 ; Cursor on a folder or plain sample row: delegate to LSWindow_Enter so
 ; Shift-Enter does no harm where it has no special meaning.
@@ -8492,7 +8493,7 @@ Proc            LSWindow_ShiftEnter Far
                 Cmp     NumSamples, 2           ; need at least one real sample
                 JB      LSWS_NoneLoaded
 
-                                                ; Stage 3: starting dst slot.
+                                                ; Stage 3: starting search slot.
                 Call    PE_GetLastInstrument    ; BX = current slot index
                 Mov     [LSBulkDstSlot], BX
                 Mov     Word Ptr [LSBulkLoadedCount], 0
@@ -8524,10 +8525,6 @@ LSWS_Loop:
                 Cmp     CX, NumSamples
                 JAE     LSWS_LoopEnd
 
-                Mov     AX, [LSBulkDstSlot]
-                Cmp     AX, 99
-                JAE     LSWS_LoopEnd            ; reserved keyjazz slot, stop
-
                                                 ; DS:SI = cache entry [CX].
                 Mov     DS, DiskDataArea
                         Assume DS:Nothing
@@ -8544,25 +8541,35 @@ LSWS_Loop:
                 And     EAX, EAX
                 JZ      LSWS_LoopAdvance
 
-                                                ; Load sample at LSBulkDstSlot
-                                                ; from DS:SI. LoadSample opens
-                                                ; the module file (filename at
-                                                ; [SI+4]) and seeks to the
-                                                ; per-sample offset at [SI+48h].
+                                                ; Find the next free destination
+                                                ; at or after the running cursor.
+                Mov     BX, CS:[LSBulkDstSlot]
+                Cmp     Byte Ptr CS:[LSBulkInstMode], 0
+                JE      LSWS_FindSampleSlot
+                Call    Music_FindFreeMatchingSlotFrom
+                Jmp     LSWS_CheckFreeSlot
+LSWS_FindSampleSlot:
+                Call    Music_FindFreeSampleSlotFrom
+LSWS_CheckFreeSlot:
+                JC      LSWS_LoopEnd            ; no free destination remains
+                Mov     CS:[LSBulkDstSlot], BX
+
+                                                ; Load sample from DS:SI. LoadSample
+                                                ; opens the module and seeks to
+                                                ; its cached sample offset.
                 Mov     AX, CS:[LSBulkDstSlot]
                 Push    CX
                 Call    LoadSample
                 Pop     CX
                 JC      LSWS_LoopAdvance        ; load failed -> don't bump dst
 
-                                                ; Instrument mode: assign the
-                                                ; sample to an instrument slot
-                                                ; (auto-creates if needed).
+                                                ; Instrument mode: bind only to
+                                                ; its matching free instrument.
                 Cmp     Byte Ptr CS:[LSBulkInstMode], 0
                 JE      LSWS_LoopBump
                 Push    CX
                 Mov     BX, CS:[LSBulkDstSlot]
-                Call    Music_AssignSampleToInstrument
+                Call    Music_AssignSampleToInstrumentExact
                 Pop     CX
 
 LSWS_LoopBump:

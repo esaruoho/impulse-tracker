@@ -12,7 +12,7 @@
 ---
 
 
-## 1. Shift-Enter on a module bulk-loads its samples into consecutive slots
+## 1. Shift-Enter on a module bulk-loads into empty slots from the cursor
 
 `@shipped @build-verified @runtime-untested @hw-untested`
 
@@ -20,7 +20,8 @@
 - Given the user is in the Sample List and has opened the Load Sample browser
 - And the cursor is on a module file row (type byte [cache+88] >= 20h)
 - When they press Shift-Enter on it
-- Then every sample in the module is loaded into consecutive sample slots
+- Then each sample is loaded into an empty slot at or after the current slot
+- And every previously occupied sample and instrument remains unchanged
 - And each occupies its own row in the sample list
 
 <sub>cite: IT_DISK.ASM:988 LSWindowKeys cond 4 (Shift) / key 11Ch -> LSWindow_ShiftEnter · IT_DISK.ASM:7830 calls the per-format LoadSamplesInModuleTable loader · IT_DISK.ASM:7894 LSWS_Loop iterates cache entries 1..NumSamples-1, · IT_G.ASM:303 lands on the F3 Sample List afterwards (Jmp Glbl_F3)</sub>
@@ -33,7 +34,8 @@
 
 - Given the Sample Load browser is showing a module row
 - When I press Caps Lock on that row
-- Then the module's samples are loaded into consecutive sample slots
+- Then the module's samples are loaded into empty slots from the current slot
+- And occupied samples and instruments remain unchanged
 
 <sub>cite: IT_DISK.ASM LSWindowKeys maps scan word 13Ah to</sub>
 

@@ -10,7 +10,7 @@ Feature: Shift-Enter Load from Sample List (bulk-load a module's samples)
   So that I can lift a whole module's sample set in a single keystroke.
 
   @shipped @build-verified @runtime-untested @hw-untested
-  Scenario: Shift-Enter on a module bulk-loads its samples into consecutive slots
+  Scenario: Shift-Enter on a module bulk-loads into empty slots from the cursor
     # cite: IT_DISK.ASM:988 LSWindowKeys cond 4 (Shift) / key 11Ch -> LSWindow_ShiftEnter
     # cite: IT_DISK.ASM:7830 calls the per-format LoadSamplesInModuleTable loader
     # cite: IT_DISK.ASM:7894 LSWS_Loop iterates cache entries 1..NumSamples-1,
@@ -19,7 +19,8 @@ Feature: Shift-Enter Load from Sample List (bulk-load a module's samples)
     Given the user is in the Sample List and has opened the Load Sample browser
     And the cursor is on a module file row (type byte [cache+88] >= 20h)
     When they press Shift-Enter on it
-    Then every sample in the module is loaded into consecutive sample slots
+    Then each sample is loaded into an empty slot at or after the current slot
+    And every previously occupied sample and instrument remains unchanged
     And each occupies its own row in the sample list
 
   @shipped @build-verified @runtime-untested @hw-untested
@@ -28,7 +29,8 @@ Feature: Shift-Enter Load from Sample List (bulk-load a module's samples)
     #       LSWindow_ShiftEnter; the handler bulk-loads module rows.
     Given the Sample Load browser is showing a module row
     When I press Caps Lock on that row
-    Then the module's samples are loaded into consecutive sample slots
+    Then the module's samples are loaded into empty slots from the current slot
+    And occupied samples and instruments remain unchanged
 
   @shipped @build-verified @runtime-untested @hw-untested
   Scenario: Loaded samples keep their original module names and loop modes
